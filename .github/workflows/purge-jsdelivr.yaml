@@ -1,0 +1,22 @@
+name: purge-jsdelivr
+
+on:
+  push:
+    branches:
+      - codex/role-card
+      - master
+      - main
+    paths:
+      - 'dist/世界调试模式（NPC版）/界面/状态栏/index.html'
+      - 'src/世界调试模式（NPC版）/index.yaml'
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge status bar HTML
+        run: |
+          set -euo pipefail
+          ref="${GITHUB_REF_NAME//\//%2F}"
+          curl -fsSL "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${ref}/dist/%E4%B8%96%E7%95%8C%E8%B0%83%E8%AF%95%E6%A8%A1%E5%BC%8F%EF%BC%88NPC%E7%89%88%EF%BC%89/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html"
