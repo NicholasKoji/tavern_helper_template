@@ -1,18 +1,20 @@
 <template>
-  <section class="debug-panel">
-    <header class="panel-header">
+  <section class="debug-console" :data-stability="stabilityTone">
+    <header class="console-header">
       <div class="title-block">
-        <p class="eyebrow">WORLD DEBUG // NPC VIEW</p>
+        <p class="eyebrow">NPC WORLD DEBUG</p>
         <h1>世界调试模式</h1>
         <p class="subtitle">{{ data.杨世发.身份 }} · {{ data.杨世发.年级 }}</p>
       </div>
-      <div class="stability-card">
+
+      <div class="stability-gauge" :style="{ '--value': `${stabilityScore}%` }">
         <span>规则稳定</span>
-        <strong>{{ data.世界.规则稳定度 }}</strong>
+        <strong>{{ stabilityScore }}</strong>
+        <small>{{ stabilityLabel }}</small>
       </div>
     </header>
 
-    <div class="world-strip">
+    <section class="world-grid" aria-label="世界坐标">
       <article>
         <span>时间</span>
         <strong>{{ data.世界.当前时间 }}</strong>
@@ -25,28 +27,32 @@
         <span>常识版本</span>
         <strong>{{ data.世界.公开常识版本 }}</strong>
       </article>
-    </div>
-
-    <section class="rule-section">
-      <span>当前规则摘要</span>
-      <p>{{ data.世界.当前规则摘要 }}</p>
     </section>
 
-    <section class="meter-board">
-      <div v-for="meter in meters" :key="meter.label" class="meter-row" :data-tone="meter.tone">
+    <section class="rule-panel">
+      <div>
+        <span>当前规则</span>
+        <p>{{ data.世界.当前规则摘要 }}</p>
+      </div>
+      <strong>{{ topRisk.label }} {{ topRisk.value }}</strong>
+    </section>
+
+    <section class="signal-board" aria-label="状态指标">
+      <article v-for="meter in meters" :key="meter.label" class="signal-meter" :data-tone="meter.tone">
         <div class="meter-head">
           <span>{{ meter.label }}</span>
           <strong>{{ meter.value }}</strong>
         </div>
-        <div class="meter-track">
+        <div class="meter-track" :aria-label="`${meter.label} ${meter.value}`">
           <div class="meter-fill" :style="{ width: `${meter.value}%` }"></div>
         </div>
-      </div>
+        <small>{{ toneText(meter.tone) }}</small>
+      </article>
     </section>
 
-    <div class="detail-grid">
-      <section class="info-section">
-        <div class="section-heading">
+    <div class="primary-grid">
+      <section class="section-panel subject-panel">
+        <div class="section-title">
           <span>杨世发</span>
           <strong>{{ data.杨世发.年龄 }}岁</strong>
         </div>
@@ -66,8 +72,8 @@
         </dl>
       </section>
 
-      <section class="info-section">
-        <div class="section-heading">
+      <section class="section-panel veil-panel">
+        <div class="section-title">
           <span>调试者遮蔽</span>
           <strong>{{ data.调试者遮蔽.遮蔽强度 }}</strong>
         </div>
@@ -82,34 +88,14 @@
           </div>
         </dl>
         <div class="permission-row">
-          <span :data-enabled="data.调试者遮蔽._交流许可"
-            >交流许可：{{ permissionText(data.调试者遮蔽._交流许可) }}</span
-          >
-          <span :data-enabled="data.调试者遮蔽._互知许可"
-            >互知许可：{{ permissionText(data.调试者遮蔽._互知许可) }}</span
-          >
+          <span :data-enabled="data.调试者遮蔽._交流许可"> 交流 {{ permissionText(data.调试者遮蔽._交流许可) }} </span>
+          <span :data-enabled="data.调试者遮蔽._互知许可"> 互知 {{ permissionText(data.调试者遮蔽._互知许可) }} </span>
         </div>
       </section>
     </div>
 
-    <section v-if="inventory.length" class="info-section">
-      <div class="section-heading">
-        <span>随身物品</span>
-        <strong>{{ inventory.length }}</strong>
-      </div>
-      <div class="item-list">
-        <article v-for="[name, item] in inventory" :key="name" class="list-item">
-          <div>
-            <strong>{{ name }}</strong>
-            <p>{{ item.描述 }}</p>
-          </div>
-          <span>x{{ item.数量 }}</span>
-        </article>
-      </div>
-    </section>
-
-    <section v-if="recentChanges.length" class="info-section">
-      <div class="section-heading">
+    <section v-if="recentChanges.length" class="section-panel">
+      <div class="section-title">
         <span>最近变更</span>
         <strong>{{ recentChanges.length }}</strong>
       </div>
@@ -125,7 +111,23 @@
       </div>
     </section>
 
-    <footer>
+    <section v-if="inventory.length" class="section-panel">
+      <div class="section-title">
+        <span>随身物品</span>
+        <strong>{{ inventory.length }}</strong>
+      </div>
+      <div class="item-list">
+        <article v-for="[name, item] in inventory" :key="name" class="item-row">
+          <div>
+            <strong>{{ name }}</strong>
+            <p>{{ item.描述 }}</p>
+          </div>
+          <span>x{{ item.数量 }}</span>
+        </article>
+      </div>
+    </section>
+
+    <footer class="narrative-note">
       <span>叙事备注</span>
       <p>{{ data.调试者遮蔽.叙事备注 }}</p>
     </footer>
@@ -136,11 +138,16 @@
 import { computed } from 'vue';
 import { useDataStore } from './store';
 
+type MeterTone = 'safe' | 'warn' | 'danger';
+
 const store = useDataStore();
 const data = store.data;
 
 const inventory = computed(() => Object.entries(data.杨世发.随身物品));
 const recentChanges = computed(() => Object.entries(data.世界.最近变更));
+const stabilityScore = computed(() => normalizePercent(data.世界.规则稳定度));
+const stabilityTone = computed(() => getMeterTone(stabilityScore.value, false));
+const stabilityLabel = computed(() => toneText(stabilityTone.value));
 
 const meters = computed(() =>
   [
@@ -159,6 +166,11 @@ const meters = computed(() =>
   }),
 );
 
+const topRisk = computed(() => {
+  const riskMeters = meters.value.filter(meter => meter.label !== '规则稳定度');
+  return riskMeters.reduce((current, meter) => (meter.value > current.value ? meter : current), riskMeters[0]);
+});
+
 function normalizePercent(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
@@ -166,7 +178,7 @@ function normalizePercent(value: number): number {
   return Math.round(Math.min(100, Math.max(0, value)));
 }
 
-function getMeterTone(value: number, inverse: boolean): 'safe' | 'warn' | 'danger' {
+function getMeterTone(value: number, inverse: boolean): MeterTone {
   if (inverse) {
     if (value >= 70) {
       return 'danger';
@@ -185,144 +197,229 @@ function getMeterTone(value: number, inverse: boolean): 'safe' | 'warn' | 'dange
   return 'safe';
 }
 
+function toneText(tone: MeterTone): string {
+  if (tone === 'danger') {
+    return '高危';
+  }
+  if (tone === 'warn') {
+    return '警戒';
+  }
+  return '稳定';
+}
+
 function permissionText(value: boolean): string {
   return value ? '开启' : '关闭';
 }
 </script>
 
 <style scoped>
-.debug-panel {
-  width: 100%;
-  max-width: 760px;
+.debug-console {
+  --surface: oklch(23% 0.018 168);
+  --panel: oklch(28% 0.016 170);
+  --panel-raised: oklch(34% 0.014 165);
+  --line: oklch(46% 0.025 165);
+  --line-soft: oklch(38% 0.018 165);
+  --text: oklch(92% 0.012 115);
+  --muted: oklch(74% 0.022 150);
+  --faint: oklch(62% 0.02 150);
+  --safe: oklch(71% 0.14 157);
+  --safe-soft: oklch(37% 0.055 157);
+  --warn: oklch(76% 0.14 78);
+  --warn-soft: oklch(40% 0.06 78);
+  --danger: oklch(65% 0.16 28);
+  --danger-soft: oklch(38% 0.07 28);
+  width: auto;
+  max-width: 780px;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 14px;
-  border: 1px solid #26343b;
-  background: #f7f7f4;
-  color: #172026;
-  font-family: Inter, 'Noto Sans SC', system-ui, sans-serif;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, oklch(27% 0.02 168), var(--surface) 42%), var(--surface);
+  color: var(--text);
+  font-family:
+    Inter,
+    'Noto Sans SC',
+    'Microsoft YaHei UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
   font-size: 13px;
   line-height: 1.45;
 }
 
-.panel-header {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
+.console-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
   gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #b8c0bd;
+  align-items: stretch;
 }
 
 .title-block {
   min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: oklch(25% 0.017 169);
+}
+
+.eyebrow,
+.world-grid span,
+.rule-panel span,
+.signal-meter small,
+dt,
+.narrative-note span {
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .eyebrow {
   margin: 0 0 4px;
-  color: #52646b;
-  font-size: 11px;
   letter-spacing: 0;
 }
 
 h1 {
   margin: 0;
-  font-size: 21px;
-  font-weight: 800;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.15;
 }
 
 .subtitle {
-  margin: 4px 0 0;
-  color: #59676a;
+  margin: 5px 0 0;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-.stability-card {
-  width: 86px;
-  flex: 0 0 auto;
+.stability-gauge {
+  --tone: var(--safe);
   display: grid;
+  min-height: 96px;
   place-items: center;
   align-content: center;
-  gap: 2px;
-  border: 1px solid #26343b;
-  background: #dbe9e5;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid color-mix(in oklch, var(--tone) 48%, var(--line));
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at center, var(--panel) 0 49%, transparent 50%),
+    conic-gradient(var(--tone) var(--value), oklch(33% 0.014 165) 0);
 }
 
-.stability-card span,
-.rule-section span,
-footer span {
-  color: #52646b;
-  font-size: 12px;
+.debug-console[data-stability='warn'] .stability-gauge {
+  --tone: var(--warn);
 }
 
-.stability-card strong {
-  font-size: 24px;
+.debug-console[data-stability='danger'] .stability-gauge {
+  --tone: var(--danger);
+}
+
+.stability-gauge span,
+.stability-gauge small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stability-gauge strong {
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 900;
   line-height: 1;
 }
 
-.world-strip,
-.detail-grid {
+.world-grid,
+.signal-board,
+.primary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
-.detail-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.world-grid {
+  grid-template-columns: 0.72fr 1.18fr 1.1fr;
 }
 
-.world-strip article,
-.info-section,
-.rule-section {
+.world-grid article,
+.signal-meter,
+.section-panel,
+.rule-panel,
+.narrative-note {
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid #c7cfcc;
-  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--panel);
 }
 
-.world-strip article {
-  padding: 8px;
+.world-grid article {
+  padding: 9px 10px;
 }
 
-.world-strip span {
+.world-grid strong {
   display: block;
-  color: #647174;
+  margin-top: 3px;
+  color: var(--text);
   font-size: 12px;
-}
-
-.world-strip strong {
-  display: block;
-  margin-top: 2px;
+  font-weight: 750;
   overflow-wrap: anywhere;
-  font-size: 13px;
 }
 
-.rule-section {
-  margin-top: 10px;
-  padding: 10px;
-  border-left: 4px solid #2c7a73;
-  background: #eef6f4;
-}
-
-.rule-section p {
-  margin: 4px 0 0;
-  overflow-wrap: anywhere;
-  font-weight: 700;
-}
-
-.meter-board {
+.rule-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 11px 12px;
+  background: color-mix(in oklch, var(--safe-soft) 36%, var(--panel));
 }
 
-.meter-row {
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid #c7cfcc;
-  background: #ffffff;
+.rule-panel p {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.rule-panel > strong {
+  align-self: stretch;
+  display: grid;
+  min-width: 76px;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid color-mix(in oklch, var(--warn) 45%, var(--line-soft));
+  border-radius: 7px;
+  color: var(--warn);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.signal-board {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.signal-meter {
+  --tone: var(--safe);
+  --tone-soft: var(--safe-soft);
+  padding: 9px;
+  background: color-mix(in oklch, var(--tone-soft) 28%, var(--panel));
+}
+
+.signal-meter[data-tone='warn'] {
+  --tone: var(--warn);
+  --tone-soft: var(--warn-soft);
+}
+
+.signal-meter[data-tone='danger'] {
+  --tone: var(--danger);
+  --tone-soft: var(--danger-soft);
 }
 
 .meter-head {
@@ -333,81 +430,92 @@ footer span {
 }
 
 .meter-head span {
-  color: #52646b;
+  color: var(--muted);
   font-size: 12px;
+  font-weight: 750;
   overflow-wrap: anywhere;
 }
 
 .meter-head strong {
-  font-size: 14px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
 }
 
 .meter-track {
-  height: 8px;
-  margin-top: 7px;
+  height: 6px;
+  margin-top: 8px;
   overflow: hidden;
-  background: #e1e5e3;
+  border-radius: 999px;
+  background: oklch(20% 0.01 165);
 }
 
 .meter-fill {
   height: 100%;
-  background: #2c7a73;
+  border-radius: inherit;
+  background: var(--tone);
 }
 
-.meter-row[data-tone='warn'] .meter-fill {
-  background: #b7791f;
+.signal-meter small {
+  display: block;
+  margin-top: 5px;
+  color: var(--tone);
 }
 
-.meter-row[data-tone='danger'] .meter-fill {
-  background: #b6423c;
+.primary-grid {
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
 }
 
-.info-section {
-  margin-top: 10px;
-  padding: 10px;
+.section-panel,
+.narrative-note {
+  margin-top: 8px;
+  padding: 11px 12px;
 }
 
-.detail-grid .info-section {
+.primary-grid .section-panel {
   margin-top: 0;
 }
 
-.section-heading {
+.section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid #dde3e0;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.section-heading span {
-  color: #26343b;
+.section-title span {
+  color: var(--text);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 850;
 }
 
-.section-heading strong {
-  color: #2c7a73;
-  font-size: 13px;
+.section-title strong {
+  color: var(--safe);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .fact-list {
   display: grid;
   gap: 8px;
-  margin: 8px 0 0;
+  margin: 9px 0 0;
 }
 
-.fact-list div {
+.fact-list div,
+.item-row,
+.change-item {
   min-width: 0;
 }
 
 dt {
-  color: #647174;
-  font-size: 12px;
+  margin: 0;
 }
 
 dd {
   margin: 2px 0 0;
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
@@ -419,109 +527,141 @@ dd {
 }
 
 .permission-row span {
-  padding: 3px 6px;
-  border: 1px solid #d1d7d4;
-  background: #f3f4f2;
-  color: #6d3531;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in oklch, var(--danger) 35%, var(--line-soft));
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--danger-soft) 28%, var(--panel));
+  color: var(--danger);
   font-size: 12px;
+  font-weight: 800;
 }
 
 .permission-row span[data-enabled='true'] {
-  color: #1e6a61;
+  border-color: color-mix(in oklch, var(--safe) 40%, var(--line-soft));
+  background: color-mix(in oklch, var(--safe-soft) 30%, var(--panel));
+  color: var(--safe);
 }
 
-.item-list,
-.change-list {
+.change-list,
+.item-list {
   display: grid;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 7px;
+  margin-top: 9px;
 }
 
-.list-item,
-.change-item {
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid #dde3e0;
-  background: #fbfcfb;
-}
-
-.list-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
-}
-
-.list-item strong,
-.change-item strong {
-  overflow-wrap: anywhere;
-}
-
-.list-item p,
-.change-item p {
-  margin: 3px 0 0;
-  color: #526064;
-  overflow-wrap: anywhere;
-}
-
-.list-item > span {
-  color: #b7791f;
-  font-weight: 800;
+.change-item,
+.item-row {
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--panel-raised);
 }
 
 .change-item header {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
   gap: 8px;
-  align-items: start;
 }
 
-.change-item header span,
-.change-item small {
-  color: #647174;
+.change-item strong,
+.item-row strong {
+  color: var(--text);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.change-item header span {
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.change-item p,
+.item-row p,
+.narrative-note p {
+  margin: 4px 0 0;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 
 .change-item small {
   display: block;
   margin-top: 5px;
-}
-
-footer {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #b8c0bd;
-}
-
-footer p {
-  margin: 3px 0 0;
+  color: var(--faint);
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 680px) {
-  .world-strip,
-  .detail-grid,
-  .meter-board {
+.item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.item-row > span {
+  min-width: 34px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--warn-soft) 34%, var(--panel));
+  color: var(--warn);
+  font-weight: 900;
+  text-align: center;
+}
+
+.narrative-note {
+  background: oklch(25% 0.015 165);
+}
+
+@media (max-width: 700px) {
+  .console-header,
+  .world-grid,
+  .primary-grid {
     grid-template-columns: 1fr;
   }
 
-  .panel-header {
-    align-items: flex-start;
+  .stability-gauge {
+    display: flex;
+    min-height: auto;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--panel);
+    background: color-mix(in oklch, var(--safe-soft) 26%, var(--panel));
+  }
+
+  .debug-console[data-stability='warn'] .stability-gauge {
+    background: color-mix(in oklch, var(--warn-soft) 28%, var(--panel));
+  }
+
+  .debug-console[data-stability='danger'] .stability-gauge {
+    background: color-mix(in oklch, var(--danger-soft) 28%, var(--panel));
+  }
+
+  .stability-gauge strong {
+    margin-left: auto;
+    font-size: 24px;
+  }
+
+  .signal-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 440px) {
-  .panel-header {
-    display: grid;
+@media (max-width: 460px) {
+  .debug-console {
+    padding: 9px;
+    border-radius: 7px;
   }
 
-  .stability-card {
-    width: 100%;
-    min-height: 56px;
-  }
-
-  .change-item header {
+  .rule-panel,
+  .change-item header,
+  .item-row,
+  .signal-board {
     grid-template-columns: 1fr;
+  }
+
+  .rule-panel > strong {
+    min-height: 32px;
   }
 }
 </style>

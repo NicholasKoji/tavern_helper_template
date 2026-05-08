@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 头像: 头像
-版本: 0.2.0
+版本: 0.3.0
 作者: ''
 备注: 2030 地球欲望规则异常题材；玩家扮演不受规则修改影响的高三 NPC 杨世发。
 
@@ -194,7 +194,7 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@0e02ccf3bd73bc626163fcbd2f3d6d91b5d636d8/dist/世界调试模式（NPC版）/界面/状态栏/index.html')
+        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/界面/状态栏/index.html')
         </script>
         </body>
         ```
