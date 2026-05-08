@@ -10,7 +10,6 @@
       - move
     - don't update field names starts with `_` as they are readonly, such as `_变量`
     - never create variables that reveal the debugger's name, location, dialogue, system panel, or relation to Yang Shifa
-    - NSFW-related updates must only involve adults aged 18 or above; do not sexualize minors or age-ambiguous characters
   format: |-
     <UpdateVariable>
     <Analysis>$(IN ENGLISH, no more than 80 words)

@@ -2,7 +2,7 @@
   <section class="debug-panel">
     <header class="panel-header">
       <div>
-        <p class="eyebrow">WORLD DEBUG // ADULT NPC VIEW</p>
+        <p class="eyebrow">WORLD DEBUG // NPC VIEW</p>
         <h1>世界调试模式</h1>
       </div>
       <span class="stability">{{ data.世界.规则稳定度 }}</span>
