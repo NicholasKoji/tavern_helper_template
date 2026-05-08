@@ -194,7 +194,29 @@
         ```
         <body>
         <script>
-        $('body').load('https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/界面/状态栏/index.html')
+        (async () => {
+          const repo = 'NicholasKoji/tavern_helper_template';
+          const branch = 'codex/role-card';
+          const path = 'dist/%E4%B8%96%E7%95%8C%E8%B0%83%E8%AF%95%E6%A8%A1%E5%BC%8F%EF%BC%88NPC%E7%89%88%EF%BC%89/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html';
+          const cache_key = `world-debug-status-sha:${repo}:${branch}`;
+
+          async function getLatestRef() {
+            const cached = JSON.parse(sessionStorage.getItem(cache_key) || 'null');
+            if (cached?.sha && Date.now() - cached.time < 5 * 60 * 1000) {
+              return cached.sha;
+            }
+            const response = await fetch(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}?t=${Date.now()}`, { cache: 'no-store' });
+            const { sha } = await response.json();
+            if (!sha) {
+              throw new Error('missing commit sha');
+            }
+            sessionStorage.setItem(cache_key, JSON.stringify({ sha, time: Date.now() }));
+            return sha;
+          }
+
+          const ref = await getLatestRef().catch(() => 'codex%2Frole-card');
+          $('body').load(`https://cdn.jsdelivr.net/gh/${repo}@${ref}/${path}`);
+        })();
         </script>
         </body>
         ```
