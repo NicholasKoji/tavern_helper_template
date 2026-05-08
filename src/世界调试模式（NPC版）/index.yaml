@@ -194,7 +194,7 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/界面/状态栏/index.html')
+        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@0e02ccf3bd73bc626163fcbd2f3d6d91b5d636d8/dist/世界调试模式（NPC版）/界面/状态栏/index.html')
         </script>
         </body>
         ```
