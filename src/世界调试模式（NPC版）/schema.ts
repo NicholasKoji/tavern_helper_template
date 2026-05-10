@@ -75,10 +75,38 @@ export const Schema = z.object({
       z.object({
         基本信息: z.object({
           姓名或称呼: z.string(),
+          性别: z.string().prefault('未记录'),
           身份: z.string(),
           所在地点: z.string(),
           关系定位: z.string(),
         }),
+        外观: z
+          .object({
+            容貌: z.string(),
+            身材: z.string(),
+            着装: z.object({
+              发型: z.string(),
+              上装: z.string(),
+              下装: z.string(),
+              鞋袜: z.string(),
+              配饰: z.string(),
+              随身物: z.string(),
+              状态细节: z.string(),
+            }),
+          })
+          .prefault({
+            容貌: '未记录',
+            身材: '未记录',
+            着装: {
+              发型: '未记录',
+              上装: '未记录',
+              下装: '未记录',
+              鞋袜: '未记录',
+              配饰: '未记录',
+              随身物: '未记录',
+              状态细节: '未记录',
+            },
+          }),
         互动记录: z.object({
           初次登场: z.string(),
           最近互动: z.string(),
@@ -91,6 +119,7 @@ export const Schema = z.object({
         }),
         当前状态: z.string(),
         对杨世发态度: z.string(),
+        心理话: z.string().prefault('暂无可由杨世发合理推测的心理话'),
         叙事备注: z.string(),
       }),
     )

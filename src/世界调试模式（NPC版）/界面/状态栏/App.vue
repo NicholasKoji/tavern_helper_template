@@ -10,7 +10,7 @@
       <div class="status-stack" aria-label="核心状态">
         <div class="status-token">
           <span>稳定</span>
-          <strong>{{ stabilityScore }}</strong>
+          <strong>{{ stabilityScore }}%</strong>
           <small>{{ stabilityLabel }}</small>
         </div>
         <div class="status-token">
@@ -102,11 +102,20 @@
     </section>
 
     <section v-else-if="activeTab === 'rules'" class="tab-panel" aria-label="规则">
+      <section class="rules-readout" aria-label="规则核心读数">
+        <ValueMeter label="规则稳定度" :value="data.世界.规则稳定度" />
+        <ValueMeter label="遮蔽强度" :value="data.调试者遮蔽.遮蔽强度" />
+        <ValueMeter label="认知压力" :value="data.杨世发.异常认知压力" inverse />
+      </section>
+
       <AccordionGroup title="生效规则" :count="ruleEntries.length">
         <details v-for="[name, rule] in ruleEntries" :key="name" class="fold-row">
           <summary>
             <strong>{{ name }}</strong>
-            <span>{{ rule.规则类型 }} · {{ rule.目标范围 }}</span>
+            <span class="summary-meta">
+              <b>{{ rule.规则类型 }}</b>
+              <em>{{ rule.目标范围 }}</em>
+            </span>
           </summary>
           <dl class="detail-grid">
             <div>
@@ -129,7 +138,10 @@
         <details v-for="[name, common] in commonEntries" :key="name" class="fold-row">
           <summary>
             <strong>{{ name }}</strong>
-            <span>{{ common.适用范围 }}</span>
+            <span class="summary-meta">
+              <b>适用范围</b>
+              <em>{{ common.适用范围 }}</em>
+            </span>
           </summary>
           <dl class="detail-grid">
             <div class="wide">
@@ -148,7 +160,10 @@
         <details v-for="[name, dimension] in dimensionEntries" :key="name" class="fold-row">
           <summary>
             <strong>{{ name }}</strong>
-            <span>{{ dimension.状态 }}</span>
+            <span class="status-line">
+              <i :data-tone="dimensionTone(dimension.状态)"></i>
+              {{ dimension.状态 }}
+            </span>
           </summary>
           <p class="fold-copy">{{ dimension.说明 }}</p>
         </details>
@@ -158,7 +173,10 @@
         <details v-for="[code, change] in recentChanges" :key="code" class="fold-row">
           <summary>
             <strong>{{ code }}</strong>
-            <span>{{ change.影响范围 }}</span>
+            <span class="summary-meta">
+              <b>影响范围</b>
+              <em>{{ change.影响范围 }}</em>
+            </span>
           </summary>
           <p class="fold-copy">{{ change.说明 }}</p>
           <p class="fold-note">{{ change.杨世发观测 }}</p>
@@ -172,17 +190,66 @@
         <summary>
           <div>
             <strong>{{ npc.基本信息.姓名或称呼 }}</strong>
-            <span>{{ npc.基本信息.身份 }}</span>
+            <span>{{ npc.基本信息.性别 }} · {{ npc.基本信息.身份 }}</span>
           </div>
           <small>{{ npc.基本信息.关系定位 }}</small>
         </summary>
 
         <div class="npc-body">
           <div class="relation-grid">
-            <RelationMeter label="好感" :value="npc.关系指标.好感度" />
-            <RelationMeter label="信任" :value="npc.关系指标.信任度" />
-            <RelationMeter label="警觉" :value="npc.关系指标.警觉度" inverse />
+            <ValueMeter label="好感" :value="npc.关系指标.好感度" />
+            <ValueMeter label="信任" :value="npc.关系指标.信任度" />
+            <ValueMeter label="警觉" :value="npc.关系指标.警觉度" inverse />
           </div>
+
+          <section class="npc-profile" aria-label="NPC外观与心理">
+            <div class="profile-copy">
+              <h3>容貌</h3>
+              <p>{{ npc.外观.容貌 }}</p>
+            </div>
+            <div class="profile-copy">
+              <h3>身材</h3>
+              <p>{{ npc.外观.身材 }}</p>
+            </div>
+            <div class="profile-copy wide">
+              <h3>心理话</h3>
+              <p>{{ npc.心理话 }}</p>
+            </div>
+          </section>
+
+          <section class="outfit-panel" aria-label="NPC着装">
+            <h3>着装拆解</h3>
+            <dl>
+              <div>
+                <dt>发型</dt>
+                <dd>{{ npc.外观.着装.发型 }}</dd>
+              </div>
+              <div>
+                <dt>上装</dt>
+                <dd>{{ npc.外观.着装.上装 }}</dd>
+              </div>
+              <div>
+                <dt>下装</dt>
+                <dd>{{ npc.外观.着装.下装 }}</dd>
+              </div>
+              <div>
+                <dt>鞋袜</dt>
+                <dd>{{ npc.外观.着装.鞋袜 }}</dd>
+              </div>
+              <div>
+                <dt>配饰</dt>
+                <dd>{{ npc.外观.着装.配饰 }}</dd>
+              </div>
+              <div>
+                <dt>随身物</dt>
+                <dd>{{ npc.外观.着装.随身物 }}</dd>
+              </div>
+              <div class="wide">
+                <dt>状态细节</dt>
+                <dd>{{ npc.外观.着装.状态细节 }}</dd>
+              </div>
+            </dl>
+          </section>
 
           <dl class="detail-grid">
             <div>
@@ -244,7 +311,9 @@
             </div>
             <div>
               <dt>遮蔽强度</dt>
-              <dd>{{ data.调试者遮蔽.遮蔽强度 }}</dd>
+              <dd>
+                <ValueMeter label="遮蔽强度" :value="data.调试者遮蔽.遮蔽强度" compact />
+              </dd>
             </div>
           </dl>
         </div>
@@ -277,25 +346,28 @@ const AccordionGroup = defineComponent({
   setup(props, { slots }) {
     return () =>
       h('section', { class: 'accordion-group' }, [
-        h('header', { class: 'group-title' }, [h('h2', props.title), h('span', String(props.count))]),
+        h('header', { class: 'group-title' }, [
+          h('h2', props.title),
+          h('span', { 'aria-label': `${props.title} ${props.count}项` }, `${props.count}项`),
+        ]),
         props.count > 0 ? slots.default?.() : h('div', { class: 'empty-state' }, '暂无记录'),
       ]);
   },
 });
 
-const RelationMeter = defineComponent({
+const ValueMeter = defineComponent({
   props: {
     label: { type: String, required: true },
     value: { type: Number, required: true },
     inverse: { type: Boolean, default: false },
+    compact: { type: Boolean, default: false },
   },
   setup(props) {
     return () => {
       const value = normalizePercent(props.value);
       const tone = getMeterTone(value, props.inverse);
-      return h('div', { class: 'relation-meter', 'data-tone': tone }, [
-        h('span', props.label),
-        h('strong', String(value)),
+      return h('div', { class: ['value-meter', { compact: props.compact }], 'data-tone': tone }, [
+        h('div', { class: 'value-meter-head' }, [h('span', props.label), h('strong', `${value}%`)]),
         h('div', { class: 'meter-track', 'aria-label': `${props.label} ${value}` }, [
           h('div', { class: 'meter-fill', style: { width: `${value}%` } }),
         ]),
@@ -347,15 +419,15 @@ const newestChangeText = computed(() => {
 });
 
 const tabs = computed<Array<{ id: TabId; label: string; count: number | string }>>(() => [
-  { id: 'overview', label: '总览', count: stabilityScore.value },
+  { id: 'overview', label: '总览', count: `${stabilityScore.value}%` },
   {
     id: 'rules',
     label: '规则',
-    count: ruleEntries.value.length + commonEntries.value.length + dimensionEntries.value.length,
+    count: `${ruleEntries.value.length + commonEntries.value.length + dimensionEntries.value.length}项`,
   },
-  { id: 'npcs', label: 'NPC', count: npcEntries.value.length },
-  { id: 'items', label: '物品', count: inventory.value.length },
-  { id: 'veil', label: '遮蔽', count: data.调试者遮蔽.遮蔽强度 },
+  { id: 'npcs', label: 'NPC', count: `${npcEntries.value.length}人` },
+  { id: 'items', label: '物品', count: `${inventory.value.length}件` },
+  { id: 'veil', label: '遮蔽', count: `${normalizePercent(data.调试者遮蔽.遮蔽强度)}%` },
 ]);
 
 function normalizePercent(value: number): number {
@@ -392,6 +464,16 @@ function toneText(tone: MeterTone): string {
     return '警戒';
   }
   return '稳定';
+}
+
+function dimensionTone(status: string): MeterTone {
+  if (/未同步|冲突|残缺|异常|失控|风险/.test(status)) {
+    return 'danger';
+  }
+  if (/局部|待定|波动|补全|改写/.test(status)) {
+    return 'warn';
+  }
+  return 'safe';
 }
 
 function permissionText(value: boolean): string {
@@ -475,6 +557,7 @@ dt,
 
 h1,
 h2,
+h3,
 p,
 dl {
   margin: 0;
@@ -490,6 +573,12 @@ h1 {
 h2 {
   color: var(--text);
   font-size: 13px;
+  font-weight: 850;
+}
+
+h3 {
+  color: var(--text);
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -655,13 +744,15 @@ h2 {
 }
 
 .signal-meter[data-tone='warn'],
-.relation-meter[data-tone='warn'] {
+.value-meter[data-tone='warn'],
+.status-line i[data-tone='warn'] {
   --tone: var(--warn);
   --tone-soft: var(--warn-soft);
 }
 
 .signal-meter[data-tone='danger'],
-.relation-meter[data-tone='danger'] {
+.value-meter[data-tone='danger'],
+.status-line i[data-tone='danger'] {
   --tone: var(--danger);
   --tone-soft: var(--danger-soft);
 }
@@ -674,14 +765,14 @@ h2 {
 }
 
 .meter-head span,
-.relation-meter span {
+.value-meter-head span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 760;
 }
 
 .meter-head strong,
-.relation-meter strong {
+.value-meter-head strong {
   color: var(--text);
   font-size: 15px;
   font-weight: 870;
@@ -718,7 +809,8 @@ h2 {
 }
 
 .fact-block dl,
-.detail-grid {
+.detail-grid,
+.outfit-panel dl {
   display: grid;
   gap: 8px;
   margin-top: 8px;
@@ -765,6 +857,13 @@ dd {
   margin-top: 8px;
 }
 
+.rules-readout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .group-title {
   display: flex;
   align-items: center;
@@ -775,13 +874,16 @@ dd {
 }
 
 .group-title span {
-  min-width: 26px;
+  min-width: 34px;
+  padding: 1px 7px;
+  border: 1px solid var(--line-soft);
   border-radius: 999px;
   background: oklch(20% 0.012 182);
   color: var(--faint);
   font-size: 11px;
   font-weight: 850;
   text-align: center;
+  white-space: nowrap;
 }
 
 .fold-row,
@@ -858,6 +960,47 @@ dd {
   grid-column: 2;
 }
 
+.summary-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.summary-meta b,
+.summary-meta em {
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+
+.summary-meta b {
+  color: var(--text);
+  font-weight: 790;
+}
+
+.summary-meta em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.status-line {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-line i {
+  --tone: var(--safe);
+  --tone-soft: var(--safe-soft);
+  width: 36px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--tone), color-mix(in oklch, var(--tone-soft) 70%, var(--panel)));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--tone) 28%, transparent);
+}
+
 .fold-row summary::before {
   grid-column: 1;
   justify-self: end;
@@ -895,17 +1038,73 @@ dd {
   margin-bottom: 10px;
 }
 
-.relation-meter {
+.npc-profile,
+.outfit-panel {
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: color-mix(in oklch, var(--panel) 84%, oklch(34% 0.014 180));
+}
+
+.npc-profile {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.profile-copy {
+  min-width: 0;
+  padding: 9px;
+  background: color-mix(in oklch, var(--panel-raised) 86%, var(--panel));
+}
+
+.profile-copy.wide {
+  grid-column: 1 / -1;
+  background: color-mix(in oklch, var(--safe-soft) 18%, var(--panel-raised));
+}
+
+.profile-copy p,
+.outfit-panel dd {
+  margin-top: 4px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.outfit-panel {
+  padding: 9px;
+}
+
+.outfit-panel dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.outfit-panel .wide {
+  grid-column: 1 / -1;
+}
+
+.value-meter {
   --tone: var(--safe);
+  --tone-soft: var(--safe-soft);
   padding: 8px;
   border: 1px solid color-mix(in oklch, var(--tone) 28%, var(--line-soft));
   border-radius: 7px;
   background: color-mix(in oklch, var(--tone-soft) 24%, var(--panel));
 }
 
-.relation-meter strong {
-  display: block;
-  margin-top: 2px;
+.value-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.value-meter.compact {
+  padding: 7px;
+  background: color-mix(in oklch, var(--tone-soft) 18%, var(--panel));
 }
 
 .permission-row {
@@ -950,6 +1149,10 @@ dd {
   .signal-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .rules-readout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -961,6 +1164,8 @@ dd {
   .status-stack,
   .tab-list,
   .detail-grid,
+  .npc-profile,
+  .outfit-panel dl,
   .relation-grid,
   .fold-row summary,
   .npc-fold summary {

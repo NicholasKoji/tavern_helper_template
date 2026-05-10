@@ -16,6 +16,8 @@
       relevant
     - when Yang Shifa has meaningful interaction with a recurring or consequential NPC, maintain 重要NPC with visible
       facts and relationship metrics
+    - when maintaining 重要NPC, also maintain visible appearance, detailed clothing parts, and 心理话 based only on what
+      Yang Shifa can observe or reasonably infer
     - do not add every passerby to 重要NPC; only important or reusable NPCs should be recorded
     - 世界.公开常识 is dynamic current-world knowledge, not a place to restate fixed worldbook principles
     - if the user moves Yang Shifa to a new place, update variables according to that new place instead of forcing the
