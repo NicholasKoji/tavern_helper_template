@@ -4,6 +4,37 @@ export const Schema = z.object({
     当前地点: z.string(),
     公开常识版本: z.string(),
     当前规则摘要: z.string(),
+    生效规则: z
+      .record(
+        z.string().describe('规则代号'),
+        z.object({
+          规则类型: z.string(),
+          目标范围: z.string(),
+          生效方式: z.string(),
+          规则摘要: z.string(),
+          当前状态: z.string(),
+        }),
+      )
+      .transform(data => _(data).entries().takeRight(8).fromPairs().value()),
+    公开常识: z
+      .record(
+        z.string().describe('常识代号'),
+        z.object({
+          常识内容: z.string(),
+          适用范围: z.string(),
+          表现载体: z.string(),
+        }),
+      )
+      .transform(data => _(data).entries().takeRight(8).fromPairs().value()),
+    规则影响维度: z
+      .record(
+        z.string().describe('影响维度'),
+        z.object({
+          状态: z.string(),
+          说明: z.string(),
+        }),
+      )
+      .transform(data => _(data).entries().takeRight(10).fromPairs().value()),
     规则稳定度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
     最近变更: z
       .record(

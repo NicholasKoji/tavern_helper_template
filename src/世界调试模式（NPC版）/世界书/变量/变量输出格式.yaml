@@ -10,6 +10,9 @@
       - move
     - don't update field names starts with `_` as they are readonly, such as `_变量`
     - never create variables that reveal the debugger's name, location, dialogue, system panel, or relation to Yang Shifa
+    - when a rule change affects the world, maintain `世界.生效规则`, `世界.公开常识`, and `世界.规则影响维度` together when relevant
+    - `世界.公开常识` is dynamic current-world knowledge, not a place to restate fixed worldbook principles
+    - if the user moves Yang Shifa to a new place, update variables according to that new place instead of forcing the scene back to school
   format: |-
     <UpdateVariable>
     <Analysis>$(IN ENGLISH, no more than 80 words)
