@@ -69,6 +69,34 @@ export const Schema = z.object({
       .transform(data => _.pickBy(data, ({ 数量 }) => 数量 > 0)),
   }),
 
+  重要NPC: z
+    .record(
+      z.string().describe('NPC代号'),
+      z.object({
+        基本信息: z.object({
+          姓名或称呼: z.string(),
+          身份: z.string(),
+          所在地点: z.string(),
+          关系定位: z.string(),
+        }),
+        互动记录: z.object({
+          初次登场: z.string(),
+          最近互动: z.string(),
+          杨世发已知信息: z.string(),
+        }),
+        关系指标: z.object({
+          好感度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
+          信任度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
+          警觉度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
+        }),
+        当前状态: z.string(),
+        对杨世发态度: z.string(),
+        叙事备注: z.string(),
+      }),
+    )
+    .transform(data => _(data).entries().takeRight(12).fromPairs().value())
+    .prefault({}),
+
   调试者遮蔽: z.object({
     _存在事实: z.string(),
     _身份状态: z.string(),

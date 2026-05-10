@@ -7,144 +7,314 @@
         <p class="subtitle">{{ data.杨世发.身份 }} · {{ data.杨世发.年级 }}</p>
       </div>
 
-      <div class="stability-gauge" :style="{ '--value': `${stabilityScore}%` }">
-        <span>规则稳定</span>
-        <strong>{{ stabilityScore }}</strong>
-        <small>{{ stabilityLabel }}</small>
+      <div class="status-stack" aria-label="核心状态">
+        <div class="status-token">
+          <span>稳定</span>
+          <strong>{{ stabilityScore }}</strong>
+          <small>{{ stabilityLabel }}</small>
+        </div>
+        <div class="status-token">
+          <span>NPC</span>
+          <strong>{{ npcEntries.length }}</strong>
+          <small>已记录</small>
+        </div>
       </div>
     </header>
 
-    <section class="world-grid" aria-label="世界坐标">
-      <article>
+    <section class="world-strip" aria-label="世界坐标">
+      <div>
         <span>时间</span>
         <strong>{{ data.世界.当前时间 }}</strong>
-      </article>
-      <article>
+      </div>
+      <div>
         <span>地点</span>
         <strong>{{ data.世界.当前地点 }}</strong>
-      </article>
-      <article>
+      </div>
+      <div>
         <span>常识版本</span>
         <strong>{{ data.世界.公开常识版本 }}</strong>
-      </article>
-    </section>
-
-    <section class="rule-panel">
-      <div>
-        <span>当前规则</span>
-        <p>{{ data.世界.当前规则摘要 }}</p>
       </div>
-      <strong>{{ topRisk.label }} {{ topRisk.value }}</strong>
     </section>
 
-    <section class="signal-board" aria-label="状态指标">
-      <article v-for="meter in meters" :key="meter.label" class="signal-meter" :data-tone="meter.tone">
-        <div class="meter-head">
-          <span>{{ meter.label }}</span>
-          <strong>{{ meter.value }}</strong>
-        </div>
-        <div class="meter-track" :aria-label="`${meter.label} ${meter.value}`">
-          <div class="meter-fill" :style="{ width: `${meter.value}%` }"></div>
-        </div>
-        <small>{{ toneText(meter.tone) }}</small>
-      </article>
+    <section class="rule-summary" aria-label="当前规则摘要">
+      <span>当前规则</span>
+      <p>{{ data.世界.当前规则摘要 }}</p>
     </section>
 
-    <div class="primary-grid">
-      <section class="section-panel subject-panel">
-        <div class="section-title">
-          <span>杨世发</span>
-          <strong>{{ data.杨世发.年龄 }}岁</strong>
-        </div>
-        <dl class="fact-list">
-          <div>
-            <dt>当前位置</dt>
-            <dd>{{ data.杨世发.当前位置 }}</dd>
+    <nav class="tab-list" aria-label="状态栏分页">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        type="button"
+        class="tab-button"
+        :class="{ active: activeTab === tab.id }"
+        :aria-selected="activeTab === tab.id"
+        @click="activeTab = tab.id"
+      >
+        <span>{{ tab.label }}</span>
+        <small>{{ tab.count }}</small>
+      </button>
+    </nav>
+
+    <section v-if="activeTab === 'overview'" class="tab-panel" aria-label="总览">
+      <section class="signal-board" aria-label="状态指标">
+        <article v-for="meter in meters" :key="meter.label" class="signal-meter" :data-tone="meter.tone">
+          <div class="meter-head">
+            <span>{{ meter.label }}</span>
+            <strong>{{ meter.value }}</strong>
           </div>
-          <div>
-            <dt>当前目标</dt>
-            <dd>{{ data.杨世发.当前目标 }}</dd>
+          <div class="meter-track" :aria-label="`${meter.label} ${meter.value}`">
+            <div class="meter-fill" :style="{ width: `${meter.value}%` }"></div>
           </div>
-          <div>
-            <dt>认知状态</dt>
-            <dd>{{ data.杨世发.认知状态 }}</dd>
-          </div>
-        </dl>
+          <small>{{ toneText(meter.tone) }}</small>
+        </article>
       </section>
 
-      <section class="section-panel veil-panel">
-        <div class="section-title">
-          <span>调试者遮蔽</span>
-          <strong>{{ data.调试者遮蔽.遮蔽强度 }}</strong>
+      <div class="fact-cluster">
+        <div class="fact-block">
+          <h2>杨世发</h2>
+          <dl>
+            <div>
+              <dt>年龄</dt>
+              <dd>{{ data.杨世发.年龄 }} 岁</dd>
+            </div>
+            <div>
+              <dt>当前位置</dt>
+              <dd>{{ data.杨世发.当前位置 }}</dd>
+            </div>
+            <div>
+              <dt>当前目标</dt>
+              <dd>{{ data.杨世发.当前目标 }}</dd>
+            </div>
+            <div>
+              <dt>认知状态</dt>
+              <dd>{{ data.杨世发.认知状态 }}</dd>
+            </div>
+          </dl>
         </div>
-        <dl class="fact-list">
-          <div>
-            <dt>存在事实</dt>
-            <dd>{{ data.调试者遮蔽._存在事实 }}</dd>
-          </div>
-          <div>
-            <dt>身份状态</dt>
-            <dd>{{ data.调试者遮蔽._身份状态 }}</dd>
-          </div>
-        </dl>
-        <div class="permission-row">
-          <span :data-enabled="data.调试者遮蔽._交流许可"> 交流 {{ permissionText(data.调试者遮蔽._交流许可) }} </span>
-          <span :data-enabled="data.调试者遮蔽._互知许可"> 互知 {{ permissionText(data.调试者遮蔽._互知许可) }} </span>
-        </div>
-      </section>
-    </div>
 
-    <section v-if="recentChanges.length" class="section-panel">
-      <div class="section-title">
-        <span>最近变更</span>
-        <strong>{{ recentChanges.length }}</strong>
+        <div class="fact-block">
+          <h2>最高风险</h2>
+          <p class="risk-line">{{ topRisk.label }} · {{ topRisk.value }} · {{ toneText(topRisk.tone) }}</p>
+          <p class="soft-copy">{{ newestChangeText }}</p>
+        </div>
       </div>
-      <div class="change-list">
-        <article v-for="[code, change] in recentChanges" :key="code" class="change-item">
-          <header>
+    </section>
+
+    <section v-else-if="activeTab === 'rules'" class="tab-panel" aria-label="规则">
+      <AccordionGroup title="生效规则" :count="ruleEntries.length">
+        <details v-for="[name, rule] in ruleEntries" :key="name" class="fold-row">
+          <summary>
+            <strong>{{ name }}</strong>
+            <span>{{ rule.规则类型 }} · {{ rule.目标范围 }}</span>
+          </summary>
+          <dl class="detail-grid">
+            <div>
+              <dt>生效方式</dt>
+              <dd>{{ rule.生效方式 }}</dd>
+            </div>
+            <div>
+              <dt>当前状态</dt>
+              <dd>{{ rule.当前状态 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>摘要</dt>
+              <dd>{{ rule.规则摘要 }}</dd>
+            </div>
+          </dl>
+        </details>
+      </AccordionGroup>
+
+      <AccordionGroup title="公开常识" :count="commonEntries.length">
+        <details v-for="[name, common] in commonEntries" :key="name" class="fold-row">
+          <summary>
+            <strong>{{ name }}</strong>
+            <span>{{ common.适用范围 }}</span>
+          </summary>
+          <dl class="detail-grid">
+            <div class="wide">
+              <dt>常识内容</dt>
+              <dd>{{ common.常识内容 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>表现载体</dt>
+              <dd>{{ common.表现载体 }}</dd>
+            </div>
+          </dl>
+        </details>
+      </AccordionGroup>
+
+      <AccordionGroup title="影响维度" :count="dimensionEntries.length">
+        <details v-for="[name, dimension] in dimensionEntries" :key="name" class="fold-row">
+          <summary>
+            <strong>{{ name }}</strong>
+            <span>{{ dimension.状态 }}</span>
+          </summary>
+          <p class="fold-copy">{{ dimension.说明 }}</p>
+        </details>
+      </AccordionGroup>
+
+      <AccordionGroup title="最近变更" :count="recentChanges.length">
+        <details v-for="[code, change] in recentChanges" :key="code" class="fold-row">
+          <summary>
             <strong>{{ code }}</strong>
             <span>{{ change.影响范围 }}</span>
-          </header>
-          <p>{{ change.说明 }}</p>
-          <small>{{ change.杨世发观测 }}</small>
-        </article>
-      </div>
+          </summary>
+          <p class="fold-copy">{{ change.说明 }}</p>
+          <p class="fold-note">{{ change.杨世发观测 }}</p>
+        </details>
+      </AccordionGroup>
     </section>
 
-    <section v-if="inventory.length" class="section-panel">
-      <div class="section-title">
-        <span>随身物品</span>
-        <strong>{{ inventory.length }}</strong>
-      </div>
-      <div class="item-list">
-        <article v-for="[name, item] in inventory" :key="name" class="item-row">
+    <section v-else-if="activeTab === 'npcs'" class="tab-panel" aria-label="重要NPC">
+      <div v-if="!npcEntries.length" class="empty-state">尚未记录重要 NPC</div>
+      <details v-for="[code, npc] in npcEntries" :key="code" class="npc-fold">
+        <summary>
           <div>
-            <strong>{{ name }}</strong>
-            <p>{{ item.描述 }}</p>
+            <strong>{{ npc.基本信息.姓名或称呼 }}</strong>
+            <span>{{ npc.基本信息.身份 }}</span>
           </div>
-          <span>x{{ item.数量 }}</span>
-        </article>
-      </div>
+          <small>{{ npc.基本信息.关系定位 }}</small>
+        </summary>
+
+        <div class="npc-body">
+          <div class="relation-grid">
+            <RelationMeter label="好感" :value="npc.关系指标.好感度" />
+            <RelationMeter label="信任" :value="npc.关系指标.信任度" />
+            <RelationMeter label="警觉" :value="npc.关系指标.警觉度" inverse />
+          </div>
+
+          <dl class="detail-grid">
+            <div>
+              <dt>所在地点</dt>
+              <dd>{{ npc.基本信息.所在地点 }}</dd>
+            </div>
+            <div>
+              <dt>当前状态</dt>
+              <dd>{{ npc.当前状态 }}</dd>
+            </div>
+            <div>
+              <dt>对杨世发态度</dt>
+              <dd>{{ npc.对杨世发态度 }}</dd>
+            </div>
+            <div>
+              <dt>初次登场</dt>
+              <dd>{{ npc.互动记录.初次登场 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>最近互动</dt>
+              <dd>{{ npc.互动记录.最近互动 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>已知信息</dt>
+              <dd>{{ npc.互动记录.杨世发已知信息 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>叙事备注</dt>
+              <dd>{{ npc.叙事备注 }}</dd>
+            </div>
+          </dl>
+        </div>
+      </details>
     </section>
 
-    <footer class="narrative-note">
-      <span>叙事备注</span>
-      <p>{{ data.调试者遮蔽.叙事备注 }}</p>
-    </footer>
+    <section v-else-if="activeTab === 'items'" class="tab-panel" aria-label="物品">
+      <div v-if="!inventory.length" class="empty-state">暂无随身物品</div>
+      <details v-for="[name, item] in inventory" :key="name" class="fold-row">
+        <summary>
+          <strong>{{ name }}</strong>
+          <span>x{{ item.数量 }}</span>
+        </summary>
+        <p class="fold-copy">{{ item.描述 }}</p>
+      </details>
+    </section>
+
+    <section v-else class="tab-panel" aria-label="遮蔽">
+      <div class="veil-grid">
+        <div class="fact-block">
+          <h2>调试者遮蔽</h2>
+          <dl>
+            <div>
+              <dt>存在事实</dt>
+              <dd>{{ data.调试者遮蔽._存在事实 }}</dd>
+            </div>
+            <div>
+              <dt>身份状态</dt>
+              <dd>{{ data.调试者遮蔽._身份状态 }}</dd>
+            </div>
+            <div>
+              <dt>遮蔽强度</dt>
+              <dd>{{ data.调试者遮蔽.遮蔽强度 }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="fact-block">
+          <h2>许可状态</h2>
+          <div class="permission-row">
+            <span :data-enabled="data.调试者遮蔽._交流许可">交流 {{ permissionText(data.调试者遮蔽._交流许可) }}</span>
+            <span :data-enabled="data.调试者遮蔽._互知许可">互知 {{ permissionText(data.调试者遮蔽._互知许可) }}</span>
+          </div>
+          <p class="soft-copy">{{ data.调试者遮蔽.叙事备注 }}</p>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, defineComponent, h, ref } from 'vue';
 import { useDataStore } from './store';
 
 type MeterTone = 'safe' | 'warn' | 'danger';
+type TabId = 'overview' | 'rules' | 'npcs' | 'items' | 'veil';
+
+const AccordionGroup = defineComponent({
+  props: {
+    title: { type: String, required: true },
+    count: { type: Number, required: true },
+  },
+  setup(props, { slots }) {
+    return () =>
+      h('section', { class: 'accordion-group' }, [
+        h('header', { class: 'group-title' }, [h('h2', props.title), h('span', String(props.count))]),
+        props.count > 0 ? slots.default?.() : h('div', { class: 'empty-state' }, '暂无记录'),
+      ]);
+  },
+});
+
+const RelationMeter = defineComponent({
+  props: {
+    label: { type: String, required: true },
+    value: { type: Number, required: true },
+    inverse: { type: Boolean, default: false },
+  },
+  setup(props) {
+    return () => {
+      const value = normalizePercent(props.value);
+      const tone = getMeterTone(value, props.inverse);
+      return h('div', { class: 'relation-meter', 'data-tone': tone }, [
+        h('span', props.label),
+        h('strong', String(value)),
+        h('div', { class: 'meter-track', 'aria-label': `${props.label} ${value}` }, [
+          h('div', { class: 'meter-fill', style: { width: `${value}%` } }),
+        ]),
+      ]);
+    };
+  },
+});
 
 const store = useDataStore();
 const data = store.data;
+const activeTab = ref<TabId>('overview');
 
 const inventory = computed(() => Object.entries(data.杨世发.随身物品));
 const recentChanges = computed(() => Object.entries(data.世界.最近变更));
+const ruleEntries = computed(() => Object.entries(data.世界.生效规则));
+const commonEntries = computed(() => Object.entries(data.世界.公开常识));
+const dimensionEntries = computed(() => Object.entries(data.世界.规则影响维度));
+const npcEntries = computed(() => Object.entries(data.重要NPC));
+
 const stabilityScore = computed(() => normalizePercent(data.世界.规则稳定度));
 const stabilityTone = computed(() => getMeterTone(stabilityScore.value, false));
 const stabilityLabel = computed(() => toneText(stabilityTone.value));
@@ -167,9 +337,26 @@ const meters = computed(() =>
 );
 
 const topRisk = computed(() => {
-  const riskMeters = meters.value.filter(meter => meter.label !== '规则稳定度');
+  const riskMeters = meters.value.filter(meter => meter.label !== '规则稳定度' && meter.label !== '遮蔽强度');
   return riskMeters.reduce((current, meter) => (meter.value > current.value ? meter : current), riskMeters[0]);
 });
+
+const newestChangeText = computed(() => {
+  const latest = recentChanges.value.at(-1);
+  return latest ? `${latest[0]}：${latest[1].杨世发观测}` : '暂无近期变更记录';
+});
+
+const tabs = computed<Array<{ id: TabId; label: string; count: number | string }>>(() => [
+  { id: 'overview', label: '总览', count: stabilityScore.value },
+  {
+    id: 'rules',
+    label: '规则',
+    count: ruleEntries.value.length + commonEntries.value.length + dimensionEntries.value.length,
+  },
+  { id: 'npcs', label: 'NPC', count: npcEntries.value.length },
+  { id: 'items', label: '物品', count: inventory.value.length },
+  { id: 'veil', label: '遮蔽', count: data.调试者遮蔽.遮蔽强度 },
+]);
 
 function normalizePercent(value: number): number {
   if (!Number.isFinite(value)) {
@@ -214,210 +401,267 @@ function permissionText(value: boolean): string {
 
 <style scoped>
 .debug-console {
-  --surface: oklch(23% 0.018 168);
-  --panel: oklch(28% 0.016 170);
-  --panel-raised: oklch(34% 0.014 165);
-  --line: oklch(46% 0.025 165);
-  --line-soft: oklch(38% 0.018 165);
-  --text: oklch(92% 0.012 115);
-  --muted: oklch(74% 0.022 150);
-  --faint: oklch(62% 0.02 150);
-  --safe: oklch(71% 0.14 157);
-  --safe-soft: oklch(37% 0.055 157);
-  --warn: oklch(76% 0.14 78);
-  --warn-soft: oklch(40% 0.06 78);
-  --danger: oklch(65% 0.16 28);
-  --danger-soft: oklch(38% 0.07 28);
+  --surface: oklch(22% 0.014 182);
+  --panel: oklch(27% 0.014 182);
+  --panel-raised: oklch(31% 0.016 178);
+  --line: oklch(45% 0.024 176);
+  --line-soft: oklch(38% 0.018 176);
+  --text: oklch(92% 0.01 124);
+  --muted: oklch(74% 0.02 150);
+  --faint: oklch(61% 0.018 155);
+  --safe: oklch(72% 0.13 155);
+  --safe-soft: oklch(36% 0.048 155);
+  --warn: oklch(78% 0.13 82);
+  --warn-soft: oklch(39% 0.052 82);
+  --danger: oklch(65% 0.15 30);
+  --danger-soft: oklch(37% 0.06 30);
   width: auto;
-  max-width: 780px;
+  max-width: 820px;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 12px;
+  padding: 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(180deg, oklch(27% 0.02 168), var(--surface) 42%), var(--surface);
+  background:
+    linear-gradient(180deg, oklch(26% 0.018 182), transparent 220px),
+    repeating-linear-gradient(90deg, transparent 0 18px, oklch(30% 0.012 182 / 0.2) 18px 19px), var(--surface);
   color: var(--text);
   font-family:
-    Inter,
-    'Noto Sans SC',
-    'Microsoft YaHei UI',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    system-ui,
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'Microsoft YaHei UI', system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.45;
 }
 
 .console-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 112px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(142px, 0.34fr);
+  gap: 8px;
   align-items: stretch;
 }
 
-.title-block {
+.title-block,
+.status-token,
+.world-strip,
+.rule-summary,
+.tab-list,
+.tab-panel {
   min-width: 0;
-  padding: 13px 14px;
+  box-sizing: border-box;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  background: oklch(25% 0.017 169);
+  background: color-mix(in oklch, var(--panel) 92%, oklch(35% 0.018 182));
+}
+
+.title-block {
+  padding: 12px 13px;
 }
 
 .eyebrow,
-.world-grid span,
-.rule-panel span,
-.signal-meter small,
+.world-strip span,
+.rule-summary span,
 dt,
-.narrative-note span {
+.signal-meter small,
+.status-token span,
+.status-token small {
   color: var(--faint);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 760;
 }
 
 .eyebrow {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   letter-spacing: 0;
 }
 
-h1 {
+h1,
+h2,
+p,
+dl {
   margin: 0;
+}
+
+h1 {
   color: var(--text);
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 850;
   line-height: 1.15;
 }
 
+h2 {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
 .subtitle {
-  margin: 5px 0 0;
+  margin-top: 5px;
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-.stability-gauge {
-  --tone: var(--safe);
+.status-stack {
   display: grid;
-  min-height: 96px;
-  place-items: center;
-  align-content: center;
-  box-sizing: border-box;
-  padding: 10px;
-  border: 1px solid color-mix(in oklch, var(--tone) 48%, var(--line));
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at center, var(--panel) 0 49%, transparent 50%),
-    conic-gradient(var(--tone) var(--value), oklch(33% 0.014 165) 0);
-}
-
-.debug-console[data-stability='warn'] .stability-gauge {
-  --tone: var(--warn);
-}
-
-.debug-console[data-stability='danger'] .stability-gauge {
-  --tone: var(--danger);
-}
-
-.stability-gauge span,
-.stability-gauge small {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.stability-gauge strong {
-  margin-top: 2px;
-  color: var(--text);
-  font-size: 28px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.world-grid,
-.signal-board,
-.primary-grid {
-  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.status-token {
+  display: grid;
+  align-content: center;
+  min-height: 78px;
+  padding: 9px;
+}
+
+.status-token strong {
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.status-token:first-child {
+  border-color: color-mix(in oklch, var(--safe) 34%, var(--line-soft));
+  background: color-mix(in oklch, var(--safe-soft) 26%, var(--panel));
+}
+
+.debug-console[data-stability='warn'] .status-token:first-child {
+  border-color: color-mix(in oklch, var(--warn) 38%, var(--line-soft));
+  background: color-mix(in oklch, var(--warn-soft) 30%, var(--panel));
+}
+
+.debug-console[data-stability='danger'] .status-token:first-child {
+  border-color: color-mix(in oklch, var(--danger) 38%, var(--line-soft));
+  background: color-mix(in oklch, var(--danger-soft) 30%, var(--panel));
+}
+
+.world-strip {
+  display: grid;
+  grid-template-columns: 0.7fr 1.25fr 1.05fr;
+  gap: 1px;
   margin-top: 8px;
+  overflow: hidden;
+  background: var(--line-soft);
 }
 
-.world-grid {
-  grid-template-columns: 0.72fr 1.18fr 1.1fr;
-}
-
-.world-grid article,
-.signal-meter,
-.section-panel,
-.rule-panel,
-.narrative-note {
+.world-strip div {
   min-width: 0;
-  box-sizing: border-box;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
+  padding: 8px 10px;
   background: var(--panel);
 }
 
-.world-grid article {
-  padding: 9px 10px;
-}
-
-.world-grid strong {
+.world-strip strong {
   display: block;
   margin-top: 3px;
   color: var(--text);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 760;
   overflow-wrap: anywhere;
 }
 
-.rule-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+.rule-summary {
   margin-top: 8px;
-  padding: 11px 12px;
-  background: color-mix(in oklch, var(--safe-soft) 36%, var(--panel));
+  padding: 10px 12px;
+  background: color-mix(in oklch, var(--safe-soft) 22%, var(--panel));
 }
 
-.rule-panel p {
-  margin: 4px 0 0;
+.rule-summary p {
+  margin-top: 3px;
   color: var(--text);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 820;
   overflow-wrap: anywhere;
 }
 
-.rule-panel > strong {
-  align-self: stretch;
+.tab-list {
   display: grid;
-  min-width: 76px;
-  place-items: center;
-  padding: 0 10px;
-  border: 1px solid color-mix(in oklch, var(--warn) 45%, var(--line-soft));
-  border-radius: 7px;
-  color: var(--warn);
-  font-size: 12px;
-  white-space: nowrap;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px;
+}
+
+.tab-button {
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tab-button:hover,
+.tab-button:focus-visible {
+  border-color: var(--line);
+  outline: none;
+  background: var(--panel-raised);
+}
+
+.tab-button.active {
+  border-color: color-mix(in oklch, var(--safe) 36%, var(--line));
+  background: color-mix(in oklch, var(--safe-soft) 34%, var(--panel));
+  color: var(--text);
+}
+
+.tab-button small {
+  min-width: 22px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: oklch(20% 0.012 182);
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.tab-panel {
+  margin-top: 8px;
+  padding: 10px;
+}
+
+.signal-board,
+.fact-cluster,
+.veil-grid {
+  display: grid;
+  gap: 8px;
 }
 
 .signal-board {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.signal-meter,
+.fact-block,
+.accordion-group,
+.fold-row,
+.npc-fold {
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--panel-raised);
+}
+
 .signal-meter {
   --tone: var(--safe);
   --tone-soft: var(--safe-soft);
-  padding: 9px;
-  background: color-mix(in oklch, var(--tone-soft) 28%, var(--panel));
+  padding: 8px;
 }
 
-.signal-meter[data-tone='warn'] {
+.signal-meter[data-tone='warn'],
+.relation-meter[data-tone='warn'] {
   --tone: var(--warn);
   --tone-soft: var(--warn-soft);
 }
 
-.signal-meter[data-tone='danger'] {
+.signal-meter[data-tone='danger'],
+.relation-meter[data-tone='danger'] {
   --tone: var(--danger);
   --tone-soft: var(--danger-soft);
 }
@@ -429,25 +673,26 @@ h1 {
   gap: 6px;
 }
 
-.meter-head span {
+.meter-head span,
+.relation-meter span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
-  overflow-wrap: anywhere;
+  font-weight: 760;
 }
 
-.meter-head strong {
+.meter-head strong,
+.relation-meter strong {
   color: var(--text);
   font-size: 15px;
-  font-weight: 850;
+  font-weight: 870;
 }
 
 .meter-track {
   height: 6px;
-  margin-top: 8px;
+  margin-top: 7px;
   overflow: hidden;
   border-radius: 999px;
-  background: oklch(20% 0.01 165);
+  background: oklch(19% 0.01 182);
 }
 
 .meter-fill {
@@ -462,51 +707,29 @@ h1 {
   color: var(--tone);
 }
 
-.primary-grid {
-  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
-}
-
-.section-panel,
-.narrative-note {
+.fact-cluster,
+.veil-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
   margin-top: 8px;
-  padding: 11px 12px;
 }
 
-.primary-grid .section-panel {
-  margin-top: 0;
+.fact-block {
+  padding: 10px;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.section-title span {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.section-title strong {
-  color: var(--safe);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.fact-list {
+.fact-block dl,
+.detail-grid {
   display: grid;
   gap: 8px;
-  margin: 9px 0 0;
+  margin-top: 8px;
 }
 
-.fact-list div,
-.item-row,
-.change-item {
-  min-width: 0;
+.detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-grid .wide {
+  grid-column: 1 / -1;
 }
 
 dt {
@@ -519,11 +742,177 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.risk-line {
+  margin-top: 8px;
+  color: var(--warn);
+  font-weight: 860;
+}
+
+.soft-copy,
+.fold-copy,
+.fold-note {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.soft-copy {
+  margin-top: 8px;
+}
+
+.accordion-group + .accordion-group,
+.fold-row + .fold-row,
+.npc-fold + .npc-fold {
+  margin-top: 8px;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.group-title span {
+  min-width: 26px;
+  border-radius: 999px;
+  background: oklch(20% 0.012 182);
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.fold-row,
+.npc-fold {
+  background: oklch(29% 0.014 180);
+}
+
+.accordion-group .fold-row {
+  margin: 8px;
+}
+
+.fold-row summary,
+.npc-fold summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.npc-fold summary {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+}
+
+.fold-row summary::-webkit-details-marker,
+.npc-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-row summary::before,
+.npc-fold summary::before {
+  content: '+';
+  width: 18px;
+  height: 18px;
+  grid-row: 1;
+  align-self: center;
+  border-radius: 999px;
+  background: oklch(20% 0.012 182);
+  color: var(--safe);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+}
+
+.fold-row[open] summary::before,
+.npc-fold[open] summary::before {
+  content: '−';
+}
+
+.fold-row summary strong,
+.npc-fold summary strong {
+  color: var(--text);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.fold-row summary span,
+.npc-fold summary span,
+.npc-fold summary small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 720;
+  overflow-wrap: anywhere;
+}
+
+.fold-row summary > strong {
+  grid-column: 1;
+}
+
+.fold-row summary > span {
+  grid-column: 2;
+}
+
+.fold-row summary::before {
+  grid-column: 1;
+  justify-self: end;
+}
+
+.fold-row summary > strong {
+  padding-right: 24px;
+}
+
+.npc-fold summary::before {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.npc-fold summary small {
+  padding-right: 24px;
+}
+
+.fold-row .detail-grid,
+.npc-body,
+.fold-copy,
+.fold-note {
+  padding: 0 10px 10px;
+}
+
+.fold-note {
+  margin-top: -4px;
+  color: var(--faint);
+}
+
+.relation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.relation-meter {
+  --tone: var(--safe);
+  padding: 8px;
+  border: 1px solid color-mix(in oklch, var(--tone) 28%, var(--line-soft));
+  border-radius: 7px;
+  background: color-mix(in oklch, var(--tone-soft) 24%, var(--panel));
+}
+
+.relation-meter strong {
+  display: block;
+  margin-top: 2px;
+}
+
 .permission-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .permission-row span {
@@ -533,7 +922,7 @@ dd {
   background: color-mix(in oklch, var(--danger-soft) 28%, var(--panel));
   color: var(--danger);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 820;
 }
 
 .permission-row span[data-enabled='true'] {
@@ -542,104 +931,20 @@ dd {
   color: var(--safe);
 }
 
-.change-list,
-.item-list {
-  display: grid;
-  gap: 7px;
-  margin-top: 9px;
-}
-
-.change-item,
-.item-row {
-  padding: 9px;
-  border: 1px solid var(--line-soft);
+.empty-state {
+  padding: 10px;
+  border: 1px dashed var(--line-soft);
   border-radius: 7px;
-  background: var(--panel-raised);
-}
-
-.change-item header {
-  display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
-  gap: 8px;
-}
-
-.change-item strong,
-.item-row strong {
-  color: var(--text);
-  font-weight: 850;
-  overflow-wrap: anywhere;
-}
-
-.change-item header span {
-  color: var(--warn);
-  font-size: 12px;
-  font-weight: 800;
-  overflow-wrap: anywhere;
-}
-
-.change-item p,
-.item-row p,
-.narrative-note p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-
-.change-item small {
-  display: block;
-  margin-top: 5px;
   color: var(--faint);
-  overflow-wrap: anywhere;
-}
-
-.item-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
-}
-
-.item-row > span {
-  min-width: 34px;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--warn-soft) 34%, var(--panel));
-  color: var(--warn);
-  font-weight: 900;
   text-align: center;
-}
-
-.narrative-note {
-  background: oklch(25% 0.015 165);
 }
 
 @media (max-width: 700px) {
   .console-header,
-  .world-grid,
-  .primary-grid {
+  .world-strip,
+  .fact-cluster,
+  .veil-grid {
     grid-template-columns: 1fr;
-  }
-
-  .stability-gauge {
-    display: flex;
-    min-height: auto;
-    justify-content: space-between;
-    gap: 10px;
-    background: var(--panel);
-    background: color-mix(in oklch, var(--safe-soft) 26%, var(--panel));
-  }
-
-  .debug-console[data-stability='warn'] .stability-gauge {
-    background: color-mix(in oklch, var(--warn-soft) 28%, var(--panel));
-  }
-
-  .debug-console[data-stability='danger'] .stability-gauge {
-    background: color-mix(in oklch, var(--danger-soft) 28%, var(--panel));
-  }
-
-  .stability-gauge strong {
-    margin-left: auto;
-    font-size: 24px;
   }
 
   .signal-board {
@@ -647,21 +952,38 @@ dd {
   }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 520px) {
   .debug-console {
-    padding: 9px;
+    padding: 8px;
     border-radius: 7px;
   }
 
-  .rule-panel,
-  .change-item header,
-  .item-row,
-  .signal-board {
+  .status-stack,
+  .tab-list,
+  .detail-grid,
+  .relation-grid,
+  .fold-row summary,
+  .npc-fold summary {
     grid-template-columns: 1fr;
   }
 
-  .rule-panel > strong {
-    min-height: 32px;
+  .fold-row summary::before,
+  .npc-fold summary::before {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .fold-row summary > strong,
+  .npc-fold summary small {
+    padding-right: 24px;
+  }
+
+  .fold-row summary > span {
+    grid-column: 1;
+  }
+
+  .tab-button {
+    justify-content: space-between;
   }
 }
 </style>
