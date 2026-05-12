@@ -30,15 +30,6 @@
         <span>地点</span>
         <strong>{{ data.世界.当前地点 }}</strong>
       </div>
-      <div>
-        <span>常识版本</span>
-        <strong>{{ data.世界.公开常识版本 }}</strong>
-      </div>
-    </section>
-
-    <section class="rule-summary" aria-label="当前规则摘要">
-      <span>当前规则</span>
-      <p>{{ data.世界.当前规则摘要 }}</p>
     </section>
 
     <nav class="tab-list" aria-label="状态栏分页">
@@ -265,20 +256,12 @@
               <dd>{{ npc.对杨世发态度 }}</dd>
             </div>
             <div>
-              <dt>初次登场</dt>
-              <dd>{{ npc.互动记录.初次登场 }}</dd>
+              <dt>当前动作</dt>
+              <dd>{{ npc.互动记录.当前动作 }}</dd>
             </div>
             <div class="wide">
               <dt>最近互动</dt>
               <dd>{{ npc.互动记录.最近互动 }}</dd>
-            </div>
-            <div class="wide">
-              <dt>已知信息</dt>
-              <dd>{{ npc.互动记录.杨世发已知信息 }}</dd>
-            </div>
-            <div class="wide">
-              <dt>叙事备注</dt>
-              <dd>{{ npc.叙事备注 }}</dd>
             </div>
           </dl>
         </div>
@@ -524,7 +507,6 @@ function permissionText(value: boolean): string {
 .title-block,
 .status-token,
 .world-strip,
-.rule-summary,
 .tab-list,
 .tab-panel {
   min-width: 0;
@@ -540,7 +522,6 @@ function permissionText(value: boolean): string {
 
 .eyebrow,
 .world-strip span,
-.rule-summary span,
 dt,
 .signal-meter small,
 .status-token span,
@@ -625,7 +606,7 @@ h3 {
 
 .world-strip {
   display: grid;
-  grid-template-columns: 0.7fr 1.25fr 1.05fr;
+  grid-template-columns: 0.72fr 1.28fr;
   gap: 1px;
   margin-top: 8px;
   overflow: hidden;
@@ -644,20 +625,6 @@ h3 {
   color: var(--text);
   font-size: 12px;
   font-weight: 760;
-  overflow-wrap: anywhere;
-}
-
-.rule-summary {
-  margin-top: 8px;
-  padding: 10px 12px;
-  background: color-mix(in oklch, var(--safe-soft) 22%, var(--panel));
-}
-
-.rule-summary p {
-  margin-top: 3px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 820;
   overflow-wrap: anywhere;
 }
 

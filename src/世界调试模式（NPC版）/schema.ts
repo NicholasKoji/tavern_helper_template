@@ -2,8 +2,6 @@ export const Schema = z.object({
   世界: z.object({
     当前时间: z.string(),
     当前地点: z.string(),
-    公开常识版本: z.string(),
-    当前规则摘要: z.string(),
     生效规则: z
       .record(
         z.string().describe('规则代号'),
@@ -106,11 +104,10 @@ export const Schema = z.object({
               随身物: '未记录',
               状态细节: '未记录',
             },
-          }),
+        }),
         互动记录: z.object({
-          初次登场: z.string(),
           最近互动: z.string(),
-          杨世发已知信息: z.string(),
+          当前动作: z.string(),
         }),
         关系指标: z.object({
           好感度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
@@ -120,10 +117,9 @@ export const Schema = z.object({
         当前状态: z.string(),
         对杨世发态度: z.string(),
         心理话: z.string().prefault('暂无可由杨世发合理推测的心理话'),
-        叙事备注: z.string(),
       }),
     )
-    .transform(data => _(data).entries().takeRight(12).fromPairs().value())
+    .transform(data => _(data).entries().takeRight(8).fromPairs().value())
     .prefault({}),
 
   调试者遮蔽: z.object({
