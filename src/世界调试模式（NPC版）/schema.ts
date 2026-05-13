@@ -73,15 +73,32 @@ export const Schema = z.object({
       z.object({
         基本信息: z.object({
           姓名或称呼: z.string(),
-          性别: z.string().prefault('未记录'),
+          性别: z.string().prefault('女'),
+          年龄: z.coerce.number().transform(value => _.clamp(value, 0, 120)),
           身份: z.string(),
           所在地点: z.string(),
           关系定位: z.string(),
         }),
+        人物档案: z
+          .object({
+            关系: z.string().prefault('未记录'),
+            性格: z.string().prefault('未记录'),
+            背景: z.string().prefault('未记录'),
+          })
+          .prefault({}),
         外观: z
           .object({
             容貌: z.string(),
             身材: z.string(),
+            身体特征: z
+              .object({
+                身高: z.string().prefault('玩家透明档案：按女性角色设定生成'),
+                罩杯: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+                胸部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+                臀部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+                腿部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+              })
+              .prefault({}),
             着装: z.object({
               发型: z.string(),
               上装: z.string(),
@@ -95,6 +112,13 @@ export const Schema = z.object({
           .prefault({
             容貌: '未记录',
             身材: '未记录',
+            身体特征: {
+              身高: '玩家透明档案：按女性角色设定生成',
+              罩杯: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
+              胸部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
+              臀部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
+              腿部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
+            },
             着装: {
               发型: '未记录',
               上装: '未记录',
@@ -114,12 +138,28 @@ export const Schema = z.object({
           信任度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
           警觉度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
         }),
+        亲密档案: z
+          .object({
+            小穴: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+            肛门: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+            怀孕情况: z.string().prefault('玩家透明档案：按女性角色设定生成'),
+            特殊性技: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+            性癖喜好: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+          })
+          .prefault({}),
         当前状态: z.string(),
         对杨世发态度: z.string(),
         心理话: z.string().prefault('暂无可由杨世发合理推测的心理话'),
       }),
     )
-    .transform(data => _(data).entries().takeRight(8).fromPairs().value())
+    .transform(data =>
+      _(data)
+        .entries()
+        .filter(([, npc]) => ['女', '女性'].includes(npc.基本信息.性别))
+        .takeRight(8)
+        .fromPairs()
+        .value(),
+    )
     .prefault({}),
 
   调试者遮蔽: z.object({

@@ -181,7 +181,7 @@
         <summary>
           <div>
             <strong>{{ npc.基本信息.姓名或称呼 }}</strong>
-            <span>{{ npc.基本信息.性别 }} · {{ npc.基本信息.身份 }}</span>
+            <span>{{ npc.基本信息.性别 }} · {{ npc.基本信息.年龄 }}岁 · {{ npc.基本信息.身份 }}</span>
           </div>
           <small>{{ npc.基本信息.关系定位 }}</small>
         </summary>
@@ -201,6 +201,14 @@
             <div class="profile-copy">
               <h3>身材</h3>
               <p>{{ npc.外观.身材 }}</p>
+            </div>
+            <div class="profile-copy wide">
+              <h3>身体特征</h3>
+              <p>
+                身高：{{ npc.外观.身体特征.身高 }}；罩杯：{{ npc.外观.身体特征.罩杯 }}；胸部：{{
+                  npc.外观.身体特征.胸部
+                }}；臀部：{{ npc.外观.身体特征.臀部 }}；腿部：{{ npc.外观.身体特征.腿部 }}
+              </p>
             </div>
             <div class="profile-copy wide">
               <h3>心理话</h3>
@@ -244,6 +252,18 @@
 
           <dl class="detail-grid">
             <div>
+              <dt>关系</dt>
+              <dd>{{ npc.人物档案.关系 }}</dd>
+            </div>
+            <div>
+              <dt>性格</dt>
+              <dd>{{ npc.人物档案.性格 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>背景</dt>
+              <dd>{{ npc.人物档案.背景 }}</dd>
+            </div>
+            <div>
               <dt>所在地点</dt>
               <dd>{{ npc.基本信息.所在地点 }}</dd>
             </div>
@@ -262,6 +282,26 @@
             <div class="wide">
               <dt>最近互动</dt>
               <dd>{{ npc.互动记录.最近互动 }}</dd>
+            </div>
+            <div>
+              <dt>小穴</dt>
+              <dd>{{ npc.亲密档案.小穴 }}</dd>
+            </div>
+            <div>
+              <dt>肛门</dt>
+              <dd>{{ npc.亲密档案.肛门 }}</dd>
+            </div>
+            <div>
+              <dt>怀孕情况</dt>
+              <dd>{{ npc.亲密档案.怀孕情况 }}</dd>
+            </div>
+            <div>
+              <dt>特殊性技</dt>
+              <dd>{{ npc.亲密档案.特殊性技 }}</dd>
+            </div>
+            <div class="wide">
+              <dt>性癖喜好</dt>
+              <dd>{{ npc.亲密档案.性癖喜好 }}</dd>
             </div>
           </dl>
         </div>
