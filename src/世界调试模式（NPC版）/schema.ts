@@ -47,7 +47,7 @@ export const Schema = z.object({
 
   重要NPC: z
     .record(
-      z.string().describe('NPC代号'),
+      z.string().describe('姓名'),
       z.object({
         基本信息: z.object({
           姓名或称呼: z.string(),
@@ -70,11 +70,11 @@ export const Schema = z.object({
             身材: z.string(),
             身体特征: z
               .object({
-                身高: z.string().prefault('玩家透明档案：按女性角色设定生成'),
-                罩杯: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-                胸部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-                臀部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-                腿部: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+                身高: z.string().prefault('未记录'),
+                罩杯: z.string().prefault('未记录'),
+                胸部: z.string().prefault('未记录'),
+                臀部: z.string().prefault('未记录'),
+                腿部: z.string().prefault('未记录'),
               })
               .prefault({}),
             着装: z.object({
@@ -91,11 +91,11 @@ export const Schema = z.object({
             容貌: '未记录',
             身材: '未记录',
             身体特征: {
-              身高: '玩家透明档案：按女性角色设定生成',
-              罩杯: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
-              胸部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
-              臀部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
-              腿部: '玩家透明档案：按女性角色设定生成，保持非露骨表达',
+              身高: '未记录',
+              罩杯: '未记录',
+              胸部: '未记录',
+              臀部: '未记录',
+              腿部: '未记录',
             },
             着装: {
               发型: '未记录',
@@ -118,11 +118,12 @@ export const Schema = z.object({
         }),
         亲密档案: z
           .object({
-            小穴: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-            肛门: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-            怀孕情况: z.string().prefault('玩家透明档案：按女性角色设定生成'),
-            特殊性技: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
-            性癖喜好: z.string().prefault('玩家透明档案：按女性角色设定生成，保持非露骨表达'),
+            小穴: z.string().prefault('未记录'),
+            肛门: z.string().prefault('未记录'),
+            嘴部: z.string().prefault('未记录'),
+            怀孕情况: z.string().prefault('未记录'),
+            特殊性技: z.string().prefault('未记录'),
+            性癖喜好: z.string().prefault('未记录'),
           })
           .prefault({}),
         当前状态: z.string(),
