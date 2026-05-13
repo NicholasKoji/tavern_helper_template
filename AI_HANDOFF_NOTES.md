@@ -86,6 +86,33 @@ pnpm build
 
 - 状态栏真实页面依赖 SillyTavern / Tavern Helper / MVU 全局对象。
 - 直接打开 `dist/.../index.html` 可能停在等待数据状态，不能仅凭空白判断坏了。
+- 使用 Codex Browser 做状态栏验证时，优先打开本地 `localhost` mock 页面，不要用 `data:` URL；Browser 安全策略可能会拦截 `data:text/html...`，继续绕会浪费时间。
+- mock 页面可以由临时本地 HTTP 服务在内存中提供，不必写入仓库文件；验证完成后关闭服务，避免留下后台端口。
+- mock 页面推荐读取：
+  - `dist/世界调试模式（NPC版）/界面/状态栏/index.html`
+  - `src/世界调试模式（NPC版）/世界书/变量/initvar.yaml`
+- mock 页面应先加载 Vue、jQuery、lodash、zod，再嵌入构建后的状态栏 HTML；至少注入：
+
+```js
+window.z = zod;
+window.createApp = window.Vue.createApp;
+window.getCurrentMessageId = () => 0;
+window.waitGlobalInitialized = async () => true;
+window.__mockVariables = { stat_data };
+window.getVariables = () => window.__mockVariables;
+window.updateVariablesWith = updater => {
+  updater(window.__mockVariables);
+};
+window.errorCatched = fn => (...args) => {
+  try {
+    return fn(...args);
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+```
+
 - 预览时应构造 mock 页面，至少提供：
   - `window.Vue`
   - `window.createApp`
@@ -109,6 +136,23 @@ pnpm build
   bodyClientWidth: document.body.clientWidth,
 })
 ```
+
+- 更精确的状态栏自身溢出检查应额外读取：
+
+```js
+const root = document.querySelector('.debug-console');
+({
+  consoleScrollWidth: root?.scrollWidth,
+  consoleClientWidth: root?.clientWidth,
+})
+```
+
+- 验证时至少检查：
+  - 首屏能正常渲染，不停留在等待数据或空白。
+  - 浏览器控制台没有 `error` / `warn`。
+  - 能切换到 `NPC` 页，并展开至少一个 NPC。
+  - 新增字段能在 DOM 中出现。
+  - 桌面宽度和约 390px 窄容器下，`.debug-console` 的 `scrollWidth` 不大于 `clientWidth`。
 
 - 旧版曾处理过的 CSS 要点：
   - `.debug-console` 避免在外部 padding 环境里使用会制造横向溢出的 `width: 100%`
