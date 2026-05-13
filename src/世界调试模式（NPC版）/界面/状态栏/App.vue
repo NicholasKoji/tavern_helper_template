@@ -1,5 +1,5 @@
 <template>
-  <section class="debug-console" :data-stability="stabilityTone">
+  <section class="debug-console">
     <header class="console-header">
       <div class="title-block">
         <p class="eyebrow">NPC WORLD DEBUG</p>
@@ -9,9 +9,9 @@
 
       <div class="status-stack" aria-label="核心状态">
         <div class="status-token">
-          <span>稳定</span>
-          <strong>{{ stabilityScore }}%</strong>
-          <small>{{ stabilityLabel }}</small>
+          <span>规则</span>
+          <strong>{{ ruleEntries.length }}</strong>
+          <small>生效中</small>
         </div>
         <div class="status-token">
           <span>NPC</span>
@@ -94,7 +94,6 @@
 
     <section v-else-if="activeTab === 'rules'" class="tab-panel" aria-label="规则">
       <section class="rules-readout" aria-label="规则核心读数">
-        <ValueMeter label="规则稳定度" :value="data.世界.规则稳定度" />
         <ValueMeter label="遮蔽强度" :value="data.调试者遮蔽.遮蔽强度" />
         <ValueMeter label="认知压力" :value="data.杨世发.异常认知压力" inverse />
       </section>
@@ -121,56 +120,24 @@
               <dt>摘要</dt>
               <dd>{{ rule.规则摘要 }}</dd>
             </div>
-          </dl>
-        </details>
-      </AccordionGroup>
-
-      <AccordionGroup title="公开常识" :count="commonEntries.length">
-        <details v-for="[name, common] in commonEntries" :key="name" class="fold-row">
-          <summary>
-            <strong>{{ name }}</strong>
-            <span class="summary-meta">
-              <b>适用范围</b>
-              <em>{{ common.适用范围 }}</em>
-            </span>
-          </summary>
-          <dl class="detail-grid">
             <div class="wide">
-              <dt>常识内容</dt>
-              <dd>{{ common.常识内容 }}</dd>
+              <dt>社会表现</dt>
+              <dd>{{ rule.社会表现 }}</dd>
             </div>
             <div class="wide">
-              <dt>表现载体</dt>
-              <dd>{{ common.表现载体 }}</dd>
+              <dt>影响维度</dt>
+              <dd class="dimension-list">
+                <span v-for="[dimension, note] in Object.entries(rule.影响维度)" :key="dimension">
+                  <b>{{ dimension }}</b>
+                  {{ note }}
+                </span>
+              </dd>
+            </div>
+            <div class="wide">
+              <dt>杨世发观测</dt>
+              <dd>{{ rule.杨世发观测 }}</dd>
             </div>
           </dl>
-        </details>
-      </AccordionGroup>
-
-      <AccordionGroup title="影响维度" :count="dimensionEntries.length">
-        <details v-for="[name, dimension] in dimensionEntries" :key="name" class="fold-row">
-          <summary>
-            <strong>{{ name }}</strong>
-            <span class="status-line">
-              <i :data-tone="dimensionTone(dimension.状态)"></i>
-              {{ dimension.状态 }}
-            </span>
-          </summary>
-          <p class="fold-copy">{{ dimension.说明 }}</p>
-        </details>
-      </AccordionGroup>
-
-      <AccordionGroup title="最近变更" :count="recentChanges.length">
-        <details v-for="[code, change] in recentChanges" :key="code" class="fold-row">
-          <summary>
-            <strong>{{ code }}</strong>
-            <span class="summary-meta">
-              <b>影响范围</b>
-              <em>{{ change.影响范围 }}</em>
-            </span>
-          </summary>
-          <p class="fold-copy">{{ change.说明 }}</p>
-          <p class="fold-note">{{ change.杨世发观测 }}</p>
         </details>
       </AccordionGroup>
     </section>
@@ -404,19 +371,11 @@ const data = store.data;
 const activeTab = ref<TabId>('overview');
 
 const inventory = computed(() => Object.entries(data.杨世发.随身物品));
-const recentChanges = computed(() => Object.entries(data.世界.最近变更));
 const ruleEntries = computed(() => Object.entries(data.世界.生效规则));
-const commonEntries = computed(() => Object.entries(data.世界.公开常识));
-const dimensionEntries = computed(() => Object.entries(data.世界.规则影响维度));
 const npcEntries = computed(() => Object.entries(data.重要NPC));
-
-const stabilityScore = computed(() => normalizePercent(data.世界.规则稳定度));
-const stabilityTone = computed(() => getMeterTone(stabilityScore.value, false));
-const stabilityLabel = computed(() => toneText(stabilityTone.value));
 
 const meters = computed(() =>
   [
-    { label: '规则稳定度', value: data.世界.规则稳定度, inverse: false },
     { label: '认知压力', value: data.杨世发.异常认知压力, inverse: true },
     { label: '异常怀疑', value: data.杨世发.对世界异常的怀疑, inverse: true },
     { label: '社会伪装', value: data.杨世发.社会伪装程度, inverse: false },
@@ -432,21 +391,21 @@ const meters = computed(() =>
 );
 
 const topRisk = computed(() => {
-  const riskMeters = meters.value.filter(meter => meter.label !== '规则稳定度' && meter.label !== '遮蔽强度');
+  const riskMeters = meters.value.filter(meter => meter.label !== '遮蔽强度');
   return riskMeters.reduce((current, meter) => (meter.value > current.value ? meter : current), riskMeters[0]);
 });
 
 const newestChangeText = computed(() => {
-  const latest = recentChanges.value.at(-1);
-  return latest ? `${latest[0]}：${latest[1].杨世发观测}` : '暂无近期变更记录';
+  const latest = ruleEntries.value.at(-1);
+  return latest ? `${latest[0]}：${latest[1].杨世发观测}` : '暂无生效规则观测';
 });
 
 const tabs = computed<Array<{ id: TabId; label: string; count: number | string }>>(() => [
-  { id: 'overview', label: '总览', count: `${stabilityScore.value}%` },
+  { id: 'overview', label: '总览', count: `${ruleEntries.value.length}规` },
   {
     id: 'rules',
     label: '规则',
-    count: `${ruleEntries.value.length + commonEntries.value.length + dimensionEntries.value.length}项`,
+    count: `${ruleEntries.value.length}条`,
   },
   { id: 'npcs', label: 'NPC', count: `${npcEntries.value.length}人` },
   { id: 'items', label: '物品', count: `${inventory.value.length}件` },
@@ -487,16 +446,6 @@ function toneText(tone: MeterTone): string {
     return '警戒';
   }
   return '稳定';
-}
-
-function dimensionTone(status: string): MeterTone {
-  if (/未同步|冲突|残缺|异常|失控|风险/.test(status)) {
-    return 'danger';
-  }
-  if (/局部|待定|波动|补全|改写/.test(status)) {
-    return 'warn';
-  }
-  return 'safe';
 }
 
 function permissionText(value: boolean): string {
@@ -634,16 +583,6 @@ h3 {
   background: color-mix(in oklch, var(--safe-soft) 26%, var(--panel));
 }
 
-.debug-console[data-stability='warn'] .status-token:first-child {
-  border-color: color-mix(in oklch, var(--warn) 38%, var(--line-soft));
-  background: color-mix(in oklch, var(--warn-soft) 30%, var(--panel));
-}
-
-.debug-console[data-stability='danger'] .status-token:first-child {
-  border-color: color-mix(in oklch, var(--danger) 38%, var(--line-soft));
-  background: color-mix(in oklch, var(--danger-soft) 30%, var(--panel));
-}
-
 .world-strip {
   display: grid;
   grid-template-columns: 0.72fr 1.28fr;
@@ -729,7 +668,7 @@ h3 {
 }
 
 .signal-board {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .signal-meter,
@@ -751,15 +690,13 @@ h3 {
 }
 
 .signal-meter[data-tone='warn'],
-.value-meter[data-tone='warn'],
-.status-line i[data-tone='warn'] {
+.value-meter[data-tone='warn'] {
   --tone: var(--warn);
   --tone-soft: var(--warn-soft);
 }
 
 .signal-meter[data-tone='danger'],
-.value-meter[data-tone='danger'],
-.status-line i[data-tone='danger'] {
+.value-meter[data-tone='danger'] {
   --tone: var(--danger);
   --tone-soft: var(--danger-soft);
 }
@@ -841,6 +778,27 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.dimension-list {
+  display: grid;
+  gap: 5px;
+}
+
+.dimension-list span {
+  display: block;
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--panel) 82%, var(--panel-raised));
+}
+
+.dimension-list b {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--safe);
+  font-weight: 850;
+}
+
 .risk-line {
   margin-top: 8px;
   color: var(--warn);
@@ -848,8 +806,7 @@ dd {
 }
 
 .soft-copy,
-.fold-copy,
-.fold-note {
+.fold-copy {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
@@ -866,7 +823,7 @@ dd {
 
 .rules-readout {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -990,24 +947,6 @@ dd {
   font-style: normal;
 }
 
-.status-line {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-line i {
-  --tone: var(--safe);
-  --tone-soft: var(--safe-soft);
-  width: 36px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--tone), color-mix(in oklch, var(--tone-soft) 70%, var(--panel)));
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--tone) 28%, transparent);
-}
-
 .fold-row summary::before {
   grid-column: 1;
   justify-self: end;
@@ -1028,14 +967,8 @@ dd {
 
 .fold-row .detail-grid,
 .npc-body,
-.fold-copy,
-.fold-note {
+.fold-copy {
   padding: 0 10px 10px;
-}
-
-.fold-note {
-  margin-top: -4px;
-  color: var(--faint);
 }
 
 .relation-grid {

@@ -12,8 +12,8 @@
     - don't update field names starts with `_` as they are readonly, such as `_变量`
     - never create variables that reveal the debugger's name, location, dialogue, system panel, or relation to Yang
       Shifa
-    - when a rule change affects the world, maintain 世界.生效规则, 世界.公开常识, and 世界.规则影响维度 together when
-      relevant
+    - when a rule change affects the world, maintain only 世界.生效规则 for rule state; put public common knowledge,
+      affected dimensions, and Yang Shifa's observation into the corresponding rule entry
     - when Yang Shifa has meaningful interaction with a recurring or consequential NPC, maintain 重要NPC with visible
       facts and relationship metrics
     - only female NPCs can be maintained in 重要NPC; remove existing 重要NPC entries if they are confirmed not female
@@ -24,7 +24,8 @@
     - keep 重要NPC compact: update 当前动作 for what the NPC is doing now, and remove stale NPC entries that no longer
       affect the current or near-future scene
     - do not add every passerby to 重要NPC; only important or reusable NPCs should be recorded
-    - 世界.公开常识 is dynamic current-world knowledge, not a place to restate fixed worldbook principles
+    - 世界.生效规则.${规则代号}.社会表现 is dynamic current-world knowledge, not a place to restate fixed worldbook
+      principles
     - if the user moves Yang Shifa to a new place, update variables according to that new place instead of forcing the
       scene back to school
   format: |-

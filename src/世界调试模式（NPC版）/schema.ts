@@ -10,40 +10,18 @@ export const Schema = z.object({
           目标范围: z.string(),
           生效方式: z.string(),
           规则摘要: z.string(),
+          社会表现: z.string().prefault('未记录'),
+          影响维度: z
+            .union([
+              z.record(z.string().describe('影响维度'), z.string()),
+              z.string().transform(value => ({ 综合影响: value })),
+            ])
+            .prefault({}),
+          杨世发观测: z.string().prefault('未记录'),
           当前状态: z.string(),
         }),
       )
-      .transform(data => _(data).entries().takeRight(8).fromPairs().value()),
-    公开常识: z
-      .record(
-        z.string().describe('常识代号'),
-        z.object({
-          常识内容: z.string(),
-          适用范围: z.string(),
-          表现载体: z.string(),
-        }),
-      )
-      .transform(data => _(data).entries().takeRight(8).fromPairs().value()),
-    规则影响维度: z
-      .record(
-        z.string().describe('影响维度'),
-        z.object({
-          状态: z.string(),
-          说明: z.string(),
-        }),
-      )
       .transform(data => _(data).entries().takeRight(10).fromPairs().value()),
-    规则稳定度: z.coerce.number().transform(value => _.clamp(value, 0, 100)),
-    最近变更: z
-      .record(
-        z.string().describe('变更代号'),
-        z.object({
-          说明: z.string(),
-          影响范围: z.string(),
-          杨世发观测: z.string(),
-        }),
-      )
-      .transform(data => _(data).entries().takeRight(6).fromPairs().value()),
   }),
 
   杨世发: z.object({

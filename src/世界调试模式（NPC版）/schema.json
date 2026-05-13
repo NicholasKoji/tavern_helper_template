@@ -32,6 +32,32 @@
               "规则摘要": {
                 "type": "string"
               },
+              "社会表现": {
+                "default": "未记录",
+                "type": "string"
+              },
+              "影响维度": {
+                "default": {},
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "description": "影响维度"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "杨世发观测": {
+                "default": "未记录",
+                "type": "string"
+              },
               "当前状态": {
                 "type": "string"
               }
@@ -44,93 +70,12 @@
               "当前状态"
             ]
           }
-        },
-        "公开常识": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "常识代号"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "常识内容": {
-                "type": "string"
-              },
-              "适用范围": {
-                "type": "string"
-              },
-              "表现载体": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "常识内容",
-              "适用范围",
-              "表现载体"
-            ]
-          }
-        },
-        "规则影响维度": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "影响维度"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "状态": {
-                "type": "string"
-              },
-              "说明": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "状态",
-              "说明"
-            ]
-          }
-        },
-        "规则稳定度": {
-          "type": "number"
-        },
-        "最近变更": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "变更代号"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "说明": {
-                "type": "string"
-              },
-              "影响范围": {
-                "type": "string"
-              },
-              "杨世发观测": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "说明",
-              "影响范围",
-              "杨世发观测"
-            ]
-          }
         }
       },
       "required": [
         "当前时间",
         "当前地点",
-        "生效规则",
-        "公开常识",
-        "规则影响维度",
-        "规则稳定度",
-        "最近变更"
+        "生效规则"
       ]
     },
     "杨世发": {
