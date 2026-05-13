@@ -98,7 +98,7 @@
         <ValueMeter label="认知压力" :value="data.杨世发.异常认知压力" inverse />
       </section>
 
-      <AccordionGroup title="生效规则" :count="ruleEntries.length">
+      <AccordionGroup title="生效规则" :count="ruleEntries.length" unit="项">
         <details v-for="[name, rule] in ruleEntries" :key="name" class="fold-row">
           <summary>
             <strong>{{ name }}</strong>
@@ -332,13 +332,20 @@ const AccordionGroup = defineComponent({
   props: {
     title: { type: String, required: true },
     count: { type: Number, required: true },
+    unit: { type: String, default: '项' },
   },
   setup(props, { slots }) {
     return () =>
       h('section', { class: 'accordion-group' }, [
         h('header', { class: 'group-title' }, [
-          h('h2', props.title),
-          h('span', { 'aria-label': `${props.title} ${props.count}项` }, `${props.count}项`),
+          h('div', { class: 'group-title-main' }, [
+            h('span', { class: 'group-kicker' }, 'RULE STACK'),
+            h('h2', props.title),
+          ]),
+          h('span', { class: 'group-count', 'aria-label': `${props.title} ${props.count}${props.unit}` }, [
+            h('strong', String(props.count)),
+            h('small', props.unit),
+          ]),
         ]),
         props.count > 0 ? slots.default?.() : h('div', { class: 'empty-state' }, '暂无记录'),
       ]);
@@ -828,26 +835,63 @@ dd {
   margin-bottom: 8px;
 }
 
-.group-title {
-  display: flex;
+.accordion-group :deep(.group-title) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  margin: 8px 8px 0;
+  padding: 8px 9px;
   border-bottom: 1px solid var(--line-soft);
+  border: 1px solid color-mix(in oklch, var(--safe) 26%, var(--line-soft));
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--safe-soft) 28%, transparent), transparent 58%),
+    color-mix(in oklch, var(--panel) 90%, oklch(34% 0.014 180));
 }
 
-.group-title span {
-  min-width: 34px;
-  padding: 1px 7px;
-  border: 1px solid var(--line-soft);
+.accordion-group :deep(.group-title-main) {
+  min-width: 0;
+}
+
+.accordion-group :deep(.group-title h2) {
+  margin-top: 1px;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.accordion-group :deep(.group-kicker) {
+  display: block;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.accordion-group :deep(.group-count) {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 42px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in oklch, var(--safe) 32%, var(--line-soft));
   border-radius: 999px;
   background: oklch(20% 0.012 182);
-  color: var(--faint);
-  font-size: 11px;
-  font-weight: 850;
-  text-align: center;
+  color: var(--text);
   white-space: nowrap;
+}
+
+.accordion-group :deep(.group-count strong) {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.accordion-group :deep(.group-count small) {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 820;
 }
 
 .fold-row,
