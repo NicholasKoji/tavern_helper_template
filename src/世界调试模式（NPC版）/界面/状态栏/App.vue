@@ -236,11 +236,11 @@
 
           <dl class="detail-grid">
             <div class="wide section-label">人物档案</div>
-            <div>
+            <div class="wide">
               <dt>关系</dt>
               <dd>{{ npc.人物档案.关系 }}</dd>
             </div>
-            <div>
+            <div class="wide">
               <dt>性格</dt>
               <dd>{{ npc.人物档案.性格 }}</dd>
             </div>
@@ -285,10 +285,6 @@
               <dd>{{ npc.亲密档案.嘴部 }}</dd>
             </div>
             <div>
-              <dt>怀孕情况</dt>
-              <dd>{{ npc.亲密档案.怀孕情况 }}</dd>
-            </div>
-            <div>
               <dt>特殊性技</dt>
               <dd>{{ npc.亲密档案.特殊性技 }}</dd>
             </div>
@@ -298,6 +294,10 @@
             </div>
 
             <div class="wide section-label">状态标记</div>
+            <div>
+              <dt>怀孕情况</dt>
+              <dd>{{ npc.亲密档案.怀孕情况 }}</dd>
+            </div>
             <div>
               <dt>性交次数</dt>
               <dd>{{ npc.性交次数 }}</dd>

@@ -255,4 +255,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/脚本/变量结构/index.js?v=0.4.8';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@d2ba0fe/dist/世界调试模式（NPC版）/脚本/变量结构/index.js';
