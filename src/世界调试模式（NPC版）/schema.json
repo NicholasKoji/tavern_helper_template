@@ -373,6 +373,22 @@
           "心理话": {
             "default": "暂无可由杨世发合理推测的心理话",
             "type": "string"
+          },
+          "性交次数": {
+            "default": 0,
+            "type": "number"
+          },
+          "是否为处女": {
+            "default": true,
+            "type": "boolean"
+          },
+          "是否有对象": {
+            "default": false,
+            "type": "boolean"
+          },
+          "是否结婚": {
+            "default": false,
+            "type": "boolean"
           }
         },
         "required": [

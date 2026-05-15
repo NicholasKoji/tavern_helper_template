@@ -20,7 +20,7 @@
     - when maintaining 重要NPC, also maintain visible appearance, detailed clothing parts, and 心理话 based only on what
       Yang Shifa can observe or reasonably infer
     - when maintaining female 重要NPC, keep 人物档案, 外观.身体特征, and 亲密档案 transparent to the player; intimate facts
-      should be clear and atmospheric but not graphically explicit
+      should be direct and explicit
     - keep 重要NPC compact: update 当前动作 for what the NPC is doing now, and remove stale NPC entries that no longer
       affect the current or near-future scene
     - do not add every passerby to 重要NPC; only important or reusable NPCs should be recorded

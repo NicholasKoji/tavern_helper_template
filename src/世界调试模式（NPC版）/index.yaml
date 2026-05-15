@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 头像: 头像
-版本: 0.4.7
+版本: 0.4.8
 作者: ''
 备注: 2030 地球欲望规则异常题材；玩家借由不受规则修改影响的 NPC 杨世发自由体验持续改写的世界。
 
@@ -255,4 +255,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/脚本/变量结构/index.js?v=0.4.7';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Frole-card/dist/世界调试模式（NPC版）/脚本/变量结构/index.js?v=0.4.8';

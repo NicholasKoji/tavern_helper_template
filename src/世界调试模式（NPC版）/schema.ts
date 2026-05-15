@@ -129,13 +129,17 @@ export const Schema = z.object({
         当前状态: z.string(),
         对杨世发态度: z.string(),
         心理话: z.string().prefault('暂无可由杨世发合理推测的心理话'),
+        性交次数: z.coerce.number().prefault(0),
+        是否为处女: z.boolean().prefault(true),
+        是否有对象: z.boolean().prefault(false),
+        是否结婚: z.boolean().prefault(false),
       }),
     )
     .transform(data =>
       _(data)
         .entries()
         .filter(([, npc]) => ['女', '女性'].includes(npc.基本信息.性别))
-        .takeRight(8)
+        .takeRight(12)
         .fromPairs()
         .value(),
     )

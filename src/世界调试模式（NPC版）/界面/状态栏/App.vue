@@ -171,11 +171,28 @@
             </div>
             <div class="profile-copy wide">
               <h3>身体特征</h3>
-              <p>
-                身高：{{ npc.外观.身体特征.身高 }}；罩杯：{{ npc.外观.身体特征.罩杯 }}；胸部：{{
-                  npc.外观.身体特征.胸部
-                }}；臀部：{{ npc.外观.身体特征.臀部 }}；腿部：{{ npc.外观.身体特征.腿部 }}
-              </p>
+              <dl class="body-features">
+                <div>
+                  <dt>身高</dt>
+                  <dd>{{ npc.外观.身体特征.身高 }}</dd>
+                </div>
+                <div>
+                  <dt>罩杯</dt>
+                  <dd>{{ npc.外观.身体特征.罩杯 }}</dd>
+                </div>
+                <div class="wide">
+                  <dt>胸部</dt>
+                  <dd>{{ npc.外观.身体特征.胸部 }}</dd>
+                </div>
+                <div class="wide">
+                  <dt>臀部</dt>
+                  <dd>{{ npc.外观.身体特征.臀部 }}</dd>
+                </div>
+                <div class="wide">
+                  <dt>腿部</dt>
+                  <dd>{{ npc.外观.身体特征.腿部 }}</dd>
+                </div>
+              </dl>
             </div>
             <div class="profile-copy wide">
               <h3>心理话</h3>
@@ -218,6 +235,7 @@
           </section>
 
           <dl class="detail-grid">
+            <div class="wide section-label">人物档案</div>
             <div>
               <dt>关系</dt>
               <dd>{{ npc.人物档案.关系 }}</dd>
@@ -230,6 +248,8 @@
               <dt>背景</dt>
               <dd>{{ npc.人物档案.背景 }}</dd>
             </div>
+
+            <div class="wide section-label">互动与状态</div>
             <div>
               <dt>所在地点</dt>
               <dd>{{ npc.基本信息.所在地点 }}</dd>
@@ -250,6 +270,8 @@
               <dt>最近互动</dt>
               <dd>{{ npc.互动记录.最近互动 }}</dd>
             </div>
+
+            <div class="wide section-label">亲密档案</div>
             <div>
               <dt>小穴</dt>
               <dd>{{ npc.亲密档案.小穴 }}</dd>
@@ -273,6 +295,24 @@
             <div class="wide">
               <dt>性癖喜好</dt>
               <dd>{{ npc.亲密档案.性癖喜好 }}</dd>
+            </div>
+
+            <div class="wide section-label">状态标记</div>
+            <div>
+              <dt>性交次数</dt>
+              <dd>{{ npc.性交次数 }}</dd>
+            </div>
+            <div>
+              <dt>是否为处女</dt>
+              <dd>{{ npc.是否为处女 ? '是' : '否' }}</dd>
+            </div>
+            <div>
+              <dt>是否有对象</dt>
+              <dd>{{ npc.是否有对象 ? '是' : '否' }}</dd>
+            </div>
+            <div>
+              <dt>是否结婚</dt>
+              <dd>{{ npc.是否结婚 ? '是' : '否' }}</dd>
             </div>
           </dl>
         </div>
@@ -779,6 +819,42 @@ h3 {
   grid-column: 1 / -1;
 }
 
+.detail-grid .section-label {
+  margin-top: 6px;
+  padding: 6px 0 2px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--safe);
+  font-size: 11px;
+  font-weight: 860;
+  letter-spacing: 0.06em;
+}
+
+.detail-grid .section-label:first-child {
+  margin-top: 0;
+}
+
+.body-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.body-features .wide {
+  grid-column: 1 / -1;
+}
+
+.body-features dt {
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.body-features dd {
+  margin-top: 1px;
+  color: var(--text);
+}
+
 dt {
   margin: 0;
 }
@@ -910,7 +986,7 @@ dd {
 .fold-row summary,
 .npc-fold summary {
   display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 9px 10px;
@@ -919,7 +995,7 @@ dd {
 }
 
 .npc-fold summary {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 0.9fr);
 }
 
 .fold-row summary::-webkit-details-marker,
@@ -997,20 +1073,26 @@ dd {
 
 .fold-row summary::before {
   grid-column: 1;
-  justify-self: end;
 }
 
 .fold-row summary > strong {
-  padding-right: 24px;
+  grid-column: 2;
+}
+
+.fold-row summary > span {
+  grid-column: 3;
 }
 
 .npc-fold summary::before {
+  grid-column: 1;
+}
+
+.npc-fold summary > div {
   grid-column: 2;
-  justify-self: end;
 }
 
 .npc-fold summary small {
-  padding-right: 24px;
+  grid-column: 3;
 }
 
 .fold-row .detail-grid,
@@ -1167,8 +1249,9 @@ dd {
   }
 
   .fold-row summary > strong,
+  .npc-fold summary > div,
   .npc-fold summary small {
-    padding-right: 24px;
+    grid-column: 1;
   }
 
   .fold-row summary > span {
