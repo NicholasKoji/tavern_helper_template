@@ -45,6 +45,18 @@ $('body').load(`https://raw.githubusercontent.com/{{仓库}}/{{分支}}/{{构建
 
 - 如果 SillyTavern 中仍显示旧状态栏，先检查角色卡正则或导入配置中的 `[界面]状态栏` 是否仍是旧地址。已经导入到 SillyTavern 的旧正则不会随仓库文件自动变化。
 
+## 第一条消息与状态栏占位符
+
+- 如果第一条消息需要挂载状态栏，`<StatusPlaceHolderImpl/>` 应放在第一条消息正文最底部。
+- 不要把 `<StatusPlaceHolderImpl/>` 放在第一条消息开头，否则状态栏替换块会压在正文前面，影响阅读顺序和首屏观感。
+- 初始化新卡时可先写成：
+
+```text
+{{第一条消息正文待补充}}
+
+<StatusPlaceHolderImpl/>
+```
+
 ## 构建与导出
 
 - `webpack.config.ts` 的入口扫描应匹配 `src/**/index.{ts,tsx,js,jsx}`。
