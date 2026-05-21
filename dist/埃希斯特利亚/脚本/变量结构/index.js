@@ -1,2 +1,2 @@
-import{registerMvuSchema as t}from'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';const e=z.z.object({});$(()=>{t(e)});
+import{registerMvuSchema as e}from'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';const t=z,r=t.z.object({san值:t.z.coerce.number().transform(e=>_.clamp(e,0,100)).prefault(100)});$(()=>{e(r)});
 //# sourceMappingURL=index.js.map
