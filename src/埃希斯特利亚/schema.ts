@@ -1,4 +1,4 @@
-export const Schema = z.object({
+﻿export const Schema = z.object({
   主角: z
     .object({
       姓名: z.string().prefault('杨世发'),
@@ -86,6 +86,29 @@ export const Schema = z.object({
               唇口: z.string().prefault(''),
               脸部轮廓: z.string().prefault(''),
               皮肤: z.string().prefault(''),
+            })
+            .prefault({}),
+          身材: z
+            .object({
+              胸部: z
+                .object({
+                  身材描述: z.string().prefault(''),
+                  罩杯: z.string().prefault(''),
+                  当前状态: z.string().prefault(''),
+                })
+                .prefault({}),
+              臀部: z
+                .object({
+                  身材描述: z.string().prefault(''),
+                  当前状态: z.string().prefault(''),
+                })
+                .prefault({}),
+              足部: z
+                .object({
+                  身材描述: z.string().prefault(''),
+                  当前状态: z.string().prefault(''),
+                })
+                .prefault({}),
             })
             .prefault({}),
           性格: z.string().prefault(''),

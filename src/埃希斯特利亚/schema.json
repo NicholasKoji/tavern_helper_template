@@ -231,6 +231,58 @@
               }
             }
           },
+          "身材": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "胸部": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "身材描述": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "罩杯": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "当前状态": {
+                    "default": "",
+                    "type": "string"
+                  }
+                }
+              },
+              "臀部": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "身材描述": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "当前状态": {
+                    "default": "",
+                    "type": "string"
+                  }
+                }
+              },
+              "足部": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "身材描述": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "当前状态": {
+                    "default": "",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
           "性格": {
             "default": "",
             "type": "string"
