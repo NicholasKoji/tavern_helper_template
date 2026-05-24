@@ -1,7 +1,7 @@
 ﻿# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 # 这个配置文件仅作为使用同步脚本的提示. 同步脚本并不是必须使用, 但可以让你的角色卡完全做到自动更新, 具体请参考: https://stagedog.github.io/青空莉/工具经验/实时编写角色卡、世界书或预设/
 头像: 头像
-版本: '0.3.0'
+版本: '0.4.0'
 作者: ''
 备注: '埃希斯特利亚角色卡宏观世界观扩展版本'
 

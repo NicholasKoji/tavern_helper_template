@@ -2,9 +2,359 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "san值": {
-      "default": 100,
-      "type": "number"
+    "主角": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "default": "杨世发",
+          "type": "string"
+        },
+        "年龄": {
+          "default": 18,
+          "type": "number"
+        },
+        "san值": {
+          "default": 100,
+          "type": "number"
+        }
+      }
+    },
+    "当前场景": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "时间": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "年": {
+              "default": 2186,
+              "type": "number"
+            },
+            "月": {
+              "default": 6,
+              "type": "number"
+            },
+            "日": {
+              "default": 14,
+              "type": "number"
+            },
+            "时": {
+              "default": 14,
+              "type": "number"
+            },
+            "分": {
+              "default": 35,
+              "type": "number"
+            }
+          }
+        },
+        "地点": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "一级区域": {
+              "default": "埃斯图拉",
+              "type": "string"
+            },
+            "二级区域": {
+              "default": "社会管理局",
+              "type": "string"
+            },
+            "三级区域": {
+              "default": "拘留室",
+              "type": "string"
+            }
+          }
+        },
+        "天气": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "概况": {
+              "default": "阴天",
+              "type": "string"
+            },
+            "气温": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "数值": {
+                  "default": 24,
+                  "type": "number"
+                },
+                "单位": {
+                  "default": "°C",
+                  "type": "string"
+                }
+              }
+            },
+            "风": {
+              "default": "海风偏湿",
+              "type": "string"
+            },
+            "体感": {
+              "default": "室外潮湿，室内空气略闷。",
+              "type": "string"
+            }
+          }
+        },
+        "环境": {
+          "default": "金属询问桌横在房间中央，封闭灯光照得桌面发白，空气里残留微甜的消毒剂气味。",
+          "type": "string"
+        }
+      }
+    },
+    "待办事项": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "主要": {
+          "default": "等待社会管理局对杨世发的无档案情况作出初步安置决定。",
+          "type": "string"
+        },
+        "次要": {
+          "default": "在赵锋离开期间，与苏晴进行第一次直接交流。",
+          "type": "string"
+        }
+      }
+    },
+    "骑士": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "骑士姓名"
+      },
+      "additionalProperties": {
+        "default": {},
+        "type": "object",
+        "properties": {
+          "年龄": {
+            "default": 18,
+            "type": "number"
+          },
+          "身份": {
+            "default": "骑士",
+            "type": "string"
+          },
+          "外貌": {
+            "default": "",
+            "type": "string"
+          },
+          "性格": {
+            "default": "",
+            "type": "string"
+          },
+          "态度": {
+            "default": "",
+            "type": "string"
+          },
+          "好感度": {
+            "default": 0,
+            "type": "number"
+          },
+          "当前心理": {
+            "default": "",
+            "type": "string"
+          },
+          "当前动作": {
+            "default": "",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "女骑": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "女骑姓名"
+      },
+      "additionalProperties": {
+        "default": {},
+        "type": "object",
+        "properties": {
+          "年龄": {
+            "default": 18,
+            "type": "number"
+          },
+          "身份": {
+            "default": "女骑",
+            "type": "string"
+          },
+          "所属骑士": {
+            "default": "",
+            "type": "string"
+          },
+          "所属关系": {
+            "default": "",
+            "type": "string"
+          },
+          "关系背景": {
+            "default": "",
+            "type": "string"
+          },
+          "外貌": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "体型": {
+                "default": "",
+                "type": "string"
+              },
+              "头发": {
+                "default": "",
+                "type": "string"
+              },
+              "眉眼": {
+                "default": "",
+                "type": "string"
+              },
+              "鼻梁": {
+                "default": "",
+                "type": "string"
+              },
+              "唇口": {
+                "default": "",
+                "type": "string"
+              },
+              "脸部轮廓": {
+                "default": "",
+                "type": "string"
+              },
+              "皮肤": {
+                "default": "",
+                "type": "string"
+              }
+            }
+          },
+          "性格": {
+            "default": "",
+            "type": "string"
+          },
+          "态度": {
+            "default": "",
+            "type": "string"
+          },
+          "好感度": {
+            "default": 0,
+            "type": "number"
+          },
+          "当前心理": {
+            "default": "",
+            "type": "string"
+          },
+          "当前动作": {
+            "default": "",
+            "type": "string"
+          },
+          "体力": {
+            "default": 100,
+            "type": "number"
+          },
+          "装备": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "description": "装备名称"
+            },
+            "additionalProperties": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "描述": {
+                  "default": "",
+                  "type": "string"
+                },
+                "状态": {
+                  "default": "",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "机动能力": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "最高时速": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "数值": {
+                    "default": 0,
+                    "type": "number"
+                  },
+                  "单位": {
+                    "default": "km/h",
+                    "type": "string"
+                  }
+                }
+              },
+              "巡航距离": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "数值": {
+                    "default": 0,
+                    "type": "number"
+                  },
+                  "单位": {
+                    "default": "km",
+                    "type": "string"
+                  }
+                }
+              },
+              "承载稳定": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "数值": {
+                    "default": 0,
+                    "type": "number"
+                  },
+                  "单位": {
+                    "default": "m/s²",
+                    "type": "string"
+                  }
+                }
+              },
+              "操控响应": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "数值": {
+                    "default": 0,
+                    "type": "number"
+                  },
+                  "单位": {
+                    "default": "s",
+                    "type": "string"
+                  }
+                }
+              },
+              "动力转化效率": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "数值": {
+                    "default": 0,
+                    "type": "number"
+                  },
+                  "单位": {
+                    "default": "百分比",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
