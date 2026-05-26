@@ -1,0 +1,30 @@
+html[data-status-mock='true'],
+html[data-status-mock='true'] body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(103, 183, 247, 0.18), transparent 32rem),
+    linear-gradient(180deg, #07151a, #0d1d23 58%, #071217);
+}
+
+html[data-status-mock='true'] body {
+  box-sizing: border-box;
+  padding: 18px 12px 36px;
+}
+
+html[data-status-mock='true'] #app::before {
+  content: 'MOCK PREVIEW';
+  display: block;
+  width: fit-content;
+  margin: 0 auto 8px;
+  padding: 4px 9px;
+  border: 1px solid rgba(232, 237, 240, 0.18);
+  border-radius: 999px;
+  color: rgba(232, 237, 240, 0.62);
+  background: rgba(255, 255, 255, 0.055);
+  font:
+    11px/1.2 ui-sans-serif,
+    'Microsoft YaHei',
+    sans-serif;
+  letter-spacing: 0;
+}
