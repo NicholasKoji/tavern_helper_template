@@ -225,22 +225,27 @@ button {
 }
 
 .status-body {
-  margin-top: -8px;
+  margin-top: -10px;
   padding: 22px 20px 24px;
   border: 1px solid oklch(78% 0.015 80);
-  border-top: 0;
-  border-radius: 0 0 var(--esh-radius-lg) var(--esh-radius-lg);
+  border-radius: var(--esh-radius-lg);
   background:
     radial-gradient(circle at 50% 0, oklch(100% 0.01 80), transparent 28%),
     linear-gradient(180deg, var(--esh-paper), oklch(93% 0.013 80));
   color: var(--esh-text);
-  box-shadow: 0 18px 30px oklch(12% 0.02 230 / 0.18);
+  box-shadow:
+    0 -2px 0 oklch(100% 0.01 80 / 0.62),
+    0 18px 30px oklch(12% 0.02 230 / 0.18);
 }
 
 .people-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.people-panel > .group-head {
+  display: none;
 }
 
 .group-head {
@@ -274,7 +279,7 @@ button {
   grid-template-columns: auto minmax(0, 1fr) minmax(140px, 220px) auto;
   gap: 14px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 1px solid oklch(83% 0.012 80);
   border-radius: var(--esh-radius-md);
   background: oklch(98% 0.01 80);
@@ -290,6 +295,15 @@ button {
   font-size: 25px;
 }
 
+.person-kind {
+  margin-right: 10px;
+  color: var(--esh-blue-deep);
+}
+
+.person-row.red .person-kind {
+  color: var(--esh-red);
+}
+
 .person-row p,
 .row-meter span {
   margin: 0;
@@ -300,6 +314,8 @@ button {
   display: grid;
   min-width: 0;
   gap: 6px;
+  padding-left: 18px;
+  border-left: 1px solid oklch(78% 0.012 80);
 }
 
 .wide-action,
@@ -818,6 +834,8 @@ button {
 
   .row-meter {
     grid-column: 2 / 3;
+    padding-left: 0;
+    border-left: 0;
   }
 
   .person-row button {
@@ -906,6 +924,8 @@ button {
 
   .row-meter {
     grid-column: 2 / 3;
+    padding-left: 0;
+    border-left: 0;
   }
 
   .person-row button {

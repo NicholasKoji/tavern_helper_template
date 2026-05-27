@@ -13,7 +13,7 @@
     >
       <StatusIcon name="shield" tone="blue" />
       <div>
-        <h3>{{ name }}</h3>
+        <h3><span class="person-kind">骑士</span>{{ name }}</h3>
         <p>{{ knight.身份 }}</p>
       </div>
       <div class="row-meter">
@@ -36,7 +36,7 @@
     >
       <StatusIcon name="shield" tone="red" />
       <div>
-        <h3>{{ name }}</h3>
+        <h3><span class="person-kind">女骑</span>{{ name }}</h3>
         <p>{{ rider.身份 }}</p>
       </div>
       <div class="row-meter">
