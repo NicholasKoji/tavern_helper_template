@@ -1,14 +1,9 @@
 <template>
-  <div class="detail-stack">
-    <section class="profile-strip red">
-      <StatusIcon name="shield" tone="red" />
-      <div>
-        <h3>{{ name }}</h3>
-        <p>{{ rider.身份 }}</p>
-      </div>
-    </section>
-    <InfoCard>
-      <dl class="inline-facts">
+  <div class="detail-stack female-detail-main">
+    <p class="female-detail-name">{{ name }}</p>
+
+    <section class="female-facts-card">
+      <dl class="female-facts">
         <dt>年龄</dt>
         <dd>{{ rider.年龄 }}</dd>
         <dt>身份</dt>
@@ -18,27 +13,50 @@
         <dt>所属关系</dt>
         <dd>{{ rider.所属关系 }}</dd>
       </dl>
-    </InfoCard>
-    <div class="stat-grid">
-      <InfoCard title="好感度" icon="heart" tone="red">
-        <p class="large-line">{{ rider.好感度 }}</p>
-        <ProgressBar :value="rider.好感度 + 100" :max="200" tone="red" />
-      </InfoCard>
-      <InfoCard title="体力" icon="heart" tone="red">
-        <p class="large-line">{{ rider.体力 }}/100</p>
+    </section>
+
+    <div class="female-metric-grid">
+      <section class="female-metric-card">
+        <div class="female-metric-line">
+          <span>好感度</span>
+          <StatusIcon name="heart" tone="red" />
+          <strong>{{ rider.好感度 }}</strong>
+        </div>
+        <ProgressBar :value="Math.max(0, rider.好感度)" tone="red" />
+      </section>
+      <section class="female-metric-card">
+        <div class="female-metric-line">
+          <span>体力</span>
+          <StatusIcon name="heart" tone="red" />
+          <strong>{{ rider.体力 }}<small>/100</small></strong>
+        </div>
         <ProgressBar :value="rider.体力" tone="red" />
-      </InfoCard>
+      </section>
     </div>
-    <InfoCard title="态度" icon="body" tone="red"
-      ><p>{{ rider.态度 }}</p></InfoCard
-    >
-    <InfoCard title="当前心理" icon="brain" tone="red"
-      ><p>{{ rider.当前心理 }}</p></InfoCard
-    >
-    <InfoCard title="当前动作" icon="person" tone="red"
-      ><p>{{ rider.当前动作 }}</p></InfoCard
-    >
-    <nav class="detail-menu">
+
+    <section class="female-status-card">
+      <StatusIcon name="eye" tone="red" />
+      <div>
+        <h3>态度</h3>
+        <p>{{ rider.态度 }}</p>
+      </div>
+    </section>
+    <section class="female-status-card">
+      <StatusIcon name="brain" tone="red" />
+      <div>
+        <h3>当前心理</h3>
+        <p>{{ rider.当前心理 }}</p>
+      </div>
+    </section>
+    <section class="female-status-card">
+      <StatusIcon name="person" tone="red" />
+      <div>
+        <h3>当前动作</h3>
+        <p>{{ rider.当前动作 }}</p>
+      </div>
+    </section>
+
+    <nav class="detail-menu female-detail-menu">
       <button v-for="item in menu" :key="item.view" type="button" @click="$emit('open', item.view)">
         <StatusIcon :name="item.icon" tone="red" />
         <span>
@@ -48,12 +66,16 @@
         <b aria-hidden="true">›</b>
       </button>
     </nav>
+
+    <button class="female-return" type="button" @click="$emit('close')">
+      <span aria-hidden="true">←</span>
+      返回状态卡
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Schema } from '../../schema';
-import InfoCard from './InfoCard.vue';
 import ProgressBar from './ProgressBar.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -64,6 +86,7 @@ defineProps<{
 
 defineEmits<{
   open: [view: 'relation' | 'appearance' | 'body' | 'equipment' | 'mobility'];
+  close: [];
 }>();
 
 const menu = [

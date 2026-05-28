@@ -26,6 +26,7 @@
         v-else-if="drawer_view === 'female' && selected_female"
         :name="selected_name"
         :rider="selected_female"
+        @close="closeDrawer"
         @open="openFemaleSubView"
       />
       <RelationDetail
@@ -124,13 +125,24 @@ const drawer_tone = computed(() => (drawer_view.value === 'knight' || drawer_vie
 function openDrawer(view: Exclude<DrawerView, null>, name = '') {
   drawer_view.value = view;
   selected_name.value = name;
+  resetDrawerScroll();
 }
 
 function openFemaleSubView(view: Exclude<DrawerView, null>) {
   drawer_view.value = view;
+  resetDrawerScroll();
 }
 
 function closeDrawer() {
   drawer_view.value = null;
+}
+
+function resetDrawerScroll() {
+  nextTick(() => {
+    const drawer = document.querySelector<HTMLElement>('.detail-drawer');
+    if (drawer) {
+      drawer.scrollTop = 0;
+    }
+  });
 }
 </script>

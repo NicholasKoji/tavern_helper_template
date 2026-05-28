@@ -15,12 +15,21 @@
       />
       <path v-else-if="name === 'person'" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
       <path v-else-if="name === 'list'" d="M8 6h11M8 12h11M8 18h11M4.5 6h.1M4.5 12h.1M4.5 18h.1" />
+      <path
+        v-else-if="name === 'book'"
+        d="M5 5.2c1.8-.8 4.2-.8 7 1v13c-2.8-1.8-5.2-1.8-7-1V5.2Zm7 1c2.8-1.8 5.2-1.8 7-1v13c-1.8-.8-4.2-.8-7 1v-13Z"
+      />
+      <path v-else-if="name === 'home'" d="M4 11.5 12 5l8 6.5M6.5 10.5V20h11v-9.5M10 20v-5h4v5" />
       <path v-else-if="name === 'suit'" d="M8 4h8l2 4-2 12H8L6 8l2-4Zm4 0v16" />
       <path v-else-if="name === 'wheel'" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 3v10M7 12h10m-8.5-3.5 7 7m0-7-7 7" />
       <path v-else-if="name === 'seat'" d="M8 5v9h8.8a2.2 2.2 0 0 0 0-4.4H12V5H8Zm0 9v5m8-5v5" />
       <path v-else-if="name === 'speed'" d="M5 17a7 7 0 0 1 14 0M12 17l4-6M8 17h8" />
       <path v-else-if="name === 'road'" d="M9 20 11 4h2l2 16M7 20h10M12 8v2m0 3v2" />
       <path v-else-if="name === 'target'" d="M12 4v3m0 10v3m8-8h-3M7 12H4m4.5 0a3.5 3.5 0 1 0 7 0 3.5 3.5 0 0 0-7 0Z" />
+      <path
+        v-else-if="name === 'eye'"
+        d="M3.8 12s3-5.2 8.2-5.2S20.2 12 20.2 12s-3 5.2-8.2 5.2S3.8 12 3.8 12Zm8.2 2.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z"
+      />
       <path
         v-else-if="name === 'body'"
         d="M12 4c2.4 2.8 3.3 5.8 2.2 9-.6 1.8-.5 4.1.8 7M12 4C9.6 6.8 8.7 9.8 9.8 13c.6 1.8.5 4.1-.8 7"
