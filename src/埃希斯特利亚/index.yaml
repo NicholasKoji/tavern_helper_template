@@ -1,7 +1,7 @@
 ﻿# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 # 这个配置文件仅作为使用同步脚本的提示. 同步脚本并不是必须使用, 但可以让你的角色卡完全做到自动更新, 具体请参考: https://stagedog.github.io/青空莉/工具经验/实时编写角色卡、世界书或预设/
 头像: 头像
-版本: '0.4.1'
+版本: '0.5.0'
 作者: ''
 备注: '埃希斯特利亚角色卡宏观世界观扩展版本'
 
@@ -344,7 +344,7 @@
         ```
         <body>
         <script>
-        $('body').load(`https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/eschistria-role-card/dist/埃希斯特利亚/界面/状态栏/index.html?t=${Date.now()}`)
+        $('body').load(`https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/eschistria-role-card-status-bar/dist/埃希斯特利亚/界面/状态栏/index.html?t=${Date.now()}`)
         </script>
         </body>
         ```
@@ -369,4 +369,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/eschistria-role-card/dist/埃希斯特利亚/脚本/变量结构/index.js';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/eschistria-role-card-status-bar/dist/埃希斯特利亚/脚本/变量结构/index.js';
