@@ -1,0 +1,13 @@
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the JSON Patch standard, must be a valid JSON array containing operation objects, but supports replace, delta, insert, remove and move
+    - don't update field names starts with `_` as they are readonly
+  format: |-
+    <UpdateVariable>
+    <Analysis>IN ENGLISH, no more than 80 words. Explain whether any variable needs to be updated.</Analysis>
+    <JSONPatch>
+    []
+    </JSONPatch>
+    </UpdateVariable>
