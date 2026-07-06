@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
-头像: null
+头像: 头像.png
 版本: 0.1.0
 作者: ''
 备注: '虚拟回响：基于第三次世界大战、智械战争与虚拟田园时代后的角色卡。'
@@ -281,21 +281,6 @@
           不可被其他条目激活: true
           不可激活其他条目: true
         文件: 世界书/角色/角色详情
-
-      - 名称: 角色玩法占位
-        启用: true
-        激活策略:
-          类型: 蓝灯
-        插入位置:
-          类型: 指定深度
-          角色: 系统
-          深度: 0
-          顺序: 14720
-        激活概率: 100
-        递归:
-          不可被其他条目激活: true
-          不可激活其他条目: true
-        文件: 世界书/角色/测评方法
 
       - 名称: ===角色结束===
         <<: *分隔符
