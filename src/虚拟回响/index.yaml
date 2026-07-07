@@ -569,7 +569,8 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/界面/状态栏/index.html')
+        const status_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/界面/状态栏/index.html';
+        $('body').load(`${status_url}?t=${Date.now()}`)
         </script>
         </body>
         ```
@@ -594,4 +595,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/脚本/变量结构/index.js';
+          await import(`https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/脚本/变量结构/index.js?t=${Date.now()}`);
