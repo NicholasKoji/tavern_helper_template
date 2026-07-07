@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
+﻿# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 头像: 头像.png
 版本: 0.1.0
 作者: ''
@@ -282,7 +282,7 @@
       - 名称: ===角色开始===
         <<: *分隔符
 
-      - 名称: 虚拟回响角色详情占位
+      - 名称: 杨世发
         启用: true
         激活策略:
           类型: 蓝灯
@@ -293,7 +293,21 @@
         递归:
           不可被其他条目激活: true
           不可激活其他条目: true
-        文件: 世界书/角色/角色详情
+        文件: 世界书/角色/杨世发
+
+        - 名称: 戴安娜
+          启用: true
+          激活策略:
+            类型: 蓝灯
+          插入位置:
+            类型: 角色定义之后
+            顺序: 14720
+          触发概率: 100
+          递归:
+            不可被其他条目激活: true
+            不可激活其他条目: true
+          文件: 世界书/角色/戴安娜
+
 
       - 名称: ===角色结束===
         <<: *分隔符
