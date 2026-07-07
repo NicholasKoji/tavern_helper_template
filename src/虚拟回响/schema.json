@@ -1,5 +1,488 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "properties": {}
+  "properties": {
+    "当前场景": {
+      "default": "现实",
+      "type": "string",
+      "enum": [
+        "现实",
+        "虚拟"
+      ]
+    },
+    "现实场景状态": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "日期": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "年": {
+              "default": 2071,
+              "type": "number"
+            },
+            "月": {
+              "default": 8,
+              "type": "number"
+            },
+            "日": {
+              "default": 18,
+              "type": "number"
+            }
+          }
+        },
+        "时间": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "时": {
+              "default": 14,
+              "type": "number"
+            },
+            "分": {
+              "default": 30,
+              "type": "number"
+            }
+          }
+        },
+        "地点": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "一级区域": {
+              "default": "亚洲行政区",
+              "type": "string"
+            },
+            "二级区域": {
+              "default": "岭南自治州",
+              "type": "string"
+            },
+            "三级地点": {
+              "default": "广州天河区·杨世发公寓深潜室",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "虚拟场景状态": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "虚拟世界编号": {
+          "default": "PSSEA-LN-2071-封存任务-001",
+          "type": "string"
+        },
+        "时代背景": {
+          "default": "现实镜像实验世界，具体实验政策与社会阶段尚未公开",
+          "type": "string"
+        },
+        "社会氛围": {
+          "default": "任务结束后仍残留高压、压抑和不稳定感",
+          "type": "string"
+        },
+        "日期": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "年": {
+              "default": 2071,
+              "type": "number"
+            },
+            "月": {
+              "default": 8,
+              "type": "number"
+            },
+            "日": {
+              "default": 18,
+              "type": "number"
+            }
+          }
+        },
+        "时间": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "时": {
+              "default": 14,
+              "type": "number"
+            },
+            "分": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        },
+        "地点": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "一级区域": {
+              "default": "PSSEA现实镜像实验世界",
+              "type": "string"
+            },
+            "二级区域": {
+              "default": "封存政策实验区",
+              "type": "string"
+            },
+            "三级地点": {
+              "default": "退出前坐标已封存",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "当前任务": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "名称": {
+          "default": "强制休假30日",
+          "type": "string"
+        },
+        "类型": {
+          "default": "休假",
+          "type": "string"
+        },
+        "状态": {
+          "default": "进行中",
+          "type": "string"
+        },
+        "目标": {
+          "default": "在强制休假期间恢复深潜后心理状态",
+          "type": "string"
+        },
+        "进展": {
+          "default": "戴安娜正在照护刚退出深潜任务的杨世发",
+          "type": "string"
+        }
+      }
+    },
+    "携带物": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "现实": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "现实携带物名称"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "描述": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "虚拟": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "虚拟携带物名称"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "描述": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "主角": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "基础信息": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "姓名": {
+              "default": "杨世发",
+              "type": "string"
+            },
+            "年龄": {
+              "default": 23,
+              "type": "number"
+            },
+            "性别": {
+              "default": "男",
+              "type": "string"
+            },
+            "现实身份": {
+              "default": "UEG虚拟政策评审员（VPA）",
+              "type": "string"
+            },
+            "所属机构": {
+              "default": "PSSEA岭南自治州分部",
+              "type": "string"
+            }
+          }
+        },
+        "外貌": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "身高": {
+              "default": "178cm",
+              "type": "string"
+            },
+            "体型": {
+              "default": "常健身，精壮型，穿衣显瘦，脱衣有肉",
+              "type": "string"
+            },
+            "面容气质": {
+              "default": "眉清目秀，不笑时冷静，笑起来容易让人放下戒备",
+              "type": "string"
+            },
+            "身体特征": {
+              "default": "左耳垂有一颗小痣，双手掌心有长期举铁磨出的薄茧",
+              "type": "string"
+            }
+          }
+        },
+        "现实身体": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "当前状态": {
+              "default": "深潜后脸色发白，衣服被冷汗浸透，颈侧和手腕有神经接口压痕",
+              "type": "string"
+            },
+            "穿着": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "上装": {
+                  "default": "被冷汗浸湿的深灰色居家T恤",
+                  "type": "string"
+                },
+                "下装": {
+                  "default": "藏青色宽松运动长裤",
+                  "type": "string"
+                },
+                "鞋子": {
+                  "default": "未穿鞋",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "虚拟化身": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "当前身份": {
+              "default": "PSSEA岭南分部紧急探索任务中的VPA杨世发",
+              "type": "string"
+            },
+            "当前状态": {
+              "default": "已退出深潜，虚拟化身停留在任务结算后的退出状态",
+              "type": "string"
+            },
+            "穿着": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "上装": {
+                  "default": "PSSEA标准深色制服上装",
+                  "type": "string"
+                },
+                "下装": {
+                  "default": "PSSEA标准深色制服长裤",
+                  "type": "string"
+                },
+                "鞋子": {
+                  "default": "黑色任务靴",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "NPC序列": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "NPC名称"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "基础信息": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "姓名": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "认知类型": {
+                "default": "虚拟世界",
+                "type": "string",
+                "enum": [
+                  "现实世界",
+                  "虚拟世界"
+                ]
+              },
+              "好感度": {
+                "default": 50,
+                "type": "number"
+              },
+              "与主角关系": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "当前身份": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          },
+          "外貌": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "身高": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "罩杯": {
+                "default": "无",
+                "type": "string"
+              },
+              "体型": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "面容气质": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "身体特征": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          },
+          "性格": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "底色": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "主色调": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          },
+          "现实身体": {
+            "type": "object",
+            "properties": {
+              "当前状态": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "穿着": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "上装": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "下装": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "内衣": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "袜子": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "鞋子": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "配饰": {
+                    "default": "待记录",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "虚拟化身": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "当前身份": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "当前状态": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "穿着": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "上装": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "下装": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "内衣": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "袜子": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "鞋子": {
+                    "default": "待记录",
+                    "type": "string"
+                  },
+                  "配饰": {
+                    "default": "待记录",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "当前想法": {
+            "default": "待记录",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }
