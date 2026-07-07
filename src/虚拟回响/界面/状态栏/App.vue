@@ -54,7 +54,7 @@
           aria-labelledby="tab-overview"
         >
           <div class="accordions">
-            <details class="module-details" open>
+            <details class="module-details">
               <summary>
                 <span class="card-title"><Icon name="list" />当前任务</span>
                 <span class="status-tag">{{ data.当前任务.状态 }}</span>
@@ -67,7 +67,7 @@
               </div>
             </details>
 
-            <details class="module-details" open>
+            <details class="module-details">
               <summary>
                 <span class="card-title"><Icon name="crosshair" />当前场景</span>
                 <span class="status-tag">{{ data.当前场景 }}</span>
