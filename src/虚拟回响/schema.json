@@ -480,6 +480,27 @@
           "当前想法": {
             "default": "待记录",
             "type": "string"
+          },
+          "私密状态": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "description": "部位名称"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "外观描述": {
+                  "default": "待记录",
+                  "type": "string"
+                },
+                "当前状态": {
+                  "default": "待记录",
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

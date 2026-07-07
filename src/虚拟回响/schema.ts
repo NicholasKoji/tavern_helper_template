@@ -1,4 +1,4 @@
-export const Schema = z.object({
+﻿export const Schema = z.object({
   当前场景: z.enum(['现实', '虚拟']).prefault('现实'),
   现实场景状态: z
     .object({
@@ -157,6 +157,14 @@ export const Schema = z.object({
             .prefault({}),
         })
         .prefault({}),
+      私密状态: z
+        .object({
+          肉棒: z.object({
+            外观描述: z.string().prefault('待记录'),
+            当前状态: z.string().prefault('待记录'),
+          }).prefault({}),
+        })
+        .prefault({}),
     })
     .prefault({}),
   NPC序列: z
@@ -166,6 +174,7 @@ export const Schema = z.object({
         基础信息: z
           .object({
             姓名: z.string().prefault('待记录'),
+            性别: z.enum(['女']).prefault('女'),
             认知类型: z.enum(['现实世界', '虚拟世界']).prefault('虚拟世界'),
             好感度: z.coerce
               .number()
@@ -222,6 +231,15 @@ export const Schema = z.object({
           })
           .prefault({}),
         当前想法: z.string().prefault('待记录'),
+        私密状态: z
+          .record(
+            z.string().describe('部位名称'),
+            z.object({
+              外观描述: z.string().prefault('待记录'),
+              当前状态: z.string().prefault('待记录'),
+            }),
+          )
+          .prefault({}),
       }),
     )
     .prefault({}),
