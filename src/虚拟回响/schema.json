@@ -311,6 +311,26 @@
               }
             }
           }
+        },
+        "私密状态": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "肉棒": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "外观描述": {
+                  "default": "待记录",
+                  "type": "string"
+                },
+                "当前状态": {
+                  "default": "待记录",
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -331,6 +351,17 @@
               "姓名": {
                 "default": "待记录",
                 "type": "string"
+              },
+              "性别": {
+                "default": "女",
+                "type": "string",
+                "enum": [
+                  "女"
+                ]
+              },
+              "年龄": {
+                "default": 18,
+                "type": "number"
               },
               "认知类型": {
                 "default": "虚拟世界",

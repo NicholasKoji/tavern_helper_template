@@ -175,6 +175,10 @@
           .object({
             姓名: z.string().prefault('待记录'),
             性别: z.enum(['女']).prefault('女'),
+            年龄: z.coerce
+              .number()
+              .transform(value => _.clamp(value, 0, 200))
+              .prefault(18),
             认知类型: z.enum(['现实世界', '虚拟世界']).prefault('虚拟世界'),
             好感度: z.coerce
               .number()
