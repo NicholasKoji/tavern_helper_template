@@ -71,7 +71,7 @@
       "type": "object",
       "properties": {
         "虚拟世界编号": {
-          "default": "PSSEA-LN-2071-封存任务-001",
+          "default": "PSSEA-MIR-04K7Q9XD",
           "type": "string"
         },
         "时代背景": {

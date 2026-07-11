@@ -41,7 +41,7 @@
     .prefault({}),
   虚拟场景状态: z
     .object({
-      虚拟世界编号: z.string().prefault('PSSEA-LN-2071-封存任务-001'),
+      虚拟世界编号: z.string().prefault('PSSEA-MIR-04K7Q9XD'),
       时代背景: z.string().prefault('现实镜像实验世界，具体实验政策与社会阶段尚未公开'),
       社会氛围: z.string().prefault('任务结束后仍残留高压、压抑和不稳定感'),
       日期: z
