@@ -6,20 +6,7 @@
           <span class="kicker">PSSEA / VIRTUAL ECHO</span>
           <h1 class="title">虚拟回响 状态栏</h1>
         </div>
-        <div class="topbar-actions">
-          <div class="scene-pill">{{ data.当前场景 }}</div>
-          <button
-            class="icon-toggle"
-            type="button"
-            :aria-label="toggleLabel"
-            :title="toggleLabel"
-            :aria-expanded="!isContentCollapsed"
-            aria-controls="status-content"
-            @click="toggleContent"
-          >
-            <Icon :name="toggleIcon" />
-          </button>
-        </div>
+        <div class="scene-pill">{{ data.当前场景 }}</div>
       </header>
 
       <section class="meta-strip" aria-label="当前时间地点">

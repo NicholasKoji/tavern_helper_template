@@ -79,13 +79,6 @@ button {
   min-width: 0;
 }
 
-.topbar-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .kicker {
   display: block;
   margin-bottom: 7px;
@@ -116,7 +109,6 @@ button {
   text-transform: uppercase;
 }
 
-.icon-toggle,
 .bottom-toggle {
   display: inline-flex;
   align-items: center;
@@ -131,8 +123,6 @@ button {
     border-color 0.16s ease;
 }
 
-.icon-toggle:hover,
-.icon-toggle:focus-visible,
 .bottom-toggle:hover,
 .bottom-toggle:focus-visible {
   border-color: var(--ve-primary);
@@ -140,15 +130,9 @@ button {
   color: var(--ve-text);
 }
 
-.icon-toggle {
-  width: 34px;
-  height: 34px;
-  flex: none;
-}
-
 .bottom-toggle {
   width: 100%;
-  min-height: 36px;
+  min-height: 30px;
   border-width: 1px 0 0;
   background: rgba(10, 15, 23, 0.62);
 }
@@ -566,11 +550,6 @@ details[open] summary::after {
     font-size: 11px;
   }
 
-  .icon-toggle {
-    width: 32px;
-    height: 32px;
-  }
-
   .meta-strip,
   .npc-layout {
     grid-template-columns: 1fr;
@@ -600,7 +579,7 @@ details[open] summary::after {
   }
 
   .bottom-toggle {
-    min-height: 38px;
+    min-height: 30px;
   }
 }
 
