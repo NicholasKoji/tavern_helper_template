@@ -75,6 +75,17 @@ button {
   background: linear-gradient(90deg, rgba(124, 199, 216, 0.11), transparent 68%);
 }
 
+.topbar-identity {
+  min-width: 0;
+}
+
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .kicker {
   display: block;
   margin-bottom: 7px;
@@ -103,6 +114,43 @@ button {
   letter-spacing: 0.08em;
   text-align: center;
   text-transform: uppercase;
+}
+
+.icon-toggle,
+.bottom-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, var(--ve-primary), white 8%);
+  background: var(--ve-ghost);
+  color: var(--ve-primary);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.icon-toggle:hover,
+.icon-toggle:focus-visible,
+.bottom-toggle:hover,
+.bottom-toggle:focus-visible {
+  border-color: var(--ve-primary);
+  background: rgba(124, 199, 216, 0.16);
+  color: var(--ve-text);
+}
+
+.icon-toggle {
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+
+.bottom-toggle {
+  width: 100%;
+  min-height: 36px;
+  border-width: 1px 0 0;
+  background: rgba(10, 15, 23, 0.62);
 }
 
 .meta-strip {
@@ -181,53 +229,6 @@ button {
 .tab-button.active {
   background: var(--ve-primary);
   color: var(--ve-bg);
-}
-
-.content-toggle {
-  display: flex;
-  width: 100%;
-  min-height: 38px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 14px;
-  border: 0;
-  border-bottom: 1px solid var(--ve-border);
-  background: rgba(10, 15, 23, 0.72);
-  color: var(--ve-muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  transition:
-    background 0.16s ease,
-    color 0.16s ease;
-}
-
-.content-toggle:hover,
-.content-toggle:focus-visible {
-  background: rgba(124, 199, 216, 0.09);
-  color: var(--ve-text);
-}
-
-.content-toggle-label,
-.content-toggle-context {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-}
-
-.content-toggle-label {
-  color: var(--ve-primary);
-}
-
-.content-toggle-context {
-  overflow: hidden;
-  color: color-mix(in oklab, var(--ve-muted), var(--ve-text) 18%);
-  font-family: var(--ve-font-mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .content {
@@ -554,11 +555,20 @@ details[open] summary::after {
 
 @media (max-width: 620px) {
   .topbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 10px 10px;
   }
 
   .scene-pill {
-    width: fit-content;
+    min-width: 62px;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .icon-toggle {
+    width: 32px;
+    height: 32px;
   }
 
   .meta-strip,
@@ -589,9 +599,8 @@ details[open] summary::after {
     font-size: 12px;
   }
 
-  .content-toggle {
-    min-height: 40px;
-    padding: 9px 10px;
+  .bottom-toggle {
+    min-height: 38px;
   }
 }
 

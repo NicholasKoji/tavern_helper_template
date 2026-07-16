@@ -2,11 +2,24 @@
   <main class="status-shell">
     <div class="terminal-frame" :class="{ 'scene-virtual': isVirtual }">
       <header class="topbar">
-        <div>
+        <div class="topbar-identity">
           <span class="kicker">PSSEA / VIRTUAL ECHO</span>
           <h1 class="title">虚拟回响 状态栏</h1>
         </div>
-        <div class="scene-pill">{{ data.当前场景 }}</div>
+        <div class="topbar-actions">
+          <div class="scene-pill">{{ data.当前场景 }}</div>
+          <button
+            class="icon-toggle"
+            type="button"
+            :aria-label="toggleLabel"
+            :title="toggleLabel"
+            :aria-expanded="!isContentCollapsed"
+            aria-controls="status-content"
+            @click="toggleContent"
+          >
+            <Icon :name="toggleIcon" />
+          </button>
+        </div>
       </header>
 
       <section class="meta-strip" aria-label="当前时间地点">
@@ -24,7 +37,7 @@
         </div>
       </section>
 
-      <nav class="tabs" role="tablist" aria-label="状态栏页签">
+      <nav v-show="!isContentCollapsed" class="tabs" role="tablist" aria-label="状态栏页签">
         <button
           v-for="tab in tabs"
           :id="`tab-${tab.id}`"
@@ -43,20 +56,6 @@
           {{ tab.label }}
         </button>
       </nav>
-
-      <button
-        class="content-toggle"
-        type="button"
-        :aria-expanded="!isContentCollapsed"
-        aria-controls="status-content"
-        @click="toggleContent"
-      >
-        <span class="content-toggle-label">
-          <Icon :name="isContentCollapsed ? 'chevronDown' : 'chevronUp'" />
-          {{ isContentCollapsed ? '展开内容' : '收起内容' }}
-        </span>
-        <span class="content-toggle-context">{{ currentTabLabel }}</span>
-      </button>
 
       <div id="status-content" v-show="!isContentCollapsed" class="content">
         <section
@@ -244,6 +243,18 @@
           </div>
         </section>
       </div>
+
+      <button
+        class="bottom-toggle"
+        type="button"
+        :aria-label="toggleLabel"
+        :title="toggleLabel"
+        :aria-expanded="!isContentCollapsed"
+        aria-controls="status-content"
+        @click="toggleContent"
+      >
+        <Icon :name="toggleIcon" />
+      </button>
     </div>
   </main>
   <div class="sr-only" aria-live="polite">{{ announcer }}</div>
@@ -305,7 +316,8 @@ const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列
 const isVirtual = computed(() => data.value.当前场景 === '虚拟');
 const activeScene = computed(() => (isVirtual.value ? data.value.虚拟场景状态 : data.value.现实场景状态));
 const protagonistSceneState = computed(() => (isVirtual.value ? data.value.主角.虚拟化身 : data.value.主角.现实身体));
-const currentTabLabel = computed(() => tabs.find(tab => tab.id === activeTab.value)?.label ?? '总览');
+const toggleIcon = computed(() => (isContentCollapsed.value ? 'chevronsDown' : 'chevronsUp'));
+const toggleLabel = computed(() => (isContentCollapsed.value ? '展开状态栏内容' : '收起状态栏内容'));
 
 const SceneRows = defineComponent({
   props: {
