@@ -183,6 +183,53 @@ button {
   color: var(--ve-bg);
 }
 
+.content-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--ve-border);
+  background: rgba(10, 15, 23, 0.72);
+  color: var(--ve-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.content-toggle:hover,
+.content-toggle:focus-visible {
+  background: rgba(124, 199, 216, 0.09);
+  color: var(--ve-text);
+}
+
+.content-toggle-label,
+.content-toggle-context {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.content-toggle-label {
+  color: var(--ve-primary);
+}
+
+.content-toggle-context {
+  overflow: hidden;
+  color: color-mix(in oklab, var(--ve-muted), var(--ve-text) 18%);
+  font-family: var(--ve-font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .content {
   padding: 14px;
 }
@@ -540,6 +587,11 @@ details[open] summary::after {
     min-height: 44px;
     gap: 4px;
     font-size: 12px;
+  }
+
+  .content-toggle {
+    min-height: 40px;
+    padding: 9px 10px;
   }
 }
 

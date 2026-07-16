@@ -44,7 +44,21 @@
         </button>
       </nav>
 
-      <div class="content">
+      <button
+        class="content-toggle"
+        type="button"
+        :aria-expanded="!isContentCollapsed"
+        aria-controls="status-content"
+        @click="toggleContent"
+      >
+        <span class="content-toggle-label">
+          <Icon :name="isContentCollapsed ? 'chevronDown' : 'chevronUp'" />
+          {{ isContentCollapsed ? '展开内容' : '收起内容' }}
+        </span>
+        <span class="content-toggle-context">{{ currentTabLabel }}</span>
+      </button>
+
+      <div id="status-content" v-show="!isContentCollapsed" class="content">
         <section
           v-show="activeTab === 'overview'"
           id="panel-overview"
@@ -269,6 +283,7 @@ const store = useDataStore();
 const data = computed(() => store.data);
 const activeTab = useLocalStorage<TabId>('virtual_echo:status_tab', 'overview');
 const selectedNpcName = useLocalStorage('virtual_echo:selected_npc', '');
+const isContentCollapsed = useLocalStorage('virtual_echo:content_collapsed', false);
 const announcer = ref('');
 
 const tabs = [
@@ -290,6 +305,7 @@ const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列
 const isVirtual = computed(() => data.value.当前场景 === '虚拟');
 const activeScene = computed(() => (isVirtual.value ? data.value.虚拟场景状态 : data.value.现实场景状态));
 const protagonistSceneState = computed(() => (isVirtual.value ? data.value.主角.虚拟化身 : data.value.主角.现实身体));
+const currentTabLabel = computed(() => tabs.find(tab => tab.id === activeTab.value)?.label ?? '总览');
 
 const SceneRows = defineComponent({
   props: {
@@ -340,6 +356,12 @@ function setTab(tab: TabId) {
 function jumpToNpc(name: string) {
   selectedNpcName.value = name;
   setTab('npc');
+  isContentCollapsed.value = false;
+}
+
+function toggleContent() {
+  isContentCollapsed.value = !isContentCollapsed.value;
+  announcer.value = isContentCollapsed.value ? '状态栏内容已收起' : '状态栏内容已展开';
 }
 
 function onTabKeydown(event: KeyboardEvent) {
