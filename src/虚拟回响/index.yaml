@@ -722,7 +722,7 @@
         ```
         <body>
         <script>
-        const status_url = 'https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/界面/状态栏/index.html';
+        const status_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fvirtual-reviewer-card/dist/虚拟回响/界面/状态栏/index.html';
         $('body').load(`${status_url}?t=${Date.now()}`)
         </script>
         </body>
