@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "build:dev": "webpack --mode development",
-    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development && node scripts/cachebust-status-html.mjs && pnpm sync bundle all",
+    "build": "webpack --mode production && node scripts/cachebust-status-html.mjs && pnpm sync bundle all",
     "watch": "webpack --mode development --watch --progress",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" --no-error-on-unmatched-pattern",
     "lint": "eslint",
