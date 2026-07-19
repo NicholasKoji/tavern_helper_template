@@ -48,7 +48,7 @@
         .object({
           年: z.coerce
             .number()
-            .transform(value => _.clamp(value, 2004, 2200))
+            .transform(value => _.clamp(value, 1, 2200))
             .prefault(2071),
           月: z.coerce
             .number()
