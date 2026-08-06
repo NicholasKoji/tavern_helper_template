@@ -225,6 +225,7 @@ ${JSON.stringify(config, null, 2)}
 
   const message = typeof result === 'string' ? result : result.content;
   const data = await Mvu.parseMessage(message, old_data);
-  await createChatMessages([{ role: 'assistant', message, data: data ?? old_data }]);
+  await createChatMessages([{ role: 'assistant', message, data: data ?? old_data }], { refresh: 'none' });
+  await setChatMessages([{ message_id: getLastMessageId() }], { refresh: 'affected' });
 }
 </script>

@@ -3,7 +3,7 @@
     <header class="bar-header">
       <span class="title">现实编辑器</span>
       <span class="badge">{{ data.现实编辑器.状态 }}</span>
-      <span class="version">v{{ data.现实编辑器.版本 }}</span>
+      <span class="version">{{ data.现实编辑器.版本 }}</span>
     </header>
 
     <div class="permissions">
