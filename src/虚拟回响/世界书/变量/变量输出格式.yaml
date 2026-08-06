@@ -1,12 +1,19 @@
 ---
 变量输出格式:
   rule:
-    - you must output the update analysis and the actual update commands at once in the end of the next reply
-    - the update commands works like the JSON Patch standard, must be a valid JSON array containing operation objects, but supports replace, delta, insert, remove and move
-    - don't update field names starts with `_` as they are readonly
+    - 必须在下一次回复末尾同时输出变量更新分析和实际更新命令
+    - 更新命令使用类似 JSON Patch 的格式，必须是由操作对象组成的合法 JSON 数组；支持 replace、delta、insert、remove 和 move
+    - JSONPatch 中的 path、from、to 是代码路径，不是自然语言；每个路径段都必须从 <status_current_variable> 展示的当前变量树中逐字复制
+    - 严禁翻译、意译、转写、缩写、拼音化或使用 camelCase 改写任何字段名；中文字段必须保持原始中文，NPC 名称也必须保持原名
+    - 合法的根路径仅有 /当前场景、/现实场景状态、/虚拟场景状态、/当前任务、/携带物、/主角、/NPC序列
+    - replace、delta、remove 使用的完整路径必须已经存在；insert 的父路径必须已经存在；move 的 from 必须已经存在且 to 的父路径必须已经存在
+    - 输出前逐段核对每条路径，确保路径层级与当前变量树完全一致，不得根据字段含义自行补充、删除或重排层级
+    - 正确路径示例：/虚拟场景状态/时间/分、/主角/虚拟化身/当前状态、/NPC序列/莱莎/基础信息/好感度
+    - 错误路径示例：/virtualSceneState/date/time/minute、/protagonist/virtualAvatar/currentState、/npcSequence/莱莎/basicInfo/favorability
+    - 不要更新字段名以 `_` 开头的只读字段
   format: |-
     <UpdateVariable>
-    <Analysis>IN ENGLISH, no more than 80 words. Explain whether any variable needs to be updated.</Analysis>
+    <Analysis>使用中文，不超过80字。简要说明经过的时间、需要更新的变量及原因；分析中的字段名也保持原始中文。</Analysis>
     <JSONPatch>
     []
     </JSONPatch>
