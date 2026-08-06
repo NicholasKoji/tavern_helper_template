@@ -187,7 +187,8 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/状态栏/index.html')
+        const status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/状态栏/index.html';
+        $('body').load(`${status_bar_url}?t=${Date.now()}`)
         </script>
         </body>
         ```
@@ -206,7 +207,8 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html')
+        const world_config_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html';
+        $('body').load(`${world_config_url}?t=${Date.now()}`)
         </script>
         </body>
         ```
