@@ -9,3 +9,4 @@
 @.cursor/rules/mvu变量框架.mdc
 @.cursor/rules/mvu角色卡.mdc
 @制卡规范.md
+@插件编写规范.md
