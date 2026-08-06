@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "当前场景": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "地点": {
+          "default": "待生成",
+          "type": "string"
+        },
+        "时间": {
+          "default": "待生成",
+          "type": "string"
+        },
+        "摘要": {
+          "default": "等待玩家完成世界配置",
+          "type": "string"
+        }
+      }
+    },
+    "世界配置": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "世界模板": {
+          "default": "现代都市",
+          "type": "string"
+        },
+        "世界观描述": {
+          "default": "普通现代都市，玩家刚捡到现实编辑器",
+          "type": "string"
+        },
+        "基调": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "色情浓度": {
+              "default": 40,
+              "type": "number"
+            },
+            "搞笑程度": {
+              "default": 70,
+              "type": "number"
+            },
+            "轻松程度": {
+              "default": 70,
+              "type": "number"
+            }
+          }
+        },
+        "允许黑深残": {
+          "default": false,
+          "type": "boolean"
+        },
+        "允许抽风": {
+          "default": true,
+          "type": "boolean"
+        },
+        "抽风频率": {
+          "default": "中",
+          "type": "string",
+          "enum": [
+            "低",
+            "中",
+            "高",
+            "随心所欲"
+          ]
+        },
+        "主角补充设定": {
+          "default": "暂无补充设定",
+          "type": "string"
+        },
+        "常识规则": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "规则名"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "description": "规则内容"
+          }
+        },
+        "行为习惯": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "习惯名"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "description": "习惯内容"
+          }
+        },
+        "物理规则": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "规则名"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "description": "规则内容"
+          }
+        },
+        "创建时间": {
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "现实编辑器": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "状态": {
+          "default": "待机",
+          "type": "string",
+          "enum": [
+            "正常",
+            "抽风中",
+            "维护中",
+            "待机"
+          ]
+        },
+        "版本": {
+          "default": "v0.1.0-alpha",
+          "type": "string"
+        },
+        "权限": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "修改世界规则": {
+              "default": true,
+              "type": "boolean"
+            },
+            "修改自身权限": {
+              "default": false,
+              "type": "boolean"
+            },
+            "卸载本设备": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        },
+        "生效规则": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "规则类别"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "description": "规则名"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "description": "规则内容"
+            }
+          }
+        },
+        "抽风记录": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "description": "记录名"
+          },
+          "additionalProperties": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "时间": {
+                "default": "",
+                "type": "string"
+              },
+              "改动": {
+                "default": "",
+                "type": "string"
+              },
+              "结果": {
+                "default": "",
+                "type": "string"
+              },
+              "是否被主角发现": {
+                "default": false,
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "下次抽风提示": {
+          "default": "暂无",
+          "type": "string"
+        }
+      }
+    },
+    "主角": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "default": "",
+          "type": "string"
+        },
+        "身份": {
+          "default": "普通居民",
+          "type": "string"
+        },
+        "补充设定": {
+          "default": "",
+          "type": "string"
+        }
+      }
+    },
+    "NPC序列": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "NPC名称"
+      },
+      "additionalProperties": {
+        "default": {},
+        "type": "object",
+        "properties": {
+          "基础信息": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "姓名": {
+                "default": "",
+                "type": "string"
+              },
+              "性别": {
+                "default": "女",
+                "type": "string"
+              },
+              "年龄": {
+                "default": "",
+                "type": "string"
+              },
+              "身份": {
+                "default": "",
+                "type": "string"
+              },
+              "与主角关系": {
+                "default": "",
+                "type": "string"
+              }
+            }
+          },
+          "当前想法": {
+            "default": "",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

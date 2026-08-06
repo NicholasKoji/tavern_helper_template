@@ -1,0 +1,21 @@
+---
+变量输出格式:
+  rule:
+    - 必须在下一次回复末尾同时输出变量更新分析和实际更新命令
+    - 更新命令使用类似 JSON Patch 的格式，必须是由操作对象组成的合法 JSON 数组；支持 replace、delta、insert、remove 和 move
+    - JSONPatch 中的 path、from、to 是代码路径，不是自然语言；每个路径段都必须从 <status_current_variable> 展示的当前变量树中逐字复制
+    - 严禁翻译、意译、转写、缩写、拼音化或使用 camelCase 改写任何字段名；中文字段必须保持原始中文，NPC 名称也必须保持原名
+    - 合法的根路径仅有 /当前场景、/世界配置、/现实编辑器、/主角、/NPC序列
+    - /现实编辑器/权限 下的字段全部只读，禁止输出任何针对它们的更新命令
+    - replace、delta、remove 使用的完整路径必须已经存在；insert 的父路径必须已经存在；move 的 from 必须已经存在且 to 的父路径必须已经存在
+    - 输出前逐段核对每条路径，确保路径层级与当前变量树完全一致
+    - 正确路径示例：/当前场景/摘要、/现实编辑器/生效规则/常识规则/走路靠右、/现实编辑器/抽风记录/第3次抽风/改动
+    - 错误路径示例：/worldConfig/base、/editor/permission、/现实编辑器/权限/修改自身权限
+    - 不要更新字段名以 `_` 开头的只读字段
+  format: |-
+    <UpdateVariable>
+    <Analysis>使用中文，不超过80字。简要说明经过的时间、需要更新的变量及原因；分析中的字段名也保持原始中文。</Analysis>
+    <JSONPatch>
+    []
+    </JSONPatch>
+    </UpdateVariable>

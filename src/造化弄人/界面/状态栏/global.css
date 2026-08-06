@@ -1,0 +1,122 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Microsoft YaHei', system-ui, sans-serif;
+  background: transparent;
+  color: #e6e6e6;
+  padding: 6px;
+}
+
+.status-bar {
+  width: 100%;
+  background: #101418;
+  border: 1px solid #2c3642;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.bar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  color: #7ee0a3;
+}
+
+.badge {
+  background: #1c2a22;
+  color: #7ee0a3;
+  border: 1px solid #2c5c40;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.version {
+  margin-left: auto;
+  color: #5d6b7d;
+  font-family: Consolas, monospace;
+}
+
+.permissions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.perm {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.perm.ok {
+  background: #1c2a22;
+  color: #7ee0a3;
+}
+
+.perm.no {
+  background: #241a1a;
+  color: #ff7c7c;
+}
+
+.world-line,
+.scene {
+  margin-top: 8px;
+  color: #c9d3de;
+}
+
+.scene {
+  color: #8895a7;
+  font-size: 11px;
+}
+
+.block {
+  margin-top: 8px;
+  border-top: 1px dashed #26303c;
+  padding-top: 6px;
+}
+
+summary {
+  cursor: pointer;
+  color: #7ee0a3;
+  font-size: 12px;
+}
+
+.rule-group {
+  margin-top: 6px;
+}
+
+h4 {
+  color: #8895a7;
+  font-size: 11px;
+}
+
+ul {
+  list-style: none;
+  margin-top: 2px;
+}
+
+li {
+  margin-top: 2px;
+  color: #c9d3de;
+}
+
+.glitch {
+  color: #ffd48a;
+}
+
+.hint {
+  margin-top: 8px;
+  color: #ffd48a;
+  font-size: 11px;
+}
