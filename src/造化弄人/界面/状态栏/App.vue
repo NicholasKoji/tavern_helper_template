@@ -30,16 +30,6 @@
       </div>
     </details>
 
-    <details v-if="glitchCount > 0" class="block">
-      <summary>抽风记录（{{ glitchCount }}）</summary>
-      <ul>
-        <li v-for="(record, name) in data.现实编辑器.抽风记录" :key="name" class="glitch">
-          <b>{{ name }}</b>（{{ record.时间 }}）：{{ record.改动 }} → {{ record.结果 }}
-        </li>
-      </ul>
-    </details>
-
-    <div v-if="data.现实编辑器.下次抽风提示 !== '暂无'" class="hint">{{ data.现实编辑器.下次抽风提示 }}</div>
   </div>
 </template>
 
@@ -54,5 +44,4 @@ const { data } = storeToRefs(store);
 const ruleCount = computed(() =>
   Object.values(data.value.现实编辑器.生效规则).reduce((sum, group) => sum + Object.keys(group).length, 0),
 );
-const glitchCount = computed(() => Object.keys(data.value.现实编辑器.抽风记录).length);
 </script>
