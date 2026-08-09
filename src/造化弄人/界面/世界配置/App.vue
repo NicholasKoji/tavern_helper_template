@@ -1,159 +1,355 @@
 <template>
-  <div class="world-config">
-    <header>
-      <h1>现实编辑器 v0.1.0 · 世界配置终端</h1>
-      <p>「造化弄人」初始化流程：选世界 → 定基调 → 改规则 → 开始游玩</p>
+  <div class="wizard">
+    <header class="wizard-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">现</span>
+        <div class="brand-text">
+          <h1>现实编辑器</h1>
+          <span class="brand-sub">世界建档受理台</span>
+        </div>
+      </div>
+      <span class="version">MOD 0.1.0</span>
     </header>
 
-    <section class="panel">
-      <h2>世界</h2>
-      <label>世界模板</label>
-      <select v-model="form.世界模板" @change="onTemplateChange">
-        <option v-for="preset in templateNames" :key="preset" :value="preset">{{ preset }}</option>
-      </select>
-      <label>时代背景</label>
-      <select v-model="form.时代背景">
-        <option v-for="era in eraOptions" :key="era" :value="era">{{ era }}</option>
-      </select>
-      <label>世界观描述</label>
-      <textarea v-model="form.世界观描述" placeholder="简单描述你想玩的世界" />
-      <label>文明与势力</label>
-      <textarea v-model="form.文明与势力" placeholder="例如：现代社会，三股地下势力暗中争夺旧世界科技" />
-      <label>地理与气候</label>
-      <textarea v-model="form.地理与气候" placeholder="例如：临海城市，夏季湿热，老城区与新城区泾渭分明" />
-      <label>历史与事件</label>
-      <textarea v-model="form.历史与事件" placeholder="例如：十年前曾出现全球性“规则异常”事件，后被官方掩盖" />
-      <label>核心冲突</label>
-      <textarea v-model="form.核心冲突" placeholder="例如：现实编辑器是旧世界科技，各方势力正在追踪它" />
-    </section>
+    <div class="progress" aria-label="配置进度">
+      <div class="progress-meta">
+        <span class="progress-index">第 {{ String(currentStep + 1).padStart(2, '0') }} / {{ String(stepCount).padStart(2, '0') }} 步</span>
+        <span class="progress-title">{{ steps[currentStep].title }}</span>
+      </div>
+      <div class="progress-rail" aria-hidden="true">
+        <span
+          v-for="(step, index) in steps"
+          :key="step.key"
+          class="progress-seg"
+          :class="{ done: index < currentStep, active: index === currentStep }"
+        />
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>主角</h2>
-      <label>身份职业</label>
-      <input v-model="form.主角身份" type="text" placeholder="例如：996 社畜 / 大学生 / 侦探" />
-      <label>性格</label>
-      <input v-model="form.主角性格" type="text" placeholder="例如：怂但嘴硬，怕麻烦，好奇心重" />
-      <label>目标</label>
-      <input v-model="form.主角目标" type="text" placeholder="例如：先保住工作，再搞懂编辑器的秘密" />
-      <label>与现实编辑器关系</label>
-      <select v-model="form.与编辑器关系">
-        <option v-for="relation in relationOptions" :key="relation" :value="relation">{{ relation }}</option>
-      </select>
-      <label>主角补充设定（可选）</label>
-      <textarea v-model="form.主角补充设定" placeholder="例如：我是学生 / 我是侦探 / 我对猫过敏……" />
-    </section>
-
-    <section class="panel">
-      <h2>主要角色</h2>
-      <div v-for="(character, index) in form.角色列表" :key="index" class="character-card">
-        <div class="character-row">
-          <input v-model="character.姓名" type="text" placeholder="姓名" />
-          <input v-model="character.性别" type="text" placeholder="性别" />
-          <input v-model="character.年龄" type="text" placeholder="年龄" />
-          <button class="ghost" type="button" @click="removeCharacter(index)">删</button>
+    <main
+      :key="currentStep"
+      class="step-body"
+      :class="{ 'step-back': slideDir === 'back' }"
+    >
+      <!-- 01 世界 -->
+      <section v-if="currentStep === 0" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">01</span>
+          <h2>世界</h2>
+          <p>给新世界定档：模板、时代与背景。留白也没关系，编辑器会替你补全。</p>
         </div>
-        <input v-model="character.身份" type="text" placeholder="身份" />
-        <input v-model="character.与主角关系" type="text" placeholder="与主角关系" />
-        <input v-model="character.外貌特征" type="text" placeholder="外貌特征（身高身材长相穿着）" />
-        <input v-model="character.性格" type="text" placeholder="性格与说话方式" />
-      </div>
-      <button class="add" type="button" @click="addCharacter">+ 添加主要角色</button>
-    </section>
 
-    <section class="panel">
-      <h2>核心设定</h2>
-      <label>认知（主角是否知道世界编辑器的存在）</label>
-      <select v-model="form.玩法模式.认知">
-        <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-      </select>
-      <label>使用（主角是否能使用世界编辑器）</label>
-      <select v-model="form.玩法模式.使用">
-        <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-      </select>
-      <label>受控（主角是否会被规则制约）</label>
-      <select v-model="form.玩法模式.受控">
-        <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-      </select>
-      <label>世界编辑器是否可以私自篡改规则</label>
-      <select v-model="form.玩法模式.编辑器篡改">
-        <option v-for="option in tamperOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
-    </section>
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">世界模板</span>
+            <select v-model="form.世界模板" class="input" @change="onTemplateChange">
+              <option v-for="preset in templateNames" :key="preset" :value="preset">{{ preset }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">时代背景</span>
+            <select v-model="form.时代背景" class="input">
+              <option v-for="era in eraOptions" :key="era" :value="era">{{ era }}</option>
+            </select>
+          </label>
+        </div>
 
-    <section class="panel">
-      <h2>基调</h2>
-      <div class="slider-row">
-        <label>色情浓度</label>
-        <input v-model.number="form.基调.色情浓度" type="range" min="0" max="100" step="5" />
-        <span>{{ form.基调.色情浓度 }}</span>
-      </div>
-      <div class="slider-row">
-        <label>搞笑程度</label>
-        <input v-model.number="form.基调.搞笑程度" type="range" min="0" max="100" step="5" />
-        <span>{{ form.基调.搞笑程度 }}</span>
-      </div>
-      <div class="slider-row">
-        <label>轻松程度</label>
-        <input v-model.number="form.基调.轻松程度" type="range" min="0" max="100" step="5" />
-        <span>{{ form.基调.轻松程度 }}</span>
-      </div>
-      <label class="checkbox-row">
-        <input v-model="form.允许黑深残" type="checkbox" />
-        允许黑深残走向
-      </label>
-    </section>
+        <label class="field">
+          <span class="field-label">世界观描述</span>
+          <textarea v-model="form.世界观描述" class="input" placeholder="简单描述你想玩的世界" />
+        </label>
 
-    <section class="panel">
-      <h2>剧情方向</h2>
-      <label>开局场景</label>
-      <select v-model="form.剧情方向.开局场景">
-        <option v-for="scene in sceneOptions" :key="scene" :value="scene">{{ scene }}</option>
-      </select>
-      <label>主线目标</label>
-      <input v-model="form.剧情方向.主线目标" type="text" placeholder="例如：查清现实编辑器的来历" />
-      <label>节奏</label>
-      <select v-model="form.剧情方向.节奏">
-        <option v-for="rhythm in rhythmOptions" :key="rhythm" :value="rhythm">{{ rhythm }}</option>
-      </select>
-      <label class="checkbox-row">
-        <input v-model="form.剧情方向.暧昧开局" type="checkbox" />
-        暧昧开局（主要角色互动更亲密）
-      </label>
-    </section>
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">文明与势力</span>
+            <textarea v-model="form.文明与势力" class="input" placeholder="例如：现代社会，三股地下势力暗中争夺旧世界科技" />
+          </label>
+          <label class="field">
+            <span class="field-label">地理与气候</span>
+            <textarea v-model="form.地理与气候" class="input" placeholder="例如：临海城市，夏季湿热，老城区与新城区泾渭分明" />
+          </label>
+        </div>
 
-    <section class="panel">
-      <h2>叙事</h2>
-      <label>视角</label>
-      <select v-model="form.视角">
-        <option v-for="option in povOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
-      <label>文风</label>
-      <select v-model="form.文风">
-        <option v-for="option in styleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
-    </section>
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">历史与事件</span>
+            <textarea v-model="form.历史与事件" class="input" placeholder="例如：十年前曾出现全球性“规则异常”事件，后被官方掩盖" />
+          </label>
+          <label class="field">
+            <span class="field-label">核心冲突</span>
+            <textarea v-model="form.核心冲突" class="input" placeholder="例如：现实编辑器是旧世界科技，各方势力正在追踪它" />
+          </label>
+        </div>
+      </section>
 
-    <section v-for="group in ruleGroups" :key="group.key" class="panel">
-      <h2>{{ group.title }}</h2>
-      <div v-for="(rule, index) in rules[group.key]" :key="index" class="rule-row">
-        <input v-model="rule.名称" type="text" placeholder="规则名" />
-        <input v-model="rule.内容" type="text" :placeholder="group.placeholder" />
-        <button class="ghost" type="button" @click="removeRule(group.key, index)">删</button>
-      </div>
-      <button class="add" type="button" @click="addRule(group.key)">+ 添加{{ group.title }}</button>
-    </section>
+      <!-- 02 主角 -->
+      <section v-else-if="currentStep === 1" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">02</span>
+          <h2>主角</h2>
+          <p>登记主角档案。姓名沿用你当前的玩家名，这里只补身份与性格。</p>
+        </div>
 
-    <footer>
-      <button class="primary" type="button" :disabled="starting" @click="startGame">
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">身份职业</span>
+            <input v-model="form.主角身份" class="input" type="text" placeholder="例如：996 社畜 / 大学生 / 侦探" />
+          </label>
+          <label class="field">
+            <span class="field-label">与现实编辑器关系</span>
+            <select v-model="form.与编辑器关系" class="input">
+              <option v-for="relation in relationOptions" :key="relation" :value="relation">{{ relation }}</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">性格</span>
+          <input v-model="form.主角性格" class="input" type="text" placeholder="例如：怂但嘴硬，怕麻烦，好奇心重" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">目标</span>
+          <input v-model="form.主角目标" class="input" type="text" placeholder="例如：先保住工作，再搞懂编辑器的秘密" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">主角补充设定（可选）</span>
+          <textarea v-model="form.主角补充设定" class="input" placeholder="例如：我是学生 / 我是侦探 / 我对猫过敏……" />
+        </label>
+      </section>
+
+      <!-- 03 主要角色 -->
+      <section v-else-if="currentStep === 2" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">03</span>
+          <h2>主要角色</h2>
+          <p>登记与主角关系最密切的角色。可以不填，开场时编辑器会临时指派一位。</p>
+        </div>
+
+        <div v-for="(character, index) in form.角色列表" :key="index" class="char-card">
+          <div class="char-head">
+            <span class="char-index">角色 #{{ String(index + 1).padStart(2, '0') }}</span>
+            <button class="icon-btn danger" type="button" title="删除角色" @click="removeCharacter(index)">✕</button>
+          </div>
+          <div class="grid-3">
+            <input v-model="character.姓名" class="input" type="text" placeholder="姓名" />
+            <input v-model="character.性别" class="input" type="text" placeholder="性别" />
+            <input v-model="character.年龄" class="input" type="text" placeholder="年龄" />
+          </div>
+          <div class="grid-2">
+            <input v-model="character.身份" class="input" type="text" placeholder="身份" />
+            <input v-model="character.与主角关系" class="input" type="text" placeholder="与主角关系" />
+          </div>
+          <input v-model="character.外貌特征" class="input" type="text" placeholder="外貌特征（身高身材长相穿着）" />
+          <input v-model="character.性格" class="input" type="text" placeholder="性格与说话方式" />
+        </div>
+
+        <button class="add-btn" type="button" @click="addCharacter">＋ 添加主要角色</button>
+      </section>
+
+      <!-- 04 核心设定 -->
+      <section v-else-if="currentStep === 3" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">04</span>
+          <h2>核心设定</h2>
+          <p>决定编辑器的权限边界：主角知道什么、能做什么、受不受规则制约。</p>
+        </div>
+
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">认知（主角是否知道世界编辑器的存在）</span>
+            <select v-model="form.玩法模式.认知" class="input">
+              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">使用（主角是否能使用世界编辑器）</span>
+            <select v-model="form.玩法模式.使用" class="input">
+              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">受控（主角是否会被规则制约）</span>
+            <select v-model="form.玩法模式.受控" class="input">
+              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">世界编辑器是否可以私自篡改规则</span>
+            <select v-model="form.玩法模式.编辑器篡改" class="input">
+              <option v-for="option in tamperOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- 05 基调 -->
+      <section v-else-if="currentStep === 4" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">05</span>
+          <h2>基调</h2>
+          <p>调节世界的浓度与温度。数值只作引导，实际以自然融入为准。</p>
+        </div>
+
+        <div class="slider-row">
+          <label class="slider-label" for="tone-erotic">色情浓度</label>
+          <input id="tone-erotic" v-model.number="form.基调.色情浓度" class="range" type="range" min="0" max="100" step="5" />
+          <span class="slider-value">{{ form.基调.色情浓度 }}</span>
+        </div>
+        <div class="slider-row">
+          <label class="slider-label" for="tone-fun">搞笑程度</label>
+          <input id="tone-fun" v-model.number="form.基调.搞笑程度" class="range" type="range" min="0" max="100" step="5" />
+          <span class="slider-value">{{ form.基调.搞笑程度 }}</span>
+        </div>
+        <div class="slider-row">
+          <label class="slider-label" for="tone-easy">轻松程度</label>
+          <input id="tone-easy" v-model.number="form.基调.轻松程度" class="range" type="range" min="0" max="100" step="5" />
+          <span class="slider-value">{{ form.基调.轻松程度 }}</span>
+        </div>
+
+        <label class="check-row">
+          <input v-model="form.允许黑深残" type="checkbox" />
+          <span>允许黑深残走向</span>
+        </label>
+      </section>
+
+      <!-- 06 剧情方向 -->
+      <section v-else-if="currentStep === 5" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">06</span>
+          <h2>剧情方向</h2>
+          <p>定下第一幕从哪开始，以及故事要往哪走。</p>
+        </div>
+
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">开局场景</span>
+            <select v-model="form.剧情方向.开局场景" class="input">
+              <option v-for="scene in sceneOptions" :key="scene" :value="scene">{{ scene }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">节奏</span>
+            <select v-model="form.剧情方向.节奏" class="input">
+              <option v-for="rhythm in rhythmOptions" :key="rhythm" :value="rhythm">{{ rhythm }}</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">主线目标</span>
+          <input v-model="form.剧情方向.主线目标" class="input" type="text" placeholder="例如：查清现实编辑器的来历" />
+        </label>
+
+        <label class="check-row">
+          <input v-model="form.剧情方向.暧昧开局" type="checkbox" />
+          <span>暧昧开局（主要角色互动更亲密）</span>
+        </label>
+      </section>
+
+      <!-- 07 叙事 -->
+      <section v-else-if="currentStep === 6" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">07</span>
+          <h2>叙事</h2>
+          <p>选择谁来讲述、用什么腔调讲述这个世界。</p>
+        </div>
+
+        <label class="field">
+          <span class="field-label">视角</span>
+          <select v-model="form.视角" class="input">
+            <option v-for="option in povOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">文风</span>
+          <select v-model="form.文风" class="input">
+            <option v-for="option in styleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+      </section>
+
+      <!-- 08 规则 -->
+      <section v-else-if="currentStep === 7" class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">08</span>
+          <h2>规则</h2>
+          <p>签发这个世界独有的规则。留白即不设限，编辑器不会擅自发挥。</p>
+        </div>
+
+        <div class="rule-tabs" role="tablist">
+          <button
+            v-for="group in ruleGroups"
+            :key="group.key"
+            type="button"
+            class="rule-tab"
+            :class="{ active: activeRuleGroup === group.key }"
+            :aria-selected="activeRuleGroup === group.key"
+            role="tab"
+            @click="activeRuleGroup = group.key"
+          >
+            {{ group.title }}
+          </button>
+        </div>
+
+        <div v-for="(rule, index) in rules[activeRuleGroup]" :key="index" class="rule-row">
+          <input v-model="rule.名称" class="input" type="text" placeholder="规则名" />
+          <input v-model="rule.内容" class="input" type="text" :placeholder="groupInfo(activeRuleGroup).placeholder" />
+          <button class="icon-btn danger" type="button" title="删除规则" @click="removeRule(activeRuleGroup, index)">✕</button>
+        </div>
+
+        <button class="add-btn" type="button" @click="addRule(activeRuleGroup)">＋ 添加{{ groupInfo(activeRuleGroup).title }}</button>
+      </section>
+
+      <!-- 09 确认与开始 -->
+      <section v-else class="step-panel">
+        <div class="step-heading">
+          <span class="step-no">09</span>
+          <h2>确认与开始</h2>
+          <p>核对登记回执。按下受理章后，编辑器将签发世界并生成第一幕。</p>
+        </div>
+
+        <dl class="receipt">
+          <div v-for="row in receipt" :key="row.key" class="receipt-row">
+            <dt>{{ row.key }}</dt>
+            <dd>{{ row.value }}</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <nav class="wizard-nav">
+      <button v-if="currentStep > 0" class="btn btn-ghost" type="button" @click="goPrev">← 上一步</button>
+      <span v-else class="nav-placeholder" aria-hidden="true" />
+
+      <button
+        v-if="!isLastStep"
+        class="btn btn-primary"
+        type="button"
+        @click="goNext"
+      >
+        下一步 →
+      </button>
+      <button
+        v-else
+        class="btn btn-seal"
+        type="button"
+        :disabled="starting"
+        @click="startGame"
+      >
         {{ starting ? '正在生成开场…' : '开始游玩' }}
       </button>
-      <p v-if="status" class="status">{{ status }}</p>
-    </footer>
+    </nav>
+
+    <p v-if="status" class="status" role="status" aria-live="polite">{{ status }}</p>
+    <p class="notice">本终端签发的规则即日生效，解释权归现实编辑器所有。</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from './store';
 
@@ -167,6 +363,7 @@ type CharacterEntry = {
   外貌特征: string;
   性格: string;
 };
+type RuleGroup = { key: string; title: string; placeholder: string };
 
 const templatePresets: Record<string, string> = {
   现代都市: '普通现代都市，你刚捡到现实编辑器，生活即将开始变得离谱',
@@ -218,12 +415,12 @@ const styleOptions = [
   { value: '微色情', label: '微色情 · 含蓄反差（配合色情浓度）' },
 ];
 
-const ruleGroups = [
+const ruleGroups: RuleGroup[] = [
   { key: '常识规则', title: '常识规则', placeholder: '例如：所有人听到“茄子”都要单脚跳一下' },
   { key: '行为习惯', title: '行为习惯', placeholder: '例如：开口前必须先说“打扰了”' },
   { key: '物理规则', title: '物理规则', placeholder: '例如：午夜十二点后重力减弱 50%' },
   { key: '超自然规则', title: '超自然规则', placeholder: '例如：灵气浓度每三年翻一倍' },
-] as const;
+];
 
 const rules = reactive<Record<string, RuleEntry[]>>({
   常识规则: [],
@@ -267,6 +464,72 @@ const form = reactive({
   视角: '第三人称限定',
   文风: '细腻写实',
 });
+
+const steps = [
+  { key: 'world', title: '世界' },
+  { key: 'protagonist', title: '主角' },
+  { key: 'characters', title: '主要角色' },
+  { key: 'core', title: '核心设定' },
+  { key: 'tone', title: '基调' },
+  { key: 'story', title: '剧情方向' },
+  { key: 'narrative', title: '叙事' },
+  { key: 'rules', title: '规则' },
+  { key: 'confirm', title: '确认与开始' },
+] as const;
+
+const stepCount = steps.length;
+const currentStep = ref(0);
+const slideDir = ref<'next' | 'back'>('next');
+const activeRuleGroup = ref('常识规则');
+
+const isLastStep = computed(() => currentStep.value === stepCount - 1);
+const namedCharacters = computed(() => form.角色列表.filter(character => character.姓名.trim()));
+const ruleCount = computed(() =>
+  Object.values(rules).reduce((sum, list) => sum + list.filter(rule => rule.名称.trim()).length, 0),
+);
+
+const receipt = computed(() => [
+  { key: '世界模板', value: `${form.世界模板} · ${form.时代背景}` },
+  { key: '主角身份', value: form.主角身份.trim() || '普通居民' },
+  {
+    key: '主要角色',
+    value: namedCharacters.value.length
+      ? namedCharacters.value.map(character => character.姓名.trim()).join('、')
+      : '未登记（开场时将自动生成一位）',
+  },
+  {
+    key: '玩法模式',
+    value: `认知 ${form.玩法模式.认知} · 使用 ${form.玩法模式.使用} · 受控 ${form.玩法模式.受控} · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`,
+  },
+  {
+    key: '基调',
+    value: `色情 ${form.基调.色情浓度} · 搞笑 ${form.基调.搞笑程度} · 轻松 ${form.基调.轻松程度}${form.允许黑深残 ? ' · 允许黑深残' : ''}`,
+  },
+  {
+    key: '剧情方向',
+    value: `${form.剧情方向.开局场景} · ${form.剧情方向.主线目标.trim() || '未填写'} · ${form.剧情方向.节奏}${form.剧情方向.暧昧开局 ? ' · 暧昧开局' : ''}`,
+  },
+  { key: '叙事', value: `${form.视角} · ${form.文风}` },
+  { key: '生效规则', value: `${ruleCount.value} 条` },
+]);
+
+function goNext() {
+  if (currentStep.value < stepCount - 1) {
+    slideDir.value = 'next';
+    currentStep.value += 1;
+  }
+}
+
+function goPrev() {
+  if (currentStep.value > 0) {
+    slideDir.value = 'back';
+    currentStep.value -= 1;
+  }
+}
+
+function groupInfo(key: string): RuleGroup {
+  return ruleGroups.find(group => group.key === key) ?? ruleGroups[0];
+}
 
 function onTemplateChange() {
   form.世界观描述 = templatePresets[form.世界模板] ?? form.世界观描述;
@@ -544,3 +807,542 @@ function buildStyleRule(style: string): string {
   return rules[style] ?? rules['通用白描'];
 }
 </script>
+
+<style scoped>
+.wizard {
+  --paper: #efe7d8;
+  --paper-dim: #b3a892;
+  --line: rgba(239, 231, 216, 0.16);
+  --line-strong: rgba(239, 231, 216, 0.34);
+  --red: #d8492f;
+  --red-bright: #f0694e;
+  --amber: #d9a441;
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--paper);
+  font-family: 'FangSong', 'FangSong_GB2312', 'STFangsong', 'SimSun', 'Microsoft YaHei', serif;
+}
+
+.wizard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--red);
+  border-radius: 2px;
+  color: var(--red-bright);
+  font-family: 'SimSun', serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.brand-text h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--paper-dim);
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+
+.version {
+  color: var(--paper-dim);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.progress {
+  padding: 14px 2px 4px;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.progress-index {
+  color: var(--red-bright);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.progress-title {
+  color: var(--paper-dim);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.progress-rail {
+  display: flex;
+  gap: 3px;
+}
+
+.progress-seg {
+  flex: 1;
+  height: 3px;
+  background: rgba(239, 231, 216, 0.12);
+  border-radius: 1px;
+  transition: background-color 0.25s ease;
+}
+
+.progress-seg.done {
+  background: var(--red);
+}
+
+.progress-seg.active {
+  background: var(--amber);
+}
+
+.step-body {
+  padding: 18px 2px 4px;
+  animation: step-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.step-body.step-back {
+  animation-name: step-back;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes step-back {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.step-heading {
+  margin-bottom: 16px;
+}
+
+.step-no {
+  color: var(--red-bright);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.step-heading h2 {
+  display: inline;
+  margin-left: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.step-heading p {
+  margin-top: 7px;
+  color: var(--paper-dim);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.field {
+  display: block;
+  margin-bottom: 13px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--paper-dim);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+textarea.input {
+  min-height: 54px;
+  resize: vertical;
+}
+
+.input::placeholder {
+  color: rgba(179, 168, 146, 0.55);
+}
+
+.input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 1px 0 0 var(--amber);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 0 10px;
+  margin-bottom: 10px;
+}
+
+.char-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--amber);
+  border-radius: 2px;
+}
+
+.char-card .input {
+  margin-bottom: 10px;
+}
+
+.char-card .input:last-child {
+  margin-bottom: 0;
+}
+
+.char-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.char-index {
+  color: var(--amber);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--paper-dim);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-btn.danger:hover {
+  color: var(--red-bright);
+  border-color: rgba(216, 73, 47, 0.5);
+}
+
+.add-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--paper-dim);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.add-btn:hover {
+  color: var(--red-bright);
+  border-color: var(--red);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.slider-label {
+  flex: 0 0 88px;
+  color: var(--paper-dim);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.range {
+  flex: 1;
+  accent-color: var(--red);
+}
+
+.slider-value {
+  flex: 0 0 38px;
+  color: var(--red-bright);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  text-align: right;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+  color: var(--paper);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check-row input {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.check-row input:checked {
+  border-color: var(--red);
+  background: var(--red);
+}
+
+.check-row input:checked::after {
+  content: '✓';
+  color: #fff7ec;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.rule-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rule-tab {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--paper-dim);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rule-tab:hover {
+  color: var(--paper);
+}
+
+.rule-tab.active {
+  color: var(--paper);
+  border-bottom-color: var(--red);
+}
+
+.rule-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+
+.receipt {
+  margin: 0;
+  padding: 4px 14px 8px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--red);
+  border-radius: 2px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(239, 231, 216, 0.1);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.receipt-row:last-child {
+  border-bottom: none;
+}
+
+.receipt dt {
+  flex: 0 0 auto;
+  color: var(--paper-dim);
+  letter-spacing: 1px;
+}
+
+.receipt dd {
+  margin: 0;
+  color: var(--paper);
+  max-width: 62%;
+  text-align: right;
+  word-break: break-word;
+}
+
+.wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 2px 4px;
+}
+
+.nav-placeholder {
+  width: 104px;
+}
+
+.btn {
+  min-width: 104px;
+  padding: 10px 16px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-ghost {
+  border-color: var(--line-strong);
+  color: var(--paper-dim);
+}
+
+.btn-ghost:hover {
+  color: var(--paper);
+  border-color: var(--paper-dim);
+}
+
+.btn-primary {
+  background: var(--red);
+  color: #fff7ec;
+}
+
+.btn-primary:hover {
+  background: var(--red-bright);
+}
+
+.btn-seal {
+  min-width: 150px;
+  padding: 12px 20px;
+  background: var(--red);
+  box-shadow: 0 0 0 2px rgba(216, 73, 47, 0.22), inset 0 0 0 1px rgba(255, 247, 236, 0.55);
+  color: #fff7ec;
+  font-size: 15px;
+  letter-spacing: 5px;
+}
+
+.btn-seal:hover:not(:disabled) {
+  background: var(--red-bright);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 12px;
+  color: var(--amber);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.notice {
+  margin-top: 14px;
+  color: var(--paper-dim);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: center;
+  opacity: 0.72;
+}
+
+@media (max-width: 520px) {
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .rule-row {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .slider-label {
+    flex-basis: 72px;
+  }
+
+  .receipt-row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .receipt dd {
+    max-width: none;
+    text-align: left;
+  }
+}
+</style>
