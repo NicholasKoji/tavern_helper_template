@@ -1,355 +1,566 @@
+<!-- eslint-disable better-tailwindcss/no-unknown-classes -->
 <template>
-  <div class="wizard">
-    <header class="wizard-header">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true">现</span>
-        <div class="brand-text">
-          <h1>现实编辑器</h1>
-          <span class="brand-sub">世界建档受理台</span>
-        </div>
+  <div class="world-forge">
+    <header class="masthead">
+      <div class="masthead-copy">
+        <p class="registry-no">WORLD REGISTRY · NO. 0047</p>
+        <h1>造化弄人</h1>
+        <p class="masthead-subtitle">现实编辑器 · 世界建档受理台</p>
       </div>
-      <span class="version">MOD 0.1.0</span>
+      <div class="masthead-seal" aria-hidden="true">
+        <Stamp :size="24" stroke-width="1.7" />
+        <span>受理</span>
+      </div>
     </header>
 
-    <div class="progress" aria-label="配置进度">
-      <div class="progress-meta">
-        <span class="progress-index">第 {{ String(currentStep + 1).padStart(2, '0') }} / {{ String(stepCount).padStart(2, '0') }} 步</span>
-        <span class="progress-title">{{ steps[currentStep].title }}</span>
-      </div>
-      <div class="progress-rail" aria-hidden="true">
-        <span
-          v-for="(step, index) in steps"
-          :key="step.key"
-          class="progress-seg"
-          :class="{ done: index < currentStep, active: index === currentStep }"
-        />
-      </div>
-    </div>
-
-    <main
-      :key="currentStep"
-      class="step-body"
-      :class="{ 'step-back': slideDir === 'back' }"
-    >
-      <!-- 01 世界 -->
-      <section v-if="currentStep === 0" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">01</span>
-          <h2>世界</h2>
-          <p>给新世界定档：模板、时代与背景。留白也没关系，编辑器会替你补全。</p>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">世界模板</span>
-            <select v-model="form.世界模板" class="input" @change="onTemplateChange">
-              <option v-for="preset in templateNames" :key="preset" :value="preset">{{ preset }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-label">时代背景</span>
-            <select v-model="form.时代背景" class="input">
-              <option v-for="era in eraOptions" :key="era" :value="era">{{ era }}</option>
-            </select>
-          </label>
-        </div>
-
-        <label class="field">
-          <span class="field-label">世界观描述</span>
-          <textarea v-model="form.世界观描述" class="input" placeholder="简单描述你想玩的世界" />
-        </label>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">文明与势力</span>
-            <textarea v-model="form.文明与势力" class="input" placeholder="例如：现代社会，三股地下势力暗中争夺旧世界科技" />
-          </label>
-          <label class="field">
-            <span class="field-label">地理与气候</span>
-            <textarea v-model="form.地理与气候" class="input" placeholder="例如：临海城市，夏季湿热，老城区与新城区泾渭分明" />
-          </label>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">历史与事件</span>
-            <textarea v-model="form.历史与事件" class="input" placeholder="例如：十年前曾出现全球性“规则异常”事件，后被官方掩盖" />
-          </label>
-          <label class="field">
-            <span class="field-label">核心冲突</span>
-            <textarea v-model="form.核心冲突" class="input" placeholder="例如：现实编辑器是旧世界科技，各方势力正在追踪它" />
-          </label>
-        </div>
-      </section>
-
-      <!-- 02 主角 -->
-      <section v-else-if="currentStep === 1" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">02</span>
-          <h2>主角</h2>
-          <p>登记主角档案。姓名沿用你当前的玩家名，这里只补身份与性格。</p>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">身份职业</span>
-            <input v-model="form.主角身份" class="input" type="text" placeholder="例如：996 社畜 / 大学生 / 侦探" />
-          </label>
-          <label class="field">
-            <span class="field-label">与现实编辑器关系</span>
-            <select v-model="form.与编辑器关系" class="input">
-              <option v-for="relation in relationOptions" :key="relation" :value="relation">{{ relation }}</option>
-            </select>
-          </label>
-        </div>
-
-        <label class="field">
-          <span class="field-label">性格</span>
-          <input v-model="form.主角性格" class="input" type="text" placeholder="例如：怂但嘴硬，怕麻烦，好奇心重" />
-        </label>
-
-        <label class="field">
-          <span class="field-label">目标</span>
-          <input v-model="form.主角目标" class="input" type="text" placeholder="例如：先保住工作，再搞懂编辑器的秘密" />
-        </label>
-
-        <label class="field">
-          <span class="field-label">主角补充设定（可选）</span>
-          <textarea v-model="form.主角补充设定" class="input" placeholder="例如：我是学生 / 我是侦探 / 我对猫过敏……" />
-        </label>
-      </section>
-
-      <!-- 03 主要角色 -->
-      <section v-else-if="currentStep === 2" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">03</span>
-          <h2>主要角色</h2>
-          <p>登记与主角关系最密切的角色。可以不填，开场时编辑器会临时指派一位。</p>
-        </div>
-
-        <div v-for="(character, index) in form.角色列表" :key="index" class="char-card">
-          <div class="char-head">
-            <span class="char-index">角色 #{{ String(index + 1).padStart(2, '0') }}</span>
-            <button class="icon-btn danger" type="button" title="删除角色" @click="removeCharacter(index)">✕</button>
-          </div>
-          <div class="grid-3">
-            <input v-model="character.姓名" class="input" type="text" placeholder="姓名" />
-            <input v-model="character.性别" class="input" type="text" placeholder="性别" />
-            <input v-model="character.年龄" class="input" type="text" placeholder="年龄" />
-          </div>
-          <div class="grid-2">
-            <input v-model="character.身份" class="input" type="text" placeholder="身份" />
-            <input v-model="character.与主角关系" class="input" type="text" placeholder="与主角关系" />
-          </div>
-          <input v-model="character.外貌特征" class="input" type="text" placeholder="外貌特征（身高身材长相穿着）" />
-          <input v-model="character.性格" class="input" type="text" placeholder="性格与说话方式" />
-        </div>
-
-        <button class="add-btn" type="button" @click="addCharacter">＋ 添加主要角色</button>
-      </section>
-
-      <!-- 04 核心设定 -->
-      <section v-else-if="currentStep === 3" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">04</span>
-          <h2>核心设定</h2>
-          <p>决定编辑器的权限边界：主角知道什么、能做什么、受不受规则制约。</p>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">认知（主角是否知道世界编辑器的存在）</span>
-            <select v-model="form.玩法模式.认知" class="input">
-              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-label">使用（主角是否能使用世界编辑器）</span>
-            <select v-model="form.玩法模式.使用" class="input">
-              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-label">受控（主角是否会被规则制约）</span>
-            <select v-model="form.玩法模式.受控" class="input">
-              <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-label">世界编辑器是否可以私自篡改规则</span>
-            <select v-model="form.玩法模式.编辑器篡改" class="input">
-              <option v-for="option in tamperOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <!-- 05 基调 -->
-      <section v-else-if="currentStep === 4" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">05</span>
-          <h2>基调</h2>
-          <p>调节世界的浓度与温度。数值只作引导，实际以自然融入为准。</p>
-        </div>
-
-        <div class="slider-row">
-          <label class="slider-label" for="tone-erotic">色情浓度</label>
-          <input id="tone-erotic" v-model.number="form.基调.色情浓度" class="range" type="range" min="0" max="100" step="5" />
-          <span class="slider-value">{{ form.基调.色情浓度 }}</span>
-        </div>
-        <div class="slider-row">
-          <label class="slider-label" for="tone-fun">搞笑程度</label>
-          <input id="tone-fun" v-model.number="form.基调.搞笑程度" class="range" type="range" min="0" max="100" step="5" />
-          <span class="slider-value">{{ form.基调.搞笑程度 }}</span>
-        </div>
-        <div class="slider-row">
-          <label class="slider-label" for="tone-easy">轻松程度</label>
-          <input id="tone-easy" v-model.number="form.基调.轻松程度" class="range" type="range" min="0" max="100" step="5" />
-          <span class="slider-value">{{ form.基调.轻松程度 }}</span>
-        </div>
-
-        <label class="check-row">
-          <input v-model="form.允许黑深残" type="checkbox" />
-          <span>允许黑深残走向</span>
-        </label>
-      </section>
-
-      <!-- 06 剧情方向 -->
-      <section v-else-if="currentStep === 5" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">06</span>
-          <h2>剧情方向</h2>
-          <p>定下第一幕从哪开始，以及故事要往哪走。</p>
-        </div>
-
-        <div class="grid-2">
-          <label class="field">
-            <span class="field-label">开局场景</span>
-            <select v-model="form.剧情方向.开局场景" class="input">
-              <option v-for="scene in sceneOptions" :key="scene" :value="scene">{{ scene }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-label">节奏</span>
-            <select v-model="form.剧情方向.节奏" class="input">
-              <option v-for="rhythm in rhythmOptions" :key="rhythm" :value="rhythm">{{ rhythm }}</option>
-            </select>
-          </label>
-        </div>
-
-        <label class="field">
-          <span class="field-label">主线目标</span>
-          <input v-model="form.剧情方向.主线目标" class="input" type="text" placeholder="例如：查清现实编辑器的来历" />
-        </label>
-
-        <label class="check-row">
-          <input v-model="form.剧情方向.暧昧开局" type="checkbox" />
-          <span>暧昧开局（主要角色互动更亲密）</span>
-        </label>
-      </section>
-
-      <!-- 07 叙事 -->
-      <section v-else-if="currentStep === 6" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">07</span>
-          <h2>叙事</h2>
-          <p>选择谁来讲述、用什么腔调讲述这个世界。</p>
-        </div>
-
-        <label class="field">
-          <span class="field-label">视角</span>
-          <select v-model="form.视角" class="input">
-            <option v-for="option in povOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span class="field-label">文风</span>
-          <select v-model="form.文风" class="input">
-            <option v-for="option in styleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </label>
-      </section>
-
-      <!-- 08 规则 -->
-      <section v-else-if="currentStep === 7" class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">08</span>
-          <h2>规则</h2>
-          <p>签发这个世界独有的规则。留白即不设限，编辑器不会擅自发挥。</p>
-        </div>
-
-        <div class="rule-tabs" role="tablist">
-          <button
-            v-for="group in ruleGroups"
-            :key="group.key"
-            type="button"
-            class="rule-tab"
-            :class="{ active: activeRuleGroup === group.key }"
-            :aria-selected="activeRuleGroup === group.key"
-            role="tab"
-            @click="activeRuleGroup = group.key"
-          >
-            {{ group.title }}
-          </button>
-        </div>
-
-        <div v-for="(rule, index) in rules[activeRuleGroup]" :key="index" class="rule-row">
-          <input v-model="rule.名称" class="input" type="text" placeholder="规则名" />
-          <input v-model="rule.内容" class="input" type="text" :placeholder="groupInfo(activeRuleGroup).placeholder" />
-          <button class="icon-btn danger" type="button" title="删除规则" @click="removeRule(activeRuleGroup, index)">✕</button>
-        </div>
-
-        <button class="add-btn" type="button" @click="addRule(activeRuleGroup)">＋ 添加{{ groupInfo(activeRuleGroup).title }}</button>
-      </section>
-
-      <!-- 09 确认与开始 -->
-      <section v-else class="step-panel">
-        <div class="step-heading">
-          <span class="step-no">09</span>
-          <h2>确认与开始</h2>
-          <p>核对登记回执。按下受理章后，编辑器将签发世界并生成第一幕。</p>
-        </div>
-
-        <dl class="receipt">
-          <div v-for="row in receipt" :key="row.key" class="receipt-row">
-            <dt>{{ row.key }}</dt>
-            <dd>{{ row.value }}</dd>
-          </div>
-        </dl>
-      </section>
-    </main>
-
-    <nav class="wizard-nav">
-      <button v-if="currentStep > 0" class="btn btn-ghost" type="button" @click="goPrev">← 上一步</button>
-      <span v-else class="nav-placeholder" aria-hidden="true" />
-
+    <nav class="chapter-strip" aria-label="世界配置章节">
       <button
-        v-if="!isLastStep"
-        class="btn btn-primary"
+        v-for="(step, index) in steps"
+        :key="step.key"
+        class="chapter-tab"
+        :class="{ active: index === currentStep, complete: index < currentStep || index < maxVisitedStep }"
+        :disabled="index > maxVisitedStep"
+        :aria-current="index === currentStep ? 'step' : undefined"
         type="button"
-        @click="goNext"
+        @click="goToStep(index)"
       >
-        下一步 →
-      </button>
-      <button
-        v-else
-        class="btn btn-seal"
-        type="button"
-        :disabled="starting"
-        @click="startGame"
-      >
-        {{ starting ? '正在生成开场…' : '开始游玩' }}
+        <span class="chapter-icon" aria-hidden="true">
+          <Check v-if="index < currentStep || index < maxVisitedStep" :size="15" stroke-width="2.4" />
+          <component :is="step.icon" v-else :size="16" stroke-width="1.9" />
+        </span>
+        <span class="chapter-copy">
+          <small>{{ step.kicker }}</small>
+          <strong>{{ step.title }}</strong>
+        </span>
       </button>
     </nav>
 
-    <p v-if="status" class="status" role="status" aria-live="polite">{{ status }}</p>
-    <p class="notice">本终端签发的规则即日生效，解释权归现实编辑器所有。</p>
+    <main class="dossier">
+      <div class="paper-notch" aria-hidden="true" />
+      <header class="chapter-heading">
+        <div>
+          <p>{{ steps[currentStep].kicker }} · CHAPTER {{ String(currentStep + 1).padStart(2, '0') }}</p>
+          <h2>{{ steps[currentStep].title }}</h2>
+        </div>
+        <span class="chapter-folio"
+          >{{ String(currentStep + 1).padStart(2, '0') }} / {{ String(stepCount).padStart(2, '0') }}</span
+        >
+      </header>
+
+      <div :key="currentStep" class="chapter-body" :class="{ 'step-back': slideDir === 'back' }">
+        <template v-if="currentStep === 0">
+          <p class="chapter-lead">先给世界定下骨架。编辑器会补全留白，但你写下的细节拥有最高优先级。</p>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><BookOpen :size="19" /></span>
+              <div>
+                <span>卷宗 01</span>
+                <h3>世界骨架</h3>
+              </div>
+            </div>
+            <div class="form-grid two-col">
+              <label class="field">
+                <span class="field-label">世界模板</span>
+                <span class="select-wrap">
+                  <select v-model="form.世界模板" class="control" @change="onTemplateChange">
+                    <option v-for="preset in templateNames" :key="preset" :value="preset">{{ preset }}</option>
+                  </select>
+                </span>
+              </label>
+              <label class="field">
+                <span class="field-label">时代背景</span>
+                <span class="select-wrap">
+                  <select v-model="form.时代背景" class="control">
+                    <option v-for="era in eraOptions" :key="era" :value="era">{{ era }}</option>
+                  </select>
+                </span>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">世界观描述</span>
+              <textarea v-model="form.世界观描述" class="control" rows="3" placeholder="简单描述你想进入的世界" />
+            </label>
+          </section>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><Landmark :size="19" /></span>
+              <div>
+                <span>卷宗 02</span>
+                <h3>文明纹理</h3>
+              </div>
+            </div>
+            <div class="form-grid two-col">
+              <label class="field">
+                <span class="field-label"><Landmark :size="14" />文明与势力</span>
+                <textarea v-model="form.文明与势力" class="control" rows="3" placeholder="有哪些组织、阵营或文明" />
+              </label>
+              <label class="field">
+                <span class="field-label"><Map :size="14" />地理与气候</span>
+                <textarea v-model="form.地理与气候" class="control" rows="3" placeholder="地点、地貌、季节与气候" />
+              </label>
+              <label class="field">
+                <span class="field-label"><History :size="14" />历史与事件</span>
+                <textarea v-model="form.历史与事件" class="control" rows="3" placeholder="塑造当下的历史事件" />
+              </label>
+              <label class="field">
+                <span class="field-label"><Swords :size="14" />核心冲突</span>
+                <textarea v-model="form.核心冲突" class="control" rows="3" placeholder="推动故事前进的矛盾" />
+              </label>
+            </div>
+          </section>
+        </template>
+
+        <template v-else-if="currentStep === 1">
+          <p class="chapter-lead">登记你的入世身份与关键关系。姓名继续使用当前玩家名，无需重复填写。</p>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><UserRound :size="19" /></span>
+              <div>
+                <span>人事卷 01</span>
+                <h3>主角档案</h3>
+              </div>
+            </div>
+            <div class="form-grid two-col">
+              <label class="field">
+                <span class="field-label">身份职业</span>
+                <input v-model="form.主角身份" class="control" type="text" placeholder="例如：调查记者、大学生" />
+              </label>
+              <label class="field">
+                <span class="field-label">与编辑器关系</span>
+                <span class="select-wrap">
+                  <select v-model="form.与编辑器关系" class="control">
+                    <option v-for="relation in relationOptions" :key="relation" :value="relation">
+                      {{ relation }}
+                    </option>
+                  </select>
+                </span>
+              </label>
+              <label class="field">
+                <span class="field-label">性格关键词</span>
+                <input v-model="form.主角性格" class="control" type="text" placeholder="例如：嘴硬、敏锐、怕麻烦" />
+              </label>
+              <label class="field">
+                <span class="field-label">当前目标</span>
+                <input v-model="form.主角目标" class="control" type="text" placeholder="此刻最想完成什么" />
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">补充设定 <em>选填</em></span>
+              <textarea
+                v-model="form.主角补充设定"
+                class="control"
+                rows="3"
+                placeholder="习惯、秘密、偏好或其他需要被记住的细节"
+              />
+            </label>
+          </section>
+
+          <section class="dossier-section">
+            <div class="section-heading section-heading-actions">
+              <span class="section-icon"><UsersRound :size="19" /></span>
+              <div>
+                <span>人事卷 02</span>
+                <h3>主要角色</h3>
+              </div>
+              <button class="text-action" type="button" @click="addCharacter"><Plus :size="16" />登记角色</button>
+            </div>
+
+            <div v-if="form.角色列表.length === 0" class="empty-record">
+              <UsersRound :size="28" stroke-width="1.5" aria-hidden="true" />
+              <div>
+                <strong>尚未登记主要角色</strong>
+                <p>可以留空，开场时编辑器会临时指派一位。</p>
+              </div>
+              <button type="button" @click="addCharacter"><Plus :size="16" />添加第一位角色</button>
+            </div>
+
+            <article v-for="(character, index) in form.角色列表" :key="index" class="character-record">
+              <header>
+                <div>
+                  <span>CHARACTER FILE</span><strong>角色档案 {{ String(index + 1).padStart(2, '0') }}</strong>
+                </div>
+                <button
+                  class="icon-button danger"
+                  type="button"
+                  :aria-label="`删除角色 ${index + 1}`"
+                  @click="removeCharacter(index)"
+                >
+                  <Trash2 :size="17" />
+                </button>
+              </header>
+              <div class="form-grid compact-grid">
+                <label class="field"
+                  ><span class="field-label">姓名</span
+                  ><input v-model="character.姓名" class="control" type="text" placeholder="姓名"
+                /></label>
+                <label class="field"
+                  ><span class="field-label">性别</span
+                  ><input v-model="character.性别" class="control" type="text" placeholder="性别"
+                /></label>
+                <label class="field"
+                  ><span class="field-label">年龄</span
+                  ><input v-model="character.年龄" class="control" type="text" placeholder="年龄"
+                /></label>
+              </div>
+              <div class="form-grid two-col">
+                <label class="field"
+                  ><span class="field-label">身份</span
+                  ><input v-model="character.身份" class="control" type="text" placeholder="职业或身份"
+                /></label>
+                <label class="field"
+                  ><span class="field-label">与主角关系</span
+                  ><input v-model="character.与主角关系" class="control" type="text" placeholder="朋友、同事、宿敌……"
+                /></label>
+              </div>
+              <label class="field"
+                ><span class="field-label">外貌特征</span
+                ><input v-model="character.外貌特征" class="control" type="text" placeholder="身形、长相、穿着与辨识点"
+              /></label>
+              <label class="field"
+                ><span class="field-label">性格与说话方式</span
+                ><input v-model="character.性格" class="control" type="text" placeholder="性格、口癖与相处方式"
+              /></label>
+            </article>
+          </section>
+        </template>
+
+        <template v-else-if="currentStep === 2">
+          <p class="chapter-lead">决定现实编辑器能做什么、谁会被规则影响，以及这个世界应当保持怎样的温度。</p>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><Scale :size="19" /></span>
+              <div>
+                <span>敕令 01</span>
+                <h3>权限边界</h3>
+              </div>
+            </div>
+            <div class="form-grid two-col">
+              <label class="field"
+                ><span class="field-label">主角知道编辑器存在</span
+                ><span class="select-wrap"
+                  ><select v-model="form.玩法模式.认知" class="control">
+                    <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">主角可以使用编辑器</span
+                ><span class="select-wrap"
+                  ><select v-model="form.玩法模式.使用" class="control">
+                    <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">主角受规则制约</span
+                ><span class="select-wrap"
+                  ><select v-model="form.玩法模式.受控" class="control">
+                    <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">编辑器私自篡改规则</span
+                ><span class="select-wrap"
+                  ><select v-model="form.玩法模式.编辑器篡改" class="control">
+                    <option v-for="option in tamperOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select></span
+                ></label
+              >
+            </div>
+          </section>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><Gauge :size="19" /></span>
+              <div>
+                <span>敕令 02</span>
+                <h3>世界基调</h3>
+              </div>
+            </div>
+            <div class="tone-list">
+              <label class="tone-row"
+                ><span><strong>色情浓度</strong><small>亲密描写的直接程度</small></span
+                ><input v-model.number="form.基调.色情浓度" type="range" min="0" max="100" step="5" /><output>{{
+                  form.基调.色情浓度
+                }}</output></label
+              >
+              <label class="tone-row"
+                ><span><strong>搞笑程度</strong><small>荒诞与幽默出现的频率</small></span
+                ><input v-model.number="form.基调.搞笑程度" type="range" min="0" max="100" step="5" /><output>{{
+                  form.基调.搞笑程度
+                }}</output></label
+              >
+              <label class="tone-row"
+                ><span><strong>轻松程度</strong><small>整体情绪的明亮程度</small></span
+                ><input v-model.number="form.基调.轻松程度" type="range" min="0" max="100" step="5" /><output>{{
+                  form.基调.轻松程度
+                }}</output></label
+              >
+            </div>
+            <label class="switch-row"
+              ><span><strong>允许黑深残走向</strong><small>允许剧情进入更压抑、残酷的分支</small></span
+              ><input v-model="form.允许黑深残" type="checkbox" role="switch"
+            /></label>
+          </section>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><ScrollText :size="19" /></span>
+              <div>
+                <span>敕令 03</span>
+                <h3>生效规则</h3>
+              </div>
+            </div>
+            <div class="rule-tabs" role="tablist" aria-label="规则类型">
+              <button
+                v-for="group in ruleGroups"
+                :key="group.key"
+                class="rule-tab"
+                :class="{ active: activeRuleGroup === group.key }"
+                type="button"
+                role="tab"
+                :aria-selected="activeRuleGroup === group.key"
+                @click="activeRuleGroup = group.key"
+              >
+                {{ group.title }}<span>{{ rules[group.key].length }}</span>
+              </button>
+            </div>
+            <div v-if="rules[activeRuleGroup].length === 0" class="rule-empty">
+              <WandSparkles :size="22" />
+              <p>这一类还没有规则，留空即不设限。</p>
+            </div>
+            <div v-for="(rule, index) in rules[activeRuleGroup]" :key="index" class="rule-record">
+              <input v-model="rule.名称" class="control" type="text" placeholder="规则名称" />
+              <input
+                v-model="rule.内容"
+                class="control"
+                type="text"
+                :placeholder="groupInfo(activeRuleGroup).placeholder"
+              />
+              <button
+                class="icon-button danger"
+                type="button"
+                :aria-label="`删除规则 ${index + 1}`"
+                @click="removeRule(activeRuleGroup, index)"
+              >
+                <Trash2 :size="17" />
+              </button>
+            </div>
+            <button class="add-record" type="button" @click="addRule(activeRuleGroup)">
+              <Plus :size="17" />添加{{ groupInfo(activeRuleGroup).title }}
+            </button>
+          </section>
+        </template>
+
+        <template v-else>
+          <p class="chapter-lead">补上第一幕的叙事方向，然后核对整份卷宗。签发后，编辑器将据此生成新的聊天楼层。</p>
+
+          <section class="dossier-section">
+            <div class="section-heading">
+              <span class="section-icon"><Feather :size="19" /></span>
+              <div>
+                <span>签发 01</span>
+                <h3>叙事开局</h3>
+              </div>
+            </div>
+            <div class="form-grid two-col">
+              <label class="field"
+                ><span class="field-label">开局场景</span
+                ><span class="select-wrap"
+                  ><select v-model="form.剧情方向.开局场景" class="control">
+                    <option v-for="scene in sceneOptions" :key="scene" :value="scene">{{ scene }}</option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">剧情节奏</span
+                ><span class="select-wrap"
+                  ><select v-model="form.剧情方向.节奏" class="control">
+                    <option v-for="rhythm in rhythmOptions" :key="rhythm" :value="rhythm">{{ rhythm }}</option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">叙事视角</span
+                ><span class="select-wrap"
+                  ><select v-model="form.视角" class="control">
+                    <option v-for="option in povOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select></span
+                ></label
+              >
+              <label class="field"
+                ><span class="field-label">叙事文风</span
+                ><span class="select-wrap"
+                  ><select v-model="form.文风" class="control">
+                    <option v-for="option in styleOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select></span
+                ></label
+              >
+            </div>
+            <label class="field"
+              ><span class="field-label">主线目标</span
+              ><input
+                v-model="form.剧情方向.主线目标"
+                class="control"
+                type="text"
+                placeholder="第一幕之后，故事要往哪里走"
+            /></label>
+            <label class="switch-row"
+              ><span><strong>暧昧开局</strong><small>让主要角色在第一幕有更亲密的互动</small></span
+              ><input v-model="form.剧情方向.暧昧开局" type="checkbox" role="switch"
+            /></label>
+          </section>
+
+          <section class="dossier-section issue-section">
+            <div class="section-heading">
+              <span class="section-icon"><Stamp :size="19" /></span>
+              <div>
+                <span>签发 02</span>
+                <h3>世界回执</h3>
+              </div>
+            </div>
+            <div class="receipt-group">
+              <header>
+                <div><BookOpen :size="18" /><strong>世界骨架</strong></div>
+                <button type="button" @click="goToStep(0)"><Pencil :size="14" />修改</button>
+              </header>
+              <dl>
+                <div>
+                  <dt>{{ receipt[0].key }}</dt>
+                  <dd>{{ receipt[0].value }}</dd>
+                </div>
+                <div>
+                  <dt>核心冲突</dt>
+                  <dd>{{ form.核心冲突 }}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="receipt-group">
+              <header>
+                <div><UsersRound :size="18" /><strong>人物关系</strong></div>
+                <button type="button" @click="goToStep(1)"><Pencil :size="14" />修改</button>
+              </header>
+              <dl>
+                <div>
+                  <dt>{{ receipt[1].key }}</dt>
+                  <dd>{{ receipt[1].value }}</dd>
+                </div>
+                <div>
+                  <dt>{{ receipt[2].key }}</dt>
+                  <dd>{{ receipt[2].value }}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="receipt-group">
+              <header>
+                <div><Scale :size="18" /><strong>法则与基调</strong></div>
+                <button type="button" @click="goToStep(2)"><Pencil :size="14" />修改</button>
+              </header>
+              <dl>
+                <div>
+                  <dt>{{ receipt[3].key }}</dt>
+                  <dd>{{ receipt[3].value }}</dd>
+                </div>
+                <div>
+                  <dt>{{ receipt[4].key }}</dt>
+                  <dd>{{ receipt[4].value }}</dd>
+                </div>
+                <div>
+                  <dt>{{ receipt[7].key }}</dt>
+                  <dd>{{ receipt[7].value }}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="receipt-group">
+              <header>
+                <div><Feather :size="18" /><strong>叙事开局</strong></div>
+                <span class="verified"><Check :size="13" />已核</span>
+              </header>
+              <dl>
+                <div>
+                  <dt>{{ receipt[5].key }}</dt>
+                  <dd>{{ receipt[5].value }}</dd>
+                </div>
+                <div>
+                  <dt>{{ receipt[6].key }}</dt>
+                  <dd>{{ receipt[6].value }}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="approval-mark" aria-hidden="true">
+              <Stamp :size="28" /><span>准予签发</span><small>REALITY EDITOR</small>
+            </div>
+          </section>
+        </template>
+      </div>
+    </main>
+
+    <nav class="action-bar" aria-label="配置操作">
+      <button v-if="currentStep > 0" class="button secondary" type="button" @click="goPrev">
+        <ChevronLeft :size="18" />上一步
+      </button>
+      <span v-else class="action-spacer" aria-hidden="true" />
+      <button v-if="!isLastStep" class="button primary" type="button" @click="goNext">
+        下一步：{{ steps[currentStep + 1].title }}<ChevronRight :size="18" />
+      </button>
+      <button v-else class="button issue-button" type="button" :disabled="starting" @click="startGame">
+        <Sparkles :class="{ spinning: starting }" :size="19" />{{ starting ? '正在生成第一幕…' : '开始游玩' }}
+      </button>
+    </nav>
+
+    <p
+      v-if="status"
+      class="status-message"
+      :class="{ error: status.includes('失败'), success: status.includes('已生成') }"
+      role="status"
+      aria-live="polite"
+    >
+      <CircleAlert v-if="status.includes('失败')" :size="16" /><Check
+        v-else-if="status.includes('已生成')"
+        :size="16"
+      /><Sparkles v-else :size="16" />{{ status }}
+    </p>
+    <p class="legal-note">WORLD ARCHIVE · 本次签发仅影响即将生成的世界</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  CloudSun,
+  Feather,
+  Gauge,
+  History,
+  Landmark,
+  Map,
+  Pencil,
+  Plus,
+  Scale,
+  ScrollText,
+  Sparkles,
+  Stamp,
+  Swords,
+  Trash2,
+  UserRound,
+  UsersRound,
+  WandSparkles,
+} from '@lucide/vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from './store';
 
@@ -466,19 +677,15 @@ const form = reactive({
 });
 
 const steps = [
-  { key: 'world', title: '世界' },
-  { key: 'protagonist', title: '主角' },
-  { key: 'characters', title: '主要角色' },
-  { key: 'core', title: '核心设定' },
-  { key: 'tone', title: '基调' },
-  { key: 'story', title: '剧情方向' },
-  { key: 'narrative', title: '叙事' },
-  { key: 'rules', title: '规则' },
-  { key: 'confirm', title: '确认与开始' },
+  { key: 'world', kicker: '第一章', title: '世界底稿', icon: BookOpen },
+  { key: 'people', kicker: '第二章', title: '入世档案', icon: UsersRound },
+  { key: 'rules', kicker: '第三章', title: '法则敕令', icon: Scale },
+  { key: 'issue', kicker: '第四章', title: '签发世界', icon: Stamp },
 ] as const;
 
 const stepCount = steps.length;
 const currentStep = ref(0);
+const maxVisitedStep = ref(0);
 const slideDir = ref<'next' | 'back'>('next');
 const activeRuleGroup = ref('常识规则');
 
@@ -513,17 +720,30 @@ const receipt = computed(() => [
   { key: '生效规则', value: `${ruleCount.value} 条` },
 ]);
 
+function moveToStep(index: number) {
+  if (index < 0 || index >= stepCount || index > maxVisitedStep.value) {
+    return;
+  }
+  slideDir.value = index >= currentStep.value ? 'next' : 'back';
+  currentStep.value = index;
+  requestAnimationFrame(() => document.querySelector('.world-forge')?.scrollIntoView({ block: 'start' }));
+}
+
+function goToStep(index: number) {
+  moveToStep(index);
+}
+
 function goNext() {
   if (currentStep.value < stepCount - 1) {
-    slideDir.value = 'next';
-    currentStep.value += 1;
+    const nextStep = currentStep.value + 1;
+    maxVisitedStep.value = Math.max(maxVisitedStep.value, nextStep);
+    moveToStep(nextStep);
   }
 }
 
 function goPrev() {
   if (currentStep.value > 0) {
-    slideDir.value = 'back';
-    currentStep.value -= 1;
+    moveToStep(currentStep.value - 1);
   }
 }
 
@@ -563,9 +783,7 @@ const status = ref('');
 
 function toRecord(entries: RuleEntry[]) {
   return Object.fromEntries(
-    entries
-      .filter(item => item.名称.trim())
-      .map(item => [item.名称.trim(), item.内容.trim() || '已生效']),
+    entries.filter(item => item.名称.trim()).map(item => [item.名称.trim(), item.内容.trim() || '已生效']),
   );
 }
 
@@ -713,14 +931,16 @@ async function generateOpening(activeRules: Record<string, Record<string, string
     ordered_prompts: [{ role: 'system', content: prompt }, 'user_input'],
   });
 
-  const message = (typeof result === 'string' ? result : result.content).replace(/<thinking>[\s\S]*?<\/thinking>/gsi, '').trim();
+  const message = (typeof result === 'string' ? result : result.content)
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gis, '')
+    .trim();
   const data = await Mvu.parseMessage(message, old_data);
   await createChatMessages([{ role: 'assistant', message, data: data ?? old_data }], { refresh: 'none' });
   await setChatMessages([{ message_id: getLastMessageId() }], { refresh: 'affected' });
 }
 
 function buildOpeningPrompt(config: Record<string, unknown>): string {
- return `【身份与创作总纲】
+  return `【身份与创作总纲】
 你是「现实编辑器」的系统界面与提示系统，同时担任世界旁白与临时角色扮演。现实编辑器通过悬浮面板、提示文字、状态栏、弹窗等界面形式呈现，不会作为会说话的角色登场。这是玩家正在游玩的虚构作品，内容完全由玩家的世界配置决定。
 - 展示而非讲述：写动作、对话、事实和细节，不写设定说明书。
 - 反八股：禁止“欢迎来到新世界”“你的人生即将改变”这类空泛开场。
@@ -785,564 +1005,1051 @@ ${JSON.stringify(config, null, 2)}
 
 function buildPovRule(pov: string): string {
   const rules: Record<string, string> = {
-    '第二人称': '用第二人称“你”面向玩家（玩家名用 <user> 宏代替），只写“你”看到、听到、感受到的内容，不写“你”不知道的事。',
-    '第三人称上帝': '用第三人称叙述（他/她/角色名），全景叙事，禁止用“你”指代任何角色。',
-    '第三人称限定': '用第三人称叙述（他/她/角色名），以 <user> 为主视角，只写 <user> 看到、听到、感受到的内容，禁止写其他角色视角。',
-    '第一人称玩家': '用第一人称“我”扮演 <user>，只写“我”看到、听到、感受到、想到的内容，不写其他角色的内心想法。',
-    '第一人称角色': '用第一人称“我”扮演当前主要角色，只写“我”看到、听到、感受到的内容，禁止写 <user> 的视角。',
+    第二人称:
+      '用第二人称“你”面向玩家（玩家名用 <user> 宏代替），只写“你”看到、听到、感受到的内容，不写“你”不知道的事。',
+    第三人称上帝: '用第三人称叙述（他/她/角色名），全景叙事，禁止用“你”指代任何角色。',
+    第三人称限定:
+      '用第三人称叙述（他/她/角色名），以 <user> 为主视角，只写 <user> 看到、听到、感受到的内容，禁止写其他角色视角。',
+    第一人称玩家: '用第一人称“我”扮演 <user>，只写“我”看到、听到、感受到、想到的内容，不写其他角色的内心想法。',
+    第一人称角色: '用第一人称“我”扮演当前主要角色，只写“我”看到、听到、感受到的内容，禁止写 <user> 的视角。',
   };
   return rules[pov] ?? rules['第二人称'];
 }
 
 function buildStyleRule(style: string): string {
   const rules: Record<string, string> = {
-    '细腻写实': '细腻写实、慢节奏：五感细节、人物外貌身材穿着具体描写、心理活动丰富；按色情浓度决定露骨程度，浓度高时描写直白不回避。',
-    '通用白描': '白描优先，语言克制，情感靠动作和细节；默认不用比喻；禁止空泛抒情。',
-    '轻小说': '口语化日常对话驱动，叙述像角色在说话；对话独立成段，少用对话标签；轻松有活力。',
-    '古风': '七分白话三分文言；称谓和用词要符合时代；禁止“温度”“数据”“系统”等现代词。',
-    '西幻': '世界有质感：写材质、重量、温度、气味；场景即叙事；对话即博弈，人人说话都有目的。',
-    '漫画分镜': '文字即分镜：短段成格，一次换行一次镜头切换；强动词优先，情感具象化；高潮用极端细节“破框”。',
-    '微色情': '日常含蓄、性爱直接：日常用若隐若现的描写，色情浓度按配置自然呈现，反差制造张力。',
+    细腻写实:
+      '细腻写实、慢节奏：五感细节、人物外貌身材穿着具体描写、心理活动丰富；按色情浓度决定露骨程度，浓度高时描写直白不回避。',
+    通用白描: '白描优先，语言克制，情感靠动作和细节；默认不用比喻；禁止空泛抒情。',
+    轻小说: '口语化日常对话驱动，叙述像角色在说话；对话独立成段，少用对话标签；轻松有活力。',
+    古风: '七分白话三分文言；称谓和用词要符合时代；禁止“温度”“数据”“系统”等现代词。',
+    西幻: '世界有质感：写材质、重量、温度、气味；场景即叙事；对话即博弈，人人说话都有目的。',
+    漫画分镜: '文字即分镜：短段成格，一次换行一次镜头切换；强动词优先，情感具象化；高潮用极端细节“破框”。',
+    微色情: '日常含蓄、性爱直接：日常用若隐若现的描写，色情浓度按配置自然呈现，反差制造张力。',
   };
   return rules[style] ?? rules['通用白描'];
 }
 </script>
 
 <style scoped>
-.wizard {
-  --paper: #efe7d8;
-  --paper-dim: #b3a892;
-  --line: rgba(239, 231, 216, 0.16);
-  --line-strong: rgba(239, 231, 216, 0.34);
-  --red: #d8492f;
-  --red-bright: #f0694e;
-  --amber: #d9a441;
-  max-width: 640px;
+.world-forge {
+  --canvas: oklch(0.16 0.012 55);
+  --canvas-raised: oklch(0.21 0.014 55);
+  --paper: oklch(0.92 0.025 78);
+  --paper-deep: oklch(0.86 0.032 75);
+  --paper-soft: oklch(0.955 0.018 78);
+  --ink: oklch(0.24 0.02 55);
+  --ink-muted: oklch(0.48 0.025 60);
+  --ink-faint: oklch(0.62 0.024 65);
+  --cinnabar: oklch(0.49 0.15 31);
+  --cinnabar-active: oklch(0.56 0.17 31);
+  --brass: oklch(0.66 0.08 72);
+  --line: oklch(0.58 0.04 65 / 0.28);
+  --line-strong: oklch(0.48 0.05 62 / 0.48);
+  width: min(100%, 760px);
   margin: 0 auto;
+  overflow: clip;
+  border: 1px solid oklch(0.55 0.05 65 / 0.22);
+  border-radius: 18px;
+  background: radial-gradient(circle at 14% 0%, oklch(0.28 0.025 55 / 0.42), transparent 34%), var(--canvas);
+  box-shadow: 0 26px 70px oklch(0.08 0.01 50 / 0.44);
   color: var(--paper);
-  font-family: 'FangSong', 'FangSong_GB2312', 'STFangsong', 'SimSun', 'Microsoft YaHei', serif;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  container-type: inline-size;
 }
 
-.wizard-header {
+.masthead {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 2px 12px;
-  border-bottom: 1px solid var(--line);
+  gap: 20px;
+  padding: 24px 24px 20px;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.registry-no,
+.chapter-heading p,
+.section-heading span,
+.character-record header span,
+.legal-note {
+  margin: 0;
+  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.brand-mark {
+.registry-no {
+  color: var(--brass);
+}
+
+.masthead h1 {
+  margin: 7px 0 3px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.05;
+}
+
+.masthead-subtitle {
+  margin: 0;
+  color: oklch(0.76 0.03 72);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+.masthead-seal {
   display: grid;
+  flex: 0 0 58px;
   place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid oklch(0.58 0.17 31 / 0.72);
+  color: oklch(0.65 0.18 31);
+  transform: rotate(3deg);
+}
+
+.masthead-seal span {
+  margin-top: -7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.chapter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0 16px 16px;
+}
+
+.chapter-tab {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 0;
+  border-bottom: 1px solid oklch(0.56 0.04 65 / 0.24);
+  background: transparent;
+  color: oklch(0.61 0.025 68);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chapter-tab::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  content: '';
+  transition: background-color 180ms ease-out;
+}
+
+.chapter-tab:not(:disabled):hover {
+  background: oklch(0.28 0.018 55 / 0.48);
+  color: var(--paper);
+}
+.chapter-tab:disabled {
+  cursor: default;
+  opacity: 0.46;
+}
+.chapter-tab.active {
+  color: var(--paper);
+}
+.chapter-tab.active::after {
+  background: var(--cinnabar-active);
+}
+.chapter-tab.complete {
+  color: oklch(0.75 0.065 73);
+}
+
+.chapter-icon {
+  display: grid;
+  flex: 0 0 28px;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--red);
-  border-radius: 2px;
-  color: var(--red-bright);
-  font-family: 'SimSun', serif;
-  font-size: 15px;
-  font-weight: 700;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
 }
 
-.brand-text h1 {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  line-height: 1.2;
-}
-
-.brand-sub {
-  display: block;
-  margin-top: 2px;
-  color: var(--paper-dim);
-  font-size: 11px;
-  letter-spacing: 3px;
-}
-
-.version {
-  color: var(--paper-dim);
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 11px;
-  letter-spacing: 1px;
-}
-
-.progress {
-  padding: 14px 2px 4px;
-}
-
-.progress-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 9px;
-}
-
-.progress-index {
-  color: var(--red-bright);
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-.progress-title {
-  color: var(--paper-dim);
-  font-size: 12px;
-  letter-spacing: 2px;
-}
-
-.progress-rail {
-  display: flex;
+.chapter-copy {
+  display: grid;
+  min-width: 0;
   gap: 3px;
 }
-
-.progress-seg {
-  flex: 1;
-  height: 3px;
-  background: rgba(239, 231, 216, 0.12);
-  border-radius: 1px;
-  transition: background-color 0.25s ease;
+.chapter-copy small {
+  font:
+    9px/1.1 'IBM Plex Mono',
+    'Cascadia Mono',
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+.chapter-copy strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.progress-seg.done {
-  background: var(--red);
+.dossier {
+  position: relative;
+  margin: 0 12px;
+  background:
+    linear-gradient(90deg, oklch(0.75 0.035 72 / 0.18), transparent 9%, transparent 91%, oklch(0.68 0.035 72 / 0.16)),
+    repeating-linear-gradient(0deg, transparent 0 5px, oklch(0.5 0.03 65 / 0.018) 5px 6px), var(--paper);
+  box-shadow:
+    inset 0 0 0 1px oklch(0.45 0.045 62 / 0.26),
+    0 18px 40px oklch(0.08 0.01 50 / 0.3);
+  color: var(--ink);
 }
 
-.progress-seg.active {
-  background: var(--amber);
+.paper-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 26px;
+  height: 9px;
+  background: var(--canvas);
+  clip-path: polygon(0 0, 100% 0, 64% 100%, 36% 100%);
+  transform: translateX(-50%);
 }
 
-.step-body {
-  padding: 18px 2px 4px;
-  animation: step-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+.chapter-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 34px 28px 22px;
+  border-bottom: 1px solid var(--line-strong);
 }
 
-.step-body.step-back {
-  animation-name: step-back;
+.chapter-heading p {
+  color: var(--cinnabar);
+}
+.chapter-heading h2 {
+  margin: 7px 0 0;
+  font-size: 30px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  line-height: 1.15;
+}
+.chapter-folio {
+  color: var(--ink-muted);
+  font:
+    700 12px/1 'IBM Plex Mono',
+    'Cascadia Mono',
+    monospace;
+  letter-spacing: 0.12em;
 }
 
-@keyframes step-in {
+.chapter-body {
+  padding: 0 28px 34px;
+  animation: page-forward 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chapter-body.step-back {
+  animation-name: page-back;
+}
+
+@keyframes page-forward {
   from {
     opacity: 0;
     transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(0);
   }
 }
-
-@keyframes step-back {
+@keyframes page-back {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(0);
   }
 }
 
-.step-heading {
-  margin-bottom: 16px;
-}
-
-.step-no {
-  color: var(--red-bright);
-  font-family: Consolas, 'Courier New', monospace;
+.chapter-lead {
+  max-width: 62ch;
+  margin: 0;
+  padding: 18px 0 22px;
+  color: var(--ink-muted);
   font-size: 13px;
-  letter-spacing: 1px;
+  line-height: 1.8;
 }
 
-.step-heading h2 {
-  display: inline;
-  margin-left: 8px;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 3px;
+.dossier-section {
+  padding: 26px 0 28px;
+  border-top: 1px solid var(--line);
+}
+.chapter-lead + .dossier-section {
+  padding-top: 4px;
+  border-top: 0;
 }
 
-.step-heading p {
-  margin-top: 7px;
-  color: var(--paper-dim);
-  font-size: 12px;
-  line-height: 1.7;
+.section-heading {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.section-heading-actions {
+  grid-template-columns: 36px 1fr auto;
+}
+.section-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid oklch(0.49 0.15 31 / 0.48);
+  border-radius: 50%;
+  color: var(--cinnabar);
+}
+.section-heading div > span {
+  color: var(--cinnabar);
+}
+.section-heading h3 {
+  margin: 3px 0 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0 16px;
+}
+.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.compact-grid {
+  grid-template-columns: 1.3fr 0.7fr 0.7fr;
 }
 
 .field {
-  display: block;
-  margin-bottom: 13px;
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
 }
-
 .field-label {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--paper-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   font-size: 12px;
-  letter-spacing: 1px;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+.field-label em {
+  color: var(--ink-faint);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
 }
 
-.input {
+.control {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--paper);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  padding: 8px 10px;
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
   outline: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  background: oklch(0.96 0.016 78 / 0.54);
+  color: var(--ink);
+  font:
+    500 14px/1.55 'Noto Sans SC',
+    'Microsoft YaHei',
+    sans-serif;
+  padding: 11px 12px;
+  transition:
+    border-color 160ms ease-out,
+    box-shadow 160ms ease-out,
+    background-color 160ms ease-out;
 }
 
-textarea.input {
-  min-height: 54px;
+textarea.control {
+  min-height: 82px;
   resize: vertical;
 }
-
-.input::placeholder {
-  color: rgba(179, 168, 146, 0.55);
+.control::placeholder {
+  color: oklch(0.58 0.02 65);
+}
+.control:hover {
+  border-color: oklch(0.46 0.055 62 / 0.66);
+  background: var(--paper-soft);
+}
+.control:focus-visible {
+  border-color: var(--cinnabar);
+  background: var(--paper-soft);
+  box-shadow: 0 0 0 3px oklch(0.5 0.15 31 / 0.14);
 }
 
-.input:focus {
-  border-color: var(--amber);
-  box-shadow: 0 1px 0 0 var(--amber);
+.select-wrap {
+  position: relative;
+  display: block;
+}
+.select-wrap::after {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ink-muted);
+  border-bottom: 1.5px solid var(--ink-muted);
+  content: '';
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+.select-wrap select {
+  appearance: none;
+  padding-right: 36px;
 }
 
-.grid-2 {
+.text-action,
+.receipt-group button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--cinnabar);
+  font:
+    700 12px/1 'Noto Sans SC',
+    'Microsoft YaHei',
+    sans-serif;
+  cursor: pointer;
+}
+
+.text-action:hover,
+.receipt-group button:hover {
+  color: var(--cinnabar-active);
+}
+
+.empty-record {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 14px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-muted);
 }
 
-.grid-3 {
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr;
-  gap: 0 10px;
-  margin-bottom: 10px;
+.empty-record strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.empty-record p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.empty-record button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font:
+    700 12px/1 'Noto Sans SC',
+    sans-serif;
+  padding: 0 12px;
+  cursor: pointer;
 }
 
-.char-card {
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-top: 2px solid var(--amber);
-  border-radius: 2px;
+.character-record {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  background: oklch(0.95 0.018 78 / 0.28);
 }
-
-.char-card .input {
-  margin-bottom: 10px;
-}
-
-.char-card .input:last-child {
-  margin-bottom: 0;
-}
-
-.char-head {
+.character-record > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.char-index {
-  color: var(--amber);
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-.icon-btn {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  background: transparent;
-  color: var(--paper-dim);
-  font-size: 12px;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.icon-btn.danger:hover {
-  color: var(--red-bright);
-  border-color: rgba(216, 73, 47, 0.5);
-}
-
-.add-btn {
-  width: 100%;
-  margin-top: 4px;
-  padding: 9px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--paper-dim);
-  font: inherit;
-  font-size: 13px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.add-btn:hover {
-  color: var(--red-bright);
-  border-color: var(--red);
-}
-
-.slider-row {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  margin-bottom: 13px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.character-record header div {
+  display: grid;
+  gap: 3px;
+}
+.character-record header span {
+  color: var(--cinnabar);
+}
+.character-record header strong {
+  font-size: 14px;
+  letter-spacing: 0.06em;
 }
 
-.slider-label {
-  flex: 0 0 88px;
-  color: var(--paper-dim);
-  font-size: 12px;
-  letter-spacing: 1px;
+.icon-button {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.icon-button:hover {
+  border-color: currentColor;
+}
+.icon-button.danger:hover {
+  color: var(--cinnabar);
 }
 
-.range {
-  flex: 1;
-  accent-color: var(--red);
+.tone-list {
+  display: grid;
+  gap: 6px;
 }
-
-.slider-value {
-  flex: 0 0 38px;
-  color: var(--red-bright);
-  font-family: Consolas, 'Courier New', monospace;
+.tone-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.9fr) minmax(140px, 1.4fr) 44px;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  border-bottom: 1px solid var(--line);
+}
+.tone-row > span {
+  display: grid;
+  gap: 3px;
+}
+.tone-row strong,
+.switch-row strong {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   font-size: 13px;
+}
+.tone-row small,
+.switch-row small {
+  color: var(--ink-muted);
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.tone-row input {
+  width: 100%;
+  accent-color: var(--cinnabar);
+  cursor: pointer;
+}
+.tone-row output {
+  color: var(--cinnabar);
+  font:
+    750 14px/1 'IBM Plex Mono',
+    'Cascadia Mono',
+    monospace;
   text-align: right;
 }
 
-.check-row {
+.switch-row {
   display: flex;
+  min-height: 62px;
   align-items: center;
-  gap: 9px;
-  margin-top: 16px;
-  color: var(--paper);
-  font-size: 13px;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 12px;
+  padding: 8px 0;
   cursor: pointer;
-  user-select: none;
 }
-
-.check-row input {
-  appearance: none;
+.switch-row > span {
   display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  margin: 0;
+  gap: 4px;
+}
+.switch-row input {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: 0 0 46px;
+  appearance: none;
   border: 1px solid var(--line-strong);
-  border-radius: 2px;
-  background: transparent;
+  border-radius: 99px;
+  background: oklch(0.58 0.02 65);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 160ms ease-out;
 }
-
-.check-row input:checked {
-  border-color: var(--red);
-  background: var(--red);
+.switch-row input::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--paper-soft);
+  box-shadow: 0 1px 3px oklch(0.25 0.02 55 / 0.35);
+  content: '';
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-.check-row input:checked::after {
-  content: '✓';
-  color: #fff7ec;
-  font-size: 11px;
-  line-height: 1;
+.switch-row input:checked {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar);
+}
+.switch-row input:checked::after {
+  transform: translateX(20px);
+}
+.switch-row input:focus-visible {
+  outline: 3px solid oklch(0.5 0.15 31 / 0.18);
+  outline-offset: 2px;
 }
 
 .rule-tabs {
   display: flex;
-  gap: 2px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--line);
+  gap: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
-
 .rule-tab {
-  flex: 1;
-  padding: 8px 4px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--paper-dim);
-  font: inherit;
-  font-size: 12px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.rule-tab:hover {
-  color: var(--paper);
-}
-
-.rule-tab.active {
-  color: var(--paper);
-  border-bottom-color: var(--red);
-}
-
-.rule-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
-  gap: 8px;
+  display: inline-flex;
+  min-width: max-content;
+  min-height: 42px;
   align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-muted);
+  font:
+    700 12px/1 'Noto Sans SC',
+    sans-serif;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.rule-tab span {
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  place-items: center;
+  border-radius: 50%;
+  background: oklch(0.58 0.03 65 / 0.15);
+  font-size: 10px;
+}
+.rule-tab.active {
+  border-color: var(--cinnabar);
+  background: oklch(0.5 0.15 31 / 0.08);
+  color: var(--cinnabar);
+}
+.rule-empty {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ink-muted);
+}
+.rule-empty p {
+  margin: 0;
+  font-size: 12px;
+}
+.rule-record {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.75fr) minmax(180px, 1.4fr) 40px;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 9px;
 }
-
-.receipt {
-  margin: 0;
-  padding: 4px 14px 8px;
-  border: 1px solid var(--line);
-  border-top: 2px solid var(--red);
-  border-radius: 2px;
+.add-record {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-muted);
+  font:
+    700 12px/1 'Noto Sans SC',
+    sans-serif;
+  cursor: pointer;
+}
+.add-record:hover {
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
 }
 
-.receipt-row {
+.issue-section {
+  position: relative;
+  padding-bottom: 90px;
+}
+.receipt-group {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.receipt-group:first-of-type {
+  border-top: 0;
+}
+.receipt-group header {
   display: flex;
+  min-height: 40px;
+  align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 9px 0;
-  border-bottom: 1px dashed rgba(239, 231, 216, 0.1);
-  font-size: 13px;
+  gap: 12px;
+}
+.receipt-group header > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--cinnabar);
+}
+.receipt-group header strong {
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+.receipt-group dl {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0 27px;
+}
+.receipt-group dl div {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 12px;
+  font-size: 12px;
   line-height: 1.6;
 }
-
-.receipt-row:last-child {
-  border-bottom: none;
+.receipt-group dt {
+  color: var(--ink-muted);
 }
-
-.receipt dt {
-  flex: 0 0 auto;
-  color: var(--paper-dim);
-  letter-spacing: 1px;
-}
-
-.receipt dd {
+.receipt-group dd {
   margin: 0;
-  color: var(--paper);
-  max-width: 62%;
-  text-align: right;
-  word-break: break-word;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--cinnabar);
+  font:
+    700 11px/1 'Noto Sans SC',
+    sans-serif;
 }
 
-.wizard-nav {
+.approval-mark {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  width: 86px;
+  height: 86px;
+  place-items: center;
+  border: 3px double oklch(0.49 0.15 31 / 0.65);
+  border-radius: 50%;
+  color: oklch(0.49 0.15 31 / 0.72);
+  transform: rotate(-8deg);
+}
+.approval-mark::after {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: '';
+}
+.approval-mark span {
+  margin-top: -16px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.approval-mark small {
+  margin-top: -20px;
+  font:
+    650 7px/1 'IBM Plex Mono',
+    monospace;
+}
+
+.action-bar {
+  position: sticky;
+  z-index: 10;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 18px 2px 4px;
+  margin-top: 12px;
+  padding: 14px max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  border-top: 1px solid oklch(0.55 0.05 65 / 0.2);
+  background: var(--canvas-raised);
+  box-shadow: 0 -16px 30px oklch(0.08 0.01 50 / 0.25);
 }
 
-.nav-placeholder {
+.action-spacer {
   width: 104px;
 }
-
-.btn {
-  min-width: 104px;
-  padding: 10px 16px;
-  border-radius: 2px;
-  border: 1px solid transparent;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  letter-spacing: 2px;
+.button {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 5px;
+  font:
+    760 13px/1 'Noto Sans SC',
+    'Microsoft YaHei',
+    sans-serif;
+  letter-spacing: 0.06em;
+  padding: 0 18px;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    transform 120ms ease-out;
 }
-
-.btn:active {
+.button:active {
   transform: translateY(1px);
 }
-
-.btn-ghost {
-  border-color: var(--line-strong);
-  color: var(--paper-dim);
+.button.secondary {
+  border: 1px solid oklch(0.7 0.055 72 / 0.38);
+  background: transparent;
+  color: oklch(0.78 0.04 72);
 }
-
-.btn-ghost:hover {
+.button.secondary:hover {
+  border-color: var(--brass);
   color: var(--paper);
-  border-color: var(--paper-dim);
 }
-
-.btn-primary {
-  background: var(--red);
-  color: #fff7ec;
+.button.primary,
+.button.issue-button {
+  min-width: 188px;
+  border: 1px solid oklch(0.63 0.17 31 / 0.85);
+  background: var(--cinnabar);
+  box-shadow:
+    inset 0 0 0 1px oklch(0.92 0.04 65 / 0.2),
+    0 8px 18px oklch(0.17 0.08 31 / 0.28);
+  color: oklch(0.96 0.02 78);
 }
-
-.btn-primary:hover {
-  background: var(--red-bright);
+.button.primary:hover,
+.button.issue-button:hover:not(:disabled) {
+  background: var(--cinnabar-active);
 }
-
-.btn-seal {
-  min-width: 150px;
-  padding: 12px 20px;
-  background: var(--red);
-  box-shadow: 0 0 0 2px rgba(216, 73, 47, 0.22), inset 0 0 0 1px rgba(255, 247, 236, 0.55);
-  color: #fff7ec;
+.button.issue-button {
+  min-width: 210px;
   font-size: 15px;
-  letter-spacing: 5px;
+  letter-spacing: 0.14em;
 }
-
-.btn-seal:hover:not(:disabled) {
-  background: var(--red-bright);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.status {
-  margin-top: 12px;
-  color: var(--amber);
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 12px;
-  text-align: center;
-  letter-spacing: 1px;
-}
-
-.notice {
-  margin-top: 14px;
-  color: var(--paper-dim);
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-align: center;
+.button:disabled {
+  cursor: wait;
   opacity: 0.72;
 }
 
-@media (max-width: 520px) {
-  .grid-2,
-  .grid-3 {
-    grid-template-columns: 1fr;
+.status-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 12px 16px 0;
+  color: var(--brass);
+  font:
+    650 12px/1.5 'Noto Sans SC',
+    sans-serif;
+  text-align: center;
+}
+.status-message.error {
+  color: oklch(0.72 0.16 30);
+}
+.status-message.success {
+  color: oklch(0.77 0.1 145);
+}
+.legal-note {
+  margin: 14px 16px 18px;
+  color: oklch(0.58 0.025 68);
+  text-align: center;
+}
+.spinning {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@container (max-width: 620px) {
+  .masthead {
+    padding: 20px 18px 16px;
+  }
+  .masthead h1 {
+    font-size: 25px;
+  }
+  .masthead-seal {
+    flex-basis: 50px;
+  }
+  .chapter-strip {
+    padding: 0 8px 12px;
+  }
+  .chapter-tab {
+    justify-content: center;
     gap: 0;
+    padding: 7px 4px;
+    text-align: center;
   }
-
-  .rule-row {
-    grid-template-columns: 1fr 1fr auto;
+  .chapter-icon {
+    width: 27px;
+    height: 27px;
   }
-
-  .slider-label {
-    flex-basis: 72px;
+  .chapter-copy small {
+    display: none;
   }
+  .chapter-copy strong {
+    max-width: 4.4em;
+    margin-left: 6px;
+    font-size: 11px;
+    white-space: normal;
+  }
+  .dossier {
+    margin: 0 7px;
+  }
+  .chapter-heading {
+    padding: 29px 18px 18px;
+  }
+  .chapter-heading h2 {
+    font-size: 25px;
+  }
+  .chapter-body {
+    padding: 0 18px 26px;
+  }
+  .two-col,
+  .compact-grid {
+    grid-template-columns: 1fr;
+  }
+  .empty-record {
+    grid-template-columns: auto 1fr;
+  }
+  .empty-record button {
+    grid-column: 1 / -1;
+  }
+  .tone-row {
+    grid-template-columns: 1fr 48px;
+    gap: 8px 12px;
+    padding: 10px 0;
+  }
+  .tone-row input {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .tone-row output {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .rule-record {
+    grid-template-columns: 1fr 40px;
+  }
+  .rule-record .control:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .rule-record .icon-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .receipt-group dl {
+    margin-left: 0;
+  }
+}
 
-  .receipt-row {
+@container (max-width: 420px) {
+  .masthead {
+    align-items: flex-start;
+  }
+  .registry-no {
+    font-size: 9px;
+  }
+  .masthead h1 {
+    font-size: 23px;
+  }
+  .masthead-subtitle {
+    font-size: 11px;
+  }
+  .masthead-seal {
+    flex-basis: 46px;
+  }
+  .chapter-tab {
+    min-height: 62px;
     flex-direction: column;
-    gap: 2px;
+    gap: 5px;
   }
-
-  .receipt dd {
+  .chapter-copy {
+    display: block;
+  }
+  .chapter-copy strong {
     max-width: none;
-    text-align: left;
+    margin-left: 0;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .chapter-heading h2 {
+    font-size: 23px;
+  }
+  .chapter-folio {
+    font-size: 10px;
+  }
+  .section-heading-actions {
+    grid-template-columns: 36px 1fr;
+  }
+  .section-heading-actions .text-action {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    border: 1px solid var(--line);
+  }
+  .receipt-group dl div {
+    grid-template-columns: 72px 1fr;
+    gap: 8px;
+  }
+  .action-bar {
+    padding-inline: 10px;
+  }
+  .action-spacer {
+    width: 0;
+  }
+  .button {
+    min-width: 0;
+    padding: 0 13px;
+  }
+  .button.primary {
+    flex: 1;
+  }
+  .button.issue-button {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-body,
+  .spinning {
+    animation: none;
+  }
+  .chapter-tab,
+  .button,
+  .control,
+  .switch-row input,
+  .switch-row input::after {
+    transition-duration: 0.01ms;
   }
 }
 </style>

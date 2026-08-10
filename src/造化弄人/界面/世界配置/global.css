@@ -1,12 +1,42 @@
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'FangSong', 'FangSong_GB2312', 'STFangsong', 'SimSun', 'Microsoft YaHei', serif;
+  min-width: 280px;
+  margin: 0;
+  padding: 8px;
   background: transparent;
-  color: #efe7d8;
-  padding: 10px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: oklch(0.49 0.15 31 / 0.2);
+}
+
+@media (max-width: 520px) {
+  body {
+    padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
