@@ -262,7 +262,7 @@
         ```
         <body>
         <script>
-        const status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/状态栏/index.html';
+        const status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/人间修订中/界面/状态栏/index.html';
         $('body').load(`${status_bar_url}?t=${Date.now()}`)
         </script>
         </body>
@@ -283,10 +283,10 @@
         <body>
         <script>
         const world_config_urls = [
-          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/4380d6dfb7f9f8ccf25d781feee163681427a617/dist/造化弄人/界面/世界配置/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/造化弄人/界面/世界配置/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/造化弄人/界面/世界配置/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/造化弄人/界面/世界配置/index.html',
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/4380d6dfb7f9f8ccf25d781feee163681427a617/dist/人间修订中/界面/世界配置/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/人间修订中/界面/世界配置/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/人间修订中/界面/世界配置/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@4380d6dfb7f9f8ccf25d781feee163681427a617/dist/人间修订中/界面/世界配置/index.html',
         ];
         const world_config_revision = '[aria-label^="霓虹夜城："]';
         const load_world_config = index => {
@@ -342,4 +342,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@c522195b3a17edd8f1df71cd5f275669ec243f2c/dist/造化弄人/脚本/变量结构/index.js';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@c522195b3a17edd8f1df71cd5f275669ec243f2c/dist/人间修订中/脚本/变量结构/index.js';
