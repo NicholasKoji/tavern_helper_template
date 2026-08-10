@@ -1,17 +1,49 @@
 <!-- eslint-disable better-tailwindcss/no-unknown-classes -->
 <template>
-  <div class="world-forge">
+  <div class="world-forge" :data-theme="activeTheme">
     <header class="masthead">
       <div class="masthead-copy">
-        <p class="registry-no">WORLD REGISTRY · NO. 0047</p>
+        <p class="registry-no">{{ activeThemeMeta.registry }}</p>
         <h1>造化弄人</h1>
-        <p class="masthead-subtitle">现实编辑器 · 世界建档受理台</p>
+        <p class="masthead-subtitle">{{ activeThemeMeta.subtitle }}</p>
       </div>
       <div class="masthead-seal" aria-hidden="true">
-        <Stamp :size="24" stroke-width="1.7" />
-        <span>受理</span>
+        <component :is="activeThemeMeta.icon" :size="24" stroke-width="1.7" />
+        <span>{{ activeThemeMeta.seal }}</span>
       </div>
     </header>
+
+    <section class="theme-dock" aria-labelledby="theme-dock-title">
+      <div class="theme-dock-heading">
+        <div>
+          <span id="theme-dock-title">界面主题</span>
+          <small>{{ activeThemeMeta.caption }}</small>
+        </div>
+        <strong>{{ activeThemeMeta.code }} / 03</strong>
+      </div>
+      <div class="theme-options" role="radiogroup" aria-label="选择世界配置界面主题">
+        <button
+          v-for="theme in themeOptions"
+          :key="theme.id"
+          class="theme-option"
+          :class="{ active: theme.id === activeTheme }"
+          type="button"
+          role="radio"
+          :aria-checked="theme.id === activeTheme"
+          :aria-label="`${theme.code} ${theme.name}：${theme.caption}`"
+          @click="setTheme(theme.id)"
+        >
+          <span class="theme-glyph" aria-hidden="true">
+            <component :is="theme.icon" :size="17" stroke-width="1.8" />
+          </span>
+          <span class="theme-option-copy">
+            <strong>{{ theme.code }} · {{ theme.name }}</strong>
+            <small>{{ theme.shortCaption }}</small>
+          </span>
+          <Check v-if="theme.id === activeTheme" class="theme-check" :size="15" stroke-width="2.5" />
+        </button>
+      </div>
+    </section>
 
     <nav class="chapter-strip" aria-label="世界配置章节">
       <button
@@ -39,7 +71,10 @@
       <div class="paper-notch" aria-hidden="true" />
       <header class="chapter-heading">
         <div>
-          <p>{{ steps[currentStep].kicker }} · CHAPTER {{ String(currentStep + 1).padStart(2, '0') }}</p>
+          <p>
+            {{ steps[currentStep].kicker }} · {{ activeThemeMeta.chapterLabel }}
+            {{ String(currentStep + 1).padStart(2, '0') }}
+          </p>
           <h2>{{ steps[currentStep].title }}</h2>
         </div>
         <span class="chapter-folio"
@@ -55,7 +90,7 @@
             <div class="section-heading">
               <span class="section-icon"><BookOpen :size="19" /></span>
               <div>
-                <span>卷宗 01</span>
+                <span>{{ activeThemeMeta.sectionLabels.world }} 01</span>
                 <h3>世界骨架</h3>
               </div>
             </div>
@@ -87,7 +122,7 @@
             <div class="section-heading">
               <span class="section-icon"><Landmark :size="19" /></span>
               <div>
-                <span>卷宗 02</span>
+                <span>{{ activeThemeMeta.sectionLabels.world }} 02</span>
                 <h3>文明纹理</h3>
               </div>
             </div>
@@ -119,7 +154,7 @@
             <div class="section-heading">
               <span class="section-icon"><UserRound :size="19" /></span>
               <div>
-                <span>人事卷 01</span>
+                <span>{{ activeThemeMeta.sectionLabels.people }} 01</span>
                 <h3>主角档案</h3>
               </div>
             </div>
@@ -162,7 +197,7 @@
             <div class="section-heading section-heading-actions">
               <span class="section-icon"><UsersRound :size="19" /></span>
               <div>
-                <span>人事卷 02</span>
+                <span>{{ activeThemeMeta.sectionLabels.people }} 02</span>
                 <h3>主要角色</h3>
               </div>
               <button class="text-action" type="button" @click="addCharacter"><Plus :size="16" />登记角色</button>
@@ -180,7 +215,8 @@
             <article v-for="(character, index) in form.角色列表" :key="index" class="character-record">
               <header>
                 <div>
-                  <span>CHARACTER FILE</span><strong>角色档案 {{ String(index + 1).padStart(2, '0') }}</strong>
+                  <span>{{ activeThemeMeta.characterFile }}</span
+                  ><strong>角色档案 {{ String(index + 1).padStart(2, '0') }}</strong>
                 </div>
                 <button
                   class="icon-button danger"
@@ -234,7 +270,7 @@
             <div class="section-heading">
               <span class="section-icon"><Scale :size="19" /></span>
               <div>
-                <span>敕令 01</span>
+                <span>{{ activeThemeMeta.sectionLabels.rules }} 01</span>
                 <h3>权限边界</h3>
               </div>
             </div>
@@ -280,7 +316,7 @@
             <div class="section-heading">
               <span class="section-icon"><Gauge :size="19" /></span>
               <div>
-                <span>敕令 02</span>
+                <span>{{ activeThemeMeta.sectionLabels.rules }} 02</span>
                 <h3>世界基调</h3>
               </div>
             </div>
@@ -314,7 +350,7 @@
             <div class="section-heading">
               <span class="section-icon"><ScrollText :size="19" /></span>
               <div>
-                <span>敕令 03</span>
+                <span>{{ activeThemeMeta.sectionLabels.rules }} 03</span>
                 <h3>生效规则</h3>
               </div>
             </div>
@@ -366,7 +402,7 @@
             <div class="section-heading">
               <span class="section-icon"><Feather :size="19" /></span>
               <div>
-                <span>签发 01</span>
+                <span>{{ activeThemeMeta.sectionLabels.issue }} 01</span>
                 <h3>叙事开局</h3>
               </div>
             </div>
@@ -426,7 +462,7 @@
             <div class="section-heading">
               <span class="section-icon"><Stamp :size="19" /></span>
               <div>
-                <span>签发 02</span>
+                <span>{{ activeThemeMeta.sectionLabels.issue }} 02</span>
                 <h3>世界回执</h3>
               </div>
             </div>
@@ -499,7 +535,8 @@
               </dl>
             </div>
             <div class="approval-mark" aria-hidden="true">
-              <Stamp :size="28" /><span>准予签发</span><small>REALITY EDITOR</small>
+              <component :is="activeThemeMeta.icon" :size="28" /><span>{{ activeThemeMeta.approval }}</span
+              ><small>{{ activeThemeMeta.approvalCaption }}</small>
             </div>
           </section>
         </template>
@@ -531,7 +568,7 @@
         :size="16"
       /><Sparkles v-else :size="16" />{{ status }}
     </p>
-    <p class="legal-note">WORLD ARCHIVE · 本次签发仅影响即将生成的世界</p>
+    <p class="legal-note">{{ activeThemeMeta.footer }} · 本次签发仅影响即将生成的世界</p>
   </div>
 </template>
 
@@ -575,6 +612,88 @@ type CharacterEntry = {
   性格: string;
 };
 type RuleGroup = { key: string; title: string; placeholder: string };
+
+const themeOptions = [
+  {
+    id: 'archive',
+    code: 'A',
+    name: '东方官署卷宗',
+    caption: '旧纸、黛墨与朱砂批印，像签发一份世界法令',
+    shortCaption: '官署卷宗',
+    registry: 'WORLD REGISTRY · NO. 0047',
+    subtitle: '现实编辑器 · 世界建档受理台',
+    seal: '受理',
+    chapterLabel: 'CHAPTER',
+    characterFile: 'CHARACTER FILE',
+    sectionLabels: { world: '卷宗', people: '人事卷', rules: '敕令', issue: '签发' },
+    approval: '准予签发',
+    approvalCaption: 'REALITY EDITOR',
+    footer: 'WORLD ARCHIVE',
+    icon: Stamp,
+  },
+  {
+    id: 'astrolabe',
+    code: 'B',
+    name: '命盘推演仪',
+    caption: '墨蓝、铜金与环形命轨，让每一步都像在校准天命',
+    shortCaption: '命盘推演',
+    registry: 'FATE ORBIT · CALC. 0047',
+    subtitle: '造化命盘 · 世界推演观测席',
+    seal: '推演',
+    chapterLabel: 'ORBIT',
+    characterFile: 'FATE SUBJECT',
+    sectionLabels: { world: '天盘', people: '人盘', rules: '律盘', issue: '定盘' },
+    approval: '推演成局',
+    approvalCaption: 'FATE ENGINE',
+    footer: 'ORBITAL DIVINATION',
+    icon: Sparkles,
+  },
+  {
+    id: 'terminal',
+    code: 'C',
+    name: '现实管理终端',
+    caption: '骨白、黑与警示红，把世界参数纳入冷峻控制台',
+    shortCaption: '管理终端',
+    registry: 'REALITY CONTROL · NODE. 0047',
+    subtitle: '现实管理终端 · 世界参数控制台',
+    seal: '在线',
+    chapterLabel: 'STAGE',
+    characterFile: 'SUBJECT RECORD',
+    sectionLabels: { world: 'WORLD', people: 'IDENTITY', rules: 'POLICY', issue: 'EXECUTE' },
+    approval: '参数就绪',
+    approvalCaption: 'REALITY NODE',
+    footer: 'CONTROL PLANE',
+    icon: Gauge,
+  },
+] as const;
+
+type ThemeId = (typeof themeOptions)[number]['id'];
+
+const THEME_STORAGE_KEY = 'zaohua-world-config-theme';
+
+function readSavedTheme(): ThemeId {
+  try {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (themeOptions.some(theme => theme.id === savedTheme)) {
+      return savedTheme as ThemeId;
+    }
+  } catch (error) {
+    console.warn('[造化弄人·世界配置] 主题偏好读取失败，将使用默认主题。', error);
+  }
+  return 'archive';
+}
+
+const activeTheme = ref<ThemeId>(readSavedTheme());
+const activeThemeMeta = computed(() => themeOptions.find(theme => theme.id === activeTheme.value) ?? themeOptions[0]);
+
+function setTheme(theme: ThemeId) {
+  activeTheme.value = theme;
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (error) {
+    console.warn('[造化弄人·世界配置] 主题偏好保存失败，本次切换仍然有效。', error);
+  }
+}
 
 const templatePresets: Record<string, string> = {
   现代都市: '普通现代都市，你刚捡到现实编辑器，生活即将开始变得离谱',
@@ -1046,16 +1165,187 @@ function buildStyleRule(style: string): string {
   --brass: oklch(0.66 0.08 72);
   --line: oklch(0.58 0.04 65 / 0.28);
   --line-strong: oklch(0.48 0.05 62 / 0.48);
+  --shell-ink: oklch(0.92 0.025 78);
+  --shell-muted: oklch(0.76 0.03 72);
+  --shell-border: oklch(0.55 0.05 65 / 0.22);
+  --shell-background: radial-gradient(circle at 14% 0%, oklch(0.28 0.025 55 / 0.42), transparent 34%), var(--canvas);
+  --shell-shadow: 0 26px 70px oklch(0.08 0.01 50 / 0.44);
+  --theme-panel: oklch(0.2 0.015 55 / 0.86);
+  --theme-border: oklch(0.58 0.045 68 / 0.26);
+  --theme-hover: oklch(0.29 0.022 55 / 0.72);
+  --seal-border: oklch(0.58 0.17 31 / 0.72);
+  --seal-color: oklch(0.65 0.18 31);
+  --tab-line: oklch(0.56 0.04 65 / 0.24);
+  --tab-muted: oklch(0.61 0.025 68);
+  --tab-hover: oklch(0.28 0.018 55 / 0.48);
+  --tab-complete: oklch(0.75 0.065 73);
+  --dossier-background:
+    linear-gradient(90deg, oklch(0.75 0.035 72 / 0.18), transparent 9%, transparent 91%, oklch(0.68 0.035 72 / 0.16)),
+    repeating-linear-gradient(0deg, transparent 0 5px, oklch(0.5 0.03 65 / 0.018) 5px 6px), var(--paper);
+  --dossier-shadow: inset 0 0 0 1px oklch(0.45 0.045 62 / 0.26), 0 18px 40px oklch(0.08 0.01 50 / 0.3);
+  --control-surface: oklch(0.96 0.016 78 / 0.54);
+  --control-placeholder: oklch(0.58 0.02 65);
+  --control-hover-border: oklch(0.46 0.055 62 / 0.66);
+  --focus-ring: oklch(0.5 0.15 31 / 0.14);
+  --record-surface: oklch(0.95 0.018 78 / 0.28);
+  --switch-off: oklch(0.58 0.02 65);
+  --switch-shadow: oklch(0.25 0.02 55 / 0.35);
+  --count-surface: oklch(0.58 0.03 65 / 0.15);
+  --selected-surface: oklch(0.5 0.15 31 / 0.08);
+  --approval-color: oklch(0.49 0.15 31 / 0.72);
+  --action-border: oklch(0.55 0.05 65 / 0.2);
+  --action-shadow: 0 -16px 30px oklch(0.08 0.01 50 / 0.25);
+  --secondary-border: oklch(0.7 0.055 72 / 0.38);
+  --secondary-text: oklch(0.78 0.04 72);
+  --button-border: oklch(0.63 0.17 31 / 0.85);
+  --button-inset: oklch(0.92 0.04 65 / 0.2);
+  --button-shadow: oklch(0.17 0.08 31 / 0.28);
+  --button-text: oklch(0.96 0.02 78);
+  --legal-text: oklch(0.58 0.025 68);
+  position: relative;
+  isolation: isolate;
   width: min(100%, 760px);
   margin: 0 auto;
   overflow: clip;
-  border: 1px solid oklch(0.55 0.05 65 / 0.22);
+  border: 1px solid var(--shell-border);
   border-radius: 18px;
-  background: radial-gradient(circle at 14% 0%, oklch(0.28 0.025 55 / 0.42), transparent 34%), var(--canvas);
-  box-shadow: 0 26px 70px oklch(0.08 0.01 50 / 0.44);
-  color: var(--paper);
+  background: var(--shell-background);
+  box-shadow: var(--shell-shadow);
+  color: var(--shell-ink);
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
   container-type: inline-size;
+  transition:
+    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.world-forge[data-theme='astrolabe'] {
+  --canvas: oklch(0.14 0.032 255);
+  --canvas-raised: oklch(0.19 0.038 250);
+  --paper: oklch(0.205 0.036 252);
+  --paper-deep: oklch(0.17 0.034 254);
+  --paper-soft: oklch(0.255 0.038 248);
+  --ink: oklch(0.91 0.024 82);
+  --ink-muted: oklch(0.73 0.032 82);
+  --ink-faint: oklch(0.59 0.035 78);
+  --cinnabar: oklch(0.72 0.105 74);
+  --cinnabar-active: oklch(0.81 0.12 78);
+  --brass: oklch(0.69 0.115 58);
+  --line: oklch(0.68 0.055 76 / 0.22);
+  --line-strong: oklch(0.74 0.075 76 / 0.4);
+  --shell-ink: oklch(0.91 0.024 82);
+  --shell-muted: oklch(0.72 0.042 80);
+  --shell-border: oklch(0.71 0.095 72 / 0.38);
+  --shell-background:
+    radial-gradient(
+      circle at 50% -8%,
+      transparent 0 64px,
+      oklch(0.74 0.1 75 / 0.22) 65px 66px,
+      transparent 67px 112px,
+      oklch(0.74 0.1 75 / 0.12) 113px 114px,
+      transparent 115px
+    ),
+    radial-gradient(circle at 85% 9%, oklch(0.34 0.075 245 / 0.46), transparent 31%), var(--canvas);
+  --shell-shadow: 0 30px 80px oklch(0.055 0.025 255 / 0.62);
+  --theme-panel: oklch(0.18 0.04 252 / 0.9);
+  --theme-border: oklch(0.7 0.085 74 / 0.3);
+  --theme-hover: oklch(0.28 0.058 246 / 0.78);
+  --seal-border: oklch(0.74 0.11 75 / 0.7);
+  --seal-color: oklch(0.81 0.12 78);
+  --tab-line: oklch(0.72 0.07 75 / 0.2);
+  --tab-muted: oklch(0.62 0.045 80);
+  --tab-hover: oklch(0.27 0.05 246 / 0.72);
+  --tab-complete: oklch(0.78 0.09 76);
+  --dossier-background:
+    radial-gradient(
+      circle at 50% 2%,
+      transparent 0 72px,
+      oklch(0.74 0.095 76 / 0.12) 73px 74px,
+      transparent 75px 116px,
+      oklch(0.74 0.095 76 / 0.07) 117px 118px,
+      transparent 119px
+    ),
+    linear-gradient(145deg, oklch(0.26 0.045 245 / 0.52), transparent 48%), var(--paper);
+  --dossier-shadow: inset 0 0 0 1px oklch(0.74 0.09 75 / 0.26), 0 20px 44px oklch(0.055 0.024 255 / 0.46);
+  --control-surface: oklch(0.245 0.037 249 / 0.88);
+  --control-placeholder: oklch(0.59 0.032 80);
+  --control-hover-border: oklch(0.76 0.1 76 / 0.7);
+  --focus-ring: oklch(0.75 0.11 76 / 0.18);
+  --record-surface: oklch(0.245 0.04 248 / 0.64);
+  --switch-off: oklch(0.39 0.04 247);
+  --switch-shadow: oklch(0.06 0.02 255 / 0.5);
+  --count-surface: oklch(0.72 0.09 76 / 0.13);
+  --selected-surface: oklch(0.72 0.1 76 / 0.12);
+  --approval-color: oklch(0.78 0.11 76 / 0.78);
+  --action-border: oklch(0.72 0.08 75 / 0.24);
+  --action-shadow: 0 -18px 34px oklch(0.055 0.025 255 / 0.42);
+  --secondary-border: oklch(0.7 0.08 76 / 0.42);
+  --secondary-text: oklch(0.82 0.07 79);
+  --button-border: oklch(0.82 0.12 78 / 0.9);
+  --button-inset: oklch(0.96 0.03 82 / 0.18);
+  --button-shadow: oklch(0.05 0.03 255 / 0.42);
+  --button-text: oklch(0.18 0.035 252);
+  --legal-text: oklch(0.58 0.04 80);
+  border-radius: 28px;
+}
+
+.world-forge[data-theme='terminal'] {
+  --canvas: oklch(0.93 0.008 80);
+  --canvas-raised: oklch(0.89 0.009 75);
+  --paper: oklch(0.975 0.006 82);
+  --paper-deep: oklch(0.92 0.009 78);
+  --paper-soft: oklch(0.99 0.004 82);
+  --ink: oklch(0.19 0.012 55);
+  --ink-muted: oklch(0.43 0.014 58);
+  --ink-faint: oklch(0.58 0.012 60);
+  --cinnabar: oklch(0.53 0.205 29);
+  --cinnabar-active: oklch(0.47 0.215 29);
+  --brass: oklch(0.34 0.012 60);
+  --line: oklch(0.34 0.015 58 / 0.22);
+  --line-strong: oklch(0.25 0.014 58 / 0.48);
+  --shell-ink: oklch(0.16 0.012 55);
+  --shell-muted: oklch(0.4 0.014 58);
+  --shell-border: oklch(0.18 0.012 55 / 0.78);
+  --shell-background:
+    repeating-linear-gradient(0deg, transparent 0 23px, oklch(0.2 0.01 55 / 0.035) 23px 24px),
+    linear-gradient(120deg, oklch(0.98 0.006 82), oklch(0.9 0.01 74));
+  --shell-shadow: 10px 10px 0 oklch(0.18 0.012 55 / 0.88);
+  --theme-panel: oklch(0.965 0.006 82 / 0.94);
+  --theme-border: oklch(0.2 0.012 55 / 0.3);
+  --theme-hover: oklch(0.89 0.012 74 / 0.9);
+  --seal-border: oklch(0.53 0.205 29 / 0.82);
+  --seal-color: oklch(0.48 0.205 29);
+  --tab-line: oklch(0.24 0.012 55 / 0.24);
+  --tab-muted: oklch(0.46 0.012 58);
+  --tab-hover: oklch(0.88 0.012 75 / 0.84);
+  --tab-complete: oklch(0.31 0.018 55);
+  --dossier-background:
+    linear-gradient(90deg, oklch(0.2 0.01 55 / 0.04) 1px, transparent 1px),
+    linear-gradient(oklch(0.2 0.01 55 / 0.035) 1px, transparent 1px), var(--paper);
+  --dossier-shadow: inset 0 0 0 1px oklch(0.19 0.012 55 / 0.72), 6px 6px 0 oklch(0.18 0.012 55 / 0.16);
+  --control-surface: oklch(0.99 0.004 82);
+  --control-placeholder: oklch(0.58 0.012 60);
+  --control-hover-border: oklch(0.28 0.015 55 / 0.76);
+  --focus-ring: oklch(0.53 0.205 29 / 0.16);
+  --record-surface: oklch(0.94 0.008 78 / 0.7);
+  --switch-off: oklch(0.64 0.01 65);
+  --switch-shadow: oklch(0.18 0.012 55 / 0.34);
+  --count-surface: oklch(0.27 0.012 55 / 0.09);
+  --selected-surface: oklch(0.53 0.205 29 / 0.08);
+  --approval-color: oklch(0.5 0.205 29 / 0.82);
+  --action-border: oklch(0.2 0.012 55 / 0.32);
+  --action-shadow: 0 -10px 0 oklch(0.18 0.012 55 / 0.05);
+  --secondary-border: oklch(0.23 0.012 55 / 0.54);
+  --secondary-text: oklch(0.22 0.012 55);
+  --button-border: oklch(0.43 0.2 29 / 0.92);
+  --button-inset: oklch(0.96 0.02 75 / 0.16);
+  --button-shadow: oklch(0.18 0.08 29 / 0.2);
+  --button-text: oklch(0.98 0.006 82);
+  --legal-text: oklch(0.43 0.012 58);
+  border-radius: 7px;
+  color-scheme: light;
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 }
 
 .masthead {
@@ -1093,7 +1383,7 @@ function buildStyleRule(style: string): string {
 
 .masthead-subtitle {
   margin: 0;
-  color: oklch(0.76 0.03 72);
+  color: var(--shell-muted);
   font-size: 13px;
   letter-spacing: 0.12em;
 }
@@ -1103,9 +1393,13 @@ function buildStyleRule(style: string): string {
   flex: 0 0 58px;
   place-items: center;
   aspect-ratio: 1;
-  border: 1px solid oklch(0.58 0.17 31 / 0.72);
-  color: oklch(0.65 0.18 31);
+  border: 1px solid var(--seal-border);
+  color: var(--seal-color);
   transform: rotate(3deg);
+  transition:
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .masthead-seal span {
@@ -1113,6 +1407,229 @@ function buildStyleRule(style: string): string {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.15em;
+}
+
+.theme-dock {
+  display: grid;
+  gap: 9px;
+  padding: 0 16px 16px;
+}
+
+.theme-dock-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--shell-muted);
+  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+}
+
+.theme-dock-heading > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.theme-dock-heading span {
+  color: var(--shell-ink);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+}
+
+.theme-dock-heading small {
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dock-heading > strong {
+  color: var(--brass);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-panel);
+}
+
+.theme-option {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  grid-template-columns: 30px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-right: 1px solid var(--theme-border);
+  background: transparent;
+  color: var(--shell-muted);
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-option:last-child {
+  border-right: 0;
+}
+
+.theme-option:hover {
+  background: var(--theme-hover);
+  color: var(--shell-ink);
+}
+
+.theme-option:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--cinnabar-active);
+  outline-offset: -3px;
+}
+
+.theme-option.active {
+  background: var(--selected-surface);
+  color: var(--shell-ink);
+}
+
+.theme-glyph {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--brass);
+}
+
+.theme-option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.theme-option-copy strong,
+.theme-option-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-option-copy strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+}
+
+.theme-option-copy small {
+  color: var(--shell-muted);
+  font-size: 9px;
+}
+
+.theme-check {
+  color: var(--cinnabar-active);
+}
+
+.world-forge[data-theme='astrolabe'] .masthead-seal {
+  position: relative;
+  border-radius: 50%;
+  box-shadow: 0 0 24px oklch(0.75 0.11 76 / 0.16);
+  transform: none;
+}
+
+.world-forge[data-theme='astrolabe'] .masthead-seal::before {
+  position: absolute;
+  inset: -7px;
+  border: 1px solid oklch(0.74 0.1 75 / 0.28);
+  border-radius: 50%;
+  content: '';
+  transform: rotate(24deg) scaleX(0.76);
+}
+
+.world-forge[data-theme='astrolabe'] .theme-options,
+.world-forge[data-theme='astrolabe'] .dossier {
+  border-radius: 14px;
+}
+
+.world-forge[data-theme='astrolabe'] .control,
+.world-forge[data-theme='astrolabe'] .button,
+.world-forge[data-theme='astrolabe'] .rule-tab,
+.world-forge[data-theme='astrolabe'] .add-record,
+.world-forge[data-theme='astrolabe'] .character-record {
+  border-radius: 9px;
+}
+
+.world-forge[data-theme='astrolabe'] .paper-notch {
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--cinnabar);
+  clip-path: none;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.world-forge[data-theme='terminal'] .masthead-seal {
+  border-width: 2px;
+  border-radius: 2px;
+  transform: none;
+}
+
+.world-forge[data-theme='terminal'] .masthead h1,
+.world-forge[data-theme='terminal'] .chapter-heading h2 {
+  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+  letter-spacing: 0.08em;
+}
+
+.world-forge[data-theme='terminal'] .theme-options,
+.world-forge[data-theme='terminal'] .dossier,
+.world-forge[data-theme='terminal'] .control,
+.world-forge[data-theme='terminal'] .button,
+.world-forge[data-theme='terminal'] .rule-tab,
+.world-forge[data-theme='terminal'] .add-record,
+.world-forge[data-theme='terminal'] .character-record {
+  border-radius: 0;
+}
+
+.world-forge[data-theme='terminal'] .theme-glyph,
+.world-forge[data-theme='terminal'] .chapter-icon,
+.world-forge[data-theme='terminal'] .section-icon,
+.world-forge[data-theme='terminal'] .icon-button {
+  border-radius: 3px;
+}
+
+.world-forge[data-theme='terminal'] .dossier {
+  background-size: 24px 24px;
+}
+
+.world-forge[data-theme='terminal'] .paper-notch {
+  top: 0;
+  width: 34px;
+  height: 5px;
+  background: var(--cinnabar);
+  clip-path: none;
+}
+
+.world-forge[data-theme='terminal'] .approval-mark {
+  width: 112px;
+  height: 72px;
+  border: 2px solid currentColor;
+  border-radius: 0;
+  transform: none;
+}
+
+.world-forge[data-theme='terminal'] .approval-mark::after {
+  border-radius: 0;
 }
 
 .chapter-strip {
@@ -1130,9 +1647,9 @@ function buildStyleRule(style: string): string {
   gap: 9px;
   padding: 8px 9px;
   border: 0;
-  border-bottom: 1px solid oklch(0.56 0.04 65 / 0.24);
+  border-bottom: 1px solid var(--tab-line);
   background: transparent;
-  color: oklch(0.61 0.025 68);
+  color: var(--tab-muted);
   text-align: left;
   cursor: pointer;
   transition:
@@ -1152,21 +1669,21 @@ function buildStyleRule(style: string): string {
 }
 
 .chapter-tab:not(:disabled):hover {
-  background: oklch(0.28 0.018 55 / 0.48);
-  color: var(--paper);
+  background: var(--tab-hover);
+  color: var(--shell-ink);
 }
 .chapter-tab:disabled {
   cursor: default;
   opacity: 0.46;
 }
 .chapter-tab.active {
-  color: var(--paper);
+  color: var(--shell-ink);
 }
 .chapter-tab.active::after {
   background: var(--cinnabar-active);
 }
 .chapter-tab.complete {
-  color: oklch(0.75 0.065 73);
+  color: var(--tab-complete);
 }
 
 .chapter-icon {
@@ -1203,13 +1720,14 @@ function buildStyleRule(style: string): string {
 .dossier {
   position: relative;
   margin: 0 12px;
-  background:
-    linear-gradient(90deg, oklch(0.75 0.035 72 / 0.18), transparent 9%, transparent 91%, oklch(0.68 0.035 72 / 0.16)),
-    repeating-linear-gradient(0deg, transparent 0 5px, oklch(0.5 0.03 65 / 0.018) 5px 6px), var(--paper);
-  box-shadow:
-    inset 0 0 0 1px oklch(0.45 0.045 62 / 0.26),
-    0 18px 40px oklch(0.08 0.01 50 / 0.3);
+  background: var(--dossier-background);
+  background-size: auto;
+  box-shadow: var(--dossier-shadow);
   color: var(--ink);
+  transition:
+    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .paper-notch {
@@ -1314,7 +1832,7 @@ function buildStyleRule(style: string): string {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid oklch(0.49 0.15 31 / 0.48);
+  border: 1px solid var(--seal-border);
   border-radius: 50%;
   color: var(--cinnabar);
 }
@@ -1367,7 +1885,7 @@ function buildStyleRule(style: string): string {
   border: 1px solid var(--line-strong);
   border-radius: 5px;
   outline: none;
-  background: oklch(0.96 0.016 78 / 0.54);
+  background: var(--control-surface);
   color: var(--ink);
   font:
     500 14px/1.55 'Noto Sans SC',
@@ -1385,16 +1903,16 @@ textarea.control {
   resize: vertical;
 }
 .control::placeholder {
-  color: oklch(0.58 0.02 65);
+  color: var(--control-placeholder);
 }
 .control:hover {
-  border-color: oklch(0.46 0.055 62 / 0.66);
+  border-color: var(--control-hover-border);
   background: var(--paper-soft);
 }
 .control:focus-visible {
   border-color: var(--cinnabar);
   background: var(--paper-soft);
-  box-shadow: 0 0 0 3px oklch(0.5 0.15 31 / 0.14);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .select-wrap {
@@ -1479,7 +1997,7 @@ textarea.control {
   margin-top: 14px;
   padding: 16px;
   border: 1px solid var(--line-strong);
-  background: oklch(0.95 0.018 78 / 0.28);
+  background: var(--record-surface);
 }
 .character-record > header {
   display: flex;
@@ -1585,7 +2103,7 @@ textarea.control {
   appearance: none;
   border: 1px solid var(--line-strong);
   border-radius: 99px;
-  background: oklch(0.58 0.02 65);
+  background: var(--switch-off);
   cursor: pointer;
   transition: background-color 160ms ease-out;
 }
@@ -1597,7 +2115,7 @@ textarea.control {
   height: 18px;
   border-radius: 50%;
   background: var(--paper-soft);
-  box-shadow: 0 1px 3px oklch(0.25 0.02 55 / 0.35);
+  box-shadow: 0 1px 3px var(--switch-shadow);
   content: '';
   transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1609,7 +2127,7 @@ textarea.control {
   transform: translateX(20px);
 }
 .switch-row input:focus-visible {
-  outline: 3px solid oklch(0.5 0.15 31 / 0.18);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -1642,12 +2160,12 @@ textarea.control {
   height: 19px;
   place-items: center;
   border-radius: 50%;
-  background: oklch(0.58 0.03 65 / 0.15);
+  background: var(--count-surface);
   font-size: 10px;
 }
 .rule-tab.active {
   border-color: var(--cinnabar);
-  background: oklch(0.5 0.15 31 / 0.08);
+  background: var(--selected-surface);
   color: var(--cinnabar);
 }
 .rule-empty {
@@ -1758,9 +2276,9 @@ textarea.control {
   width: 86px;
   height: 86px;
   place-items: center;
-  border: 3px double oklch(0.49 0.15 31 / 0.65);
+  border: 3px double var(--approval-color);
   border-radius: 50%;
-  color: oklch(0.49 0.15 31 / 0.72);
+  color: var(--approval-color);
   transform: rotate(-8deg);
 }
 .approval-mark::after {
@@ -1794,9 +2312,9 @@ textarea.control {
   margin-top: 12px;
   padding: 14px max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
-  border-top: 1px solid oklch(0.55 0.05 65 / 0.2);
+  border-top: 1px solid var(--action-border);
   background: var(--canvas-raised);
-  box-shadow: 0 -16px 30px oklch(0.08 0.01 50 / 0.25);
+  box-shadow: var(--action-shadow);
 }
 
 .action-spacer {
@@ -1825,23 +2343,23 @@ textarea.control {
   transform: translateY(1px);
 }
 .button.secondary {
-  border: 1px solid oklch(0.7 0.055 72 / 0.38);
+  border: 1px solid var(--secondary-border);
   background: transparent;
-  color: oklch(0.78 0.04 72);
+  color: var(--secondary-text);
 }
 .button.secondary:hover {
   border-color: var(--brass);
-  color: var(--paper);
+  color: var(--shell-ink);
 }
 .button.primary,
 .button.issue-button {
   min-width: 188px;
-  border: 1px solid oklch(0.63 0.17 31 / 0.85);
+  border: 1px solid var(--button-border);
   background: var(--cinnabar);
   box-shadow:
-    inset 0 0 0 1px oklch(0.92 0.04 65 / 0.2),
-    0 8px 18px oklch(0.17 0.08 31 / 0.28);
-  color: oklch(0.96 0.02 78);
+    inset 0 0 0 1px var(--button-inset),
+    0 8px 18px var(--button-shadow);
+  color: var(--button-text);
 }
 .button.primary:hover,
 .button.issue-button:hover:not(:disabled) {
@@ -1877,7 +2395,7 @@ textarea.control {
 }
 .legal-note {
   margin: 14px 16px 18px;
-  color: oklch(0.58 0.025 68);
+  color: var(--legal-text);
   text-align: center;
 }
 .spinning {
@@ -1898,6 +2416,18 @@ textarea.control {
   }
   .masthead-seal {
     flex-basis: 50px;
+  }
+  .theme-dock {
+    padding: 0 8px 12px;
+  }
+  .theme-option {
+    grid-template-columns: 28px minmax(0, 1fr) 14px;
+    gap: 6px;
+    padding: 7px;
+  }
+  .theme-glyph {
+    width: 28px;
+    height: 28px;
   }
   .chapter-strip {
     padding: 0 8px 12px;
@@ -1988,6 +2518,34 @@ textarea.control {
   .masthead-seal {
     flex-basis: 46px;
   }
+  .theme-dock-heading small {
+    display: none;
+  }
+  .theme-options {
+    border-radius: 5px;
+  }
+  .theme-option {
+    min-height: 54px;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px 6px;
+  }
+  .theme-glyph {
+    width: 26px;
+    height: 26px;
+  }
+  .theme-option-copy strong {
+    font-size: 10px;
+    white-space: normal;
+  }
+  .theme-option-copy small {
+    display: none;
+  }
+  .theme-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+  }
   .chapter-tab {
     min-height: 62px;
     flex-direction: column;
@@ -2045,6 +2603,8 @@ textarea.control {
     animation: none;
   }
   .chapter-tab,
+  .theme-option,
+  .masthead-seal,
   .button,
   .control,
   .switch-row input,
