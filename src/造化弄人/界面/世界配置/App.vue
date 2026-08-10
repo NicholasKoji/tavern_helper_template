@@ -19,7 +19,7 @@
           <span id="theme-dock-title">界面主题</span>
           <small>{{ activeThemeMeta.caption }}</small>
         </div>
-        <strong>{{ activeThemeMeta.code }} / 03</strong>
+        <strong>{{ themeOptions.length }} 款</strong>
       </div>
       <div class="theme-options" role="radiogroup" aria-label="选择世界配置界面主题">
         <button
@@ -30,15 +30,15 @@
           type="button"
           role="radio"
           :aria-checked="theme.id === activeTheme"
-          :aria-label="`${theme.code} ${theme.name}：${theme.caption}`"
+          :aria-label="`${theme.name}：${theme.caption}`"
           @click="setTheme(theme.id)"
         >
           <span class="theme-glyph" aria-hidden="true">
             <component :is="theme.icon" :size="17" stroke-width="1.8" />
           </span>
           <span class="theme-option-copy">
-            <strong>{{ theme.code }} · {{ theme.name }}</strong>
-            <small>{{ theme.shortCaption }}</small>
+            <strong>{{ theme.name }}</strong>
+            <small>{{ theme.caption }}</small>
           </span>
           <Check v-if="theme.id === activeTheme" class="theme-check" :size="15" stroke-width="2.5" />
         </button>
@@ -581,6 +581,7 @@ import {
   ChevronRight,
   CircleAlert,
   CloudSun,
+  Cpu,
   Feather,
   Gauge,
   History,
@@ -616,12 +617,10 @@ type RuleGroup = { key: string; title: string; placeholder: string };
 const themeOptions = [
   {
     id: 'archive',
-    code: 'A',
-    name: '东方官署卷宗',
-    caption: '旧纸、黛墨与朱砂批印，像签发一份世界法令',
-    shortCaption: '官署卷宗',
+    name: '官署卷宗',
+    caption: '仿古官署卷宗风格，以暖纸、黛墨和朱砂红为主色。',
     registry: 'WORLD REGISTRY · NO. 0047',
-    subtitle: '现实编辑器 · 世界建档受理台',
+    subtitle: '仿古官署卷宗风格，以暖纸、黛墨和朱砂红为主色。',
     seal: '受理',
     chapterLabel: 'CHAPTER',
     characterFile: 'CHARACTER FILE',
@@ -633,12 +632,10 @@ const themeOptions = [
   },
   {
     id: 'astrolabe',
-    code: 'B',
-    name: '命盘推演仪',
-    caption: '墨蓝、铜金与环形命轨，让每一步都像在校准天命',
-    shortCaption: '命盘推演',
+    name: '命盘推演',
+    caption: '东方星盘仪轨风格，以墨蓝、铜金和米白微光为主色。',
     registry: 'FATE ORBIT · CALC. 0047',
-    subtitle: '造化命盘 · 世界推演观测席',
+    subtitle: '东方星盘仪轨风格，以墨蓝、铜金和米白微光为主色。',
     seal: '推演',
     chapterLabel: 'ORBIT',
     characterFile: 'FATE SUBJECT',
@@ -650,12 +647,10 @@ const themeOptions = [
   },
   {
     id: 'terminal',
-    code: 'C',
-    name: '现实管理终端',
-    caption: '骨白、黑与警示红，把世界参数纳入冷峻控制台',
-    shortCaption: '管理终端',
+    name: '管理终端',
+    caption: '冷峻工业控制台风格，以骨白、碳黑和警示红为主色。',
     registry: 'REALITY CONTROL · NODE. 0047',
-    subtitle: '现实管理终端 · 世界参数控制台',
+    subtitle: '冷峻工业控制台风格，以骨白、碳黑和警示红为主色。',
     seal: '在线',
     chapterLabel: 'STAGE',
     characterFile: 'SUBJECT RECORD',
@@ -664,6 +659,21 @@ const themeOptions = [
     approvalCaption: 'REALITY NODE',
     footer: 'CONTROL PLANE',
     icon: Gauge,
+  },
+  {
+    id: 'neon',
+    name: '霓虹夜城',
+    caption: '赛博朋克夜城风格，以深紫黑、电光青和霓虹粉为主色。',
+    registry: 'NIGHT CITY // LINK 0047',
+    subtitle: '赛博朋克夜城风格，以深紫黑、电光青和霓虹粉为主色。',
+    seal: '接入',
+    chapterLabel: 'SECTOR',
+    characterFile: 'IDENTITY SHARD',
+    sectionLabels: { world: 'ZONE', people: 'AVATAR', rules: 'PROTOCOL', issue: 'DEPLOY' },
+    approval: '链路已同步',
+    approvalCaption: 'NEON GRID',
+    footer: 'NIGHT CITY PROTOCOL',
+    icon: Cpu,
   },
 ] as const;
 
@@ -1348,6 +1358,68 @@ function buildStyleRule(style: string): string {
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 }
 
+.world-forge[data-theme='neon'] {
+  --canvas: oklch(0.105 0.045 285);
+  --canvas-raised: oklch(0.155 0.055 275);
+  --paper: oklch(0.145 0.048 278);
+  --paper-deep: oklch(0.12 0.045 282);
+  --paper-soft: oklch(0.2 0.06 270);
+  --ink: oklch(0.92 0.03 205);
+  --ink-muted: oklch(0.72 0.05 210);
+  --ink-faint: oklch(0.57 0.055 220);
+  --cinnabar: oklch(0.82 0.15 195);
+  --cinnabar-active: oklch(0.87 0.18 192);
+  --brass: oklch(0.72 0.22 330);
+  --line: oklch(0.78 0.14 195 / 0.17);
+  --line-strong: oklch(0.79 0.15 195 / 0.42);
+  --shell-ink: oklch(0.94 0.035 205);
+  --shell-muted: oklch(0.72 0.06 215);
+  --shell-border: oklch(0.78 0.17 195 / 0.52);
+  --shell-background:
+    repeating-linear-gradient(0deg, transparent 0 3px, oklch(0.86 0.18 195 / 0.025) 3px 4px),
+    radial-gradient(circle at 8% 0%, oklch(0.54 0.2 330 / 0.23), transparent 29%),
+    radial-gradient(circle at 92% 6%, oklch(0.62 0.16 195 / 0.2), transparent 31%), var(--canvas);
+  --shell-shadow:
+    0 0 0 1px oklch(0.72 0.22 330 / 0.18), 0 0 34px oklch(0.77 0.17 195 / 0.2), 0 30px 80px oklch(0.035 0.025 285 / 0.7);
+  --theme-panel: oklch(0.13 0.05 280 / 0.92);
+  --theme-border: oklch(0.76 0.16 195 / 0.3);
+  --theme-hover: oklch(0.24 0.075 275 / 0.82);
+  --seal-border: oklch(0.72 0.22 330 / 0.82);
+  --seal-color: oklch(0.87 0.18 192);
+  --tab-line: oklch(0.78 0.16 195 / 0.22);
+  --tab-muted: oklch(0.59 0.06 215);
+  --tab-hover: oklch(0.24 0.07 275 / 0.76);
+  --tab-complete: oklch(0.77 0.18 330);
+  --dossier-background:
+    linear-gradient(90deg, oklch(0.78 0.15 195 / 0.055) 1px, transparent 1px),
+    linear-gradient(oklch(0.78 0.15 195 / 0.045) 1px, transparent 1px), var(--paper);
+  --dossier-shadow:
+    inset 0 0 0 1px oklch(0.78 0.15 195 / 0.32), 7px 7px 0 oklch(0.72 0.22 330 / 0.12),
+    0 20px 50px oklch(0.035 0.025 285 / 0.55);
+  --control-surface: oklch(0.18 0.055 275 / 0.9);
+  --control-placeholder: oklch(0.55 0.055 220);
+  --control-hover-border: oklch(0.86 0.18 192 / 0.74);
+  --focus-ring: oklch(0.82 0.15 195 / 0.2);
+  --record-surface: oklch(0.2 0.06 275 / 0.6);
+  --switch-off: oklch(0.34 0.055 275);
+  --switch-shadow: oklch(0.03 0.02 285 / 0.66);
+  --count-surface: oklch(0.72 0.22 330 / 0.14);
+  --selected-surface: oklch(0.82 0.15 195 / 0.13);
+  --approval-color: oklch(0.78 0.19 330 / 0.86);
+  --action-border: oklch(0.78 0.15 195 / 0.25);
+  --action-shadow: 0 -14px 32px oklch(0.035 0.025 285 / 0.52);
+  --secondary-border: oklch(0.77 0.18 330 / 0.46);
+  --secondary-text: oklch(0.85 0.12 330);
+  --button-border: oklch(0.87 0.18 192 / 0.94);
+  --button-inset: oklch(0.98 0.03 205 / 0.22);
+  --button-shadow: oklch(0.71 0.18 195 / 0.34);
+  --button-text: oklch(0.12 0.045 282);
+  --legal-text: oklch(0.56 0.06 220);
+  border-radius: 6px;
+  color-scheme: dark;
+  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+}
+
 .masthead {
   display: flex;
   align-items: center;
@@ -1455,7 +1527,7 @@ function buildStyleRule(style: string): string {
 
 .theme-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--theme-border);
   border-radius: 8px;
@@ -1466,12 +1538,13 @@ function buildStyleRule(style: string): string {
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 58px;
+  min-height: 72px;
   grid-template-columns: 30px minmax(0, 1fr) 16px;
   align-items: center;
   gap: 8px;
   border: 0;
   border-right: 1px solid var(--theme-border);
+  border-bottom: 1px solid var(--theme-border);
   background: transparent;
   color: var(--shell-muted);
   padding: 8px 10px;
@@ -1482,8 +1555,12 @@ function buildStyleRule(style: string): string {
     color 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.theme-option:last-child {
+.theme-option:nth-child(2n) {
   border-right: 0;
+}
+
+.theme-option:nth-last-child(-n + 2) {
+  border-bottom: 0;
 }
 
 .theme-option:hover {
@@ -1521,8 +1598,6 @@ function buildStyleRule(style: string): string {
 .theme-option-copy strong,
 .theme-option-copy small {
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .theme-option-copy strong {
@@ -1533,8 +1608,12 @@ function buildStyleRule(style: string): string {
 }
 
 .theme-option-copy small {
+  display: -webkit-box;
   color: var(--shell-muted);
   font-size: 9px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .theme-check {
@@ -1629,6 +1708,72 @@ function buildStyleRule(style: string): string {
 }
 
 .world-forge[data-theme='terminal'] .approval-mark::after {
+  border-radius: 0;
+}
+
+.world-forge[data-theme='neon'] .masthead-seal {
+  border-width: 2px;
+  border-radius: 0;
+  background: oklch(0.16 0.06 278 / 0.84);
+  box-shadow:
+    inset 0 0 14px oklch(0.82 0.15 195 / 0.14),
+    0 0 18px oklch(0.72 0.22 330 / 0.24);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transform: none;
+}
+
+.world-forge[data-theme='neon'] .masthead h1,
+.world-forge[data-theme='neon'] .chapter-heading h2 {
+  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+  text-shadow: 0 0 18px oklch(0.82 0.15 195 / 0.18);
+}
+
+.world-forge[data-theme='neon'] .theme-options,
+.world-forge[data-theme='neon'] .dossier,
+.world-forge[data-theme='neon'] .control,
+.world-forge[data-theme='neon'] .button,
+.world-forge[data-theme='neon'] .rule-tab,
+.world-forge[data-theme='neon'] .add-record,
+.world-forge[data-theme='neon'] .character-record {
+  border-radius: 3px;
+}
+
+.world-forge[data-theme='neon'] .theme-glyph,
+.world-forge[data-theme='neon'] .chapter-icon,
+.world-forge[data-theme='neon'] .section-icon,
+.world-forge[data-theme='neon'] .icon-button {
+  border-radius: 2px;
+  box-shadow: 0 0 12px oklch(0.82 0.15 195 / 0.12);
+}
+
+.world-forge[data-theme='neon'] .dossier {
+  background-size: 28px 28px;
+}
+
+.world-forge[data-theme='neon'] .paper-notch {
+  top: 0;
+  width: 72px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brass) 0 28%, var(--cinnabar) 28% 100%);
+  box-shadow: 0 0 12px var(--cinnabar);
+  clip-path: none;
+}
+
+.world-forge[data-theme='neon'] .theme-option.active {
+  box-shadow: inset 3px 0 0 var(--cinnabar);
+}
+
+.world-forge[data-theme='neon'] .approval-mark {
+  width: 118px;
+  height: 76px;
+  border: 2px solid currentColor;
+  border-radius: 0;
+  box-shadow: 0 0 18px oklch(0.72 0.22 330 / 0.2);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  transform: none;
+}
+
+.world-forge[data-theme='neon'] .approval-mark::after {
   border-radius: 0;
 }
 
@@ -2420,10 +2565,21 @@ textarea.control {
   .theme-dock {
     padding: 0 8px 12px;
   }
+  .theme-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .theme-option {
+    min-height: 64px;
     grid-template-columns: 28px minmax(0, 1fr) 14px;
     gap: 6px;
+    border-bottom: 1px solid var(--theme-border);
     padding: 7px;
+  }
+  .theme-option:nth-child(2n) {
+    border-right: 0;
+  }
+  .theme-option:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
   .theme-glyph {
     width: 28px;
@@ -2525,7 +2681,7 @@ textarea.control {
     border-radius: 5px;
   }
   .theme-option {
-    min-height: 54px;
+    min-height: 68px;
     grid-template-columns: 26px minmax(0, 1fr);
     gap: 6px;
     padding: 7px 6px;
@@ -2539,7 +2695,13 @@ textarea.control {
     white-space: normal;
   }
   .theme-option-copy small {
-    display: none;
+    display: -webkit-box;
+    overflow: hidden;
+    line-height: 1.35;
+    text-overflow: clip;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
   .theme-check {
     position: absolute;
