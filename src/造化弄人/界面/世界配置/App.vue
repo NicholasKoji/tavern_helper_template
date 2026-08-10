@@ -4,8 +4,8 @@
     <header class="masthead">
       <div class="masthead-copy">
         <p class="registry-no">{{ activeThemeMeta.registry }}</p>
-        <h1>造化弄人</h1>
-        <p class="masthead-subtitle">{{ activeThemeMeta.subtitle }}</p>
+        <h1>人间修订中</h1>
+        <p class="masthead-subtitle">旧章沉入昨夜，新律化作寻常。</p>
       </div>
       <div class="masthead-seal" aria-hidden="true">
         <component :is="activeThemeMeta.icon" :size="24" stroke-width="1.7" />
@@ -15,10 +15,7 @@
 
     <section class="theme-dock" aria-labelledby="theme-dock-title">
       <div class="theme-dock-heading">
-        <div>
-          <span id="theme-dock-title">界面主题</span>
-          <small>{{ activeThemeMeta.caption }}</small>
-        </div>
+        <span id="theme-dock-title">界面主题</span>
         <strong>{{ themeOptions.length }} 款</strong>
       </div>
       <div class="theme-options" role="radiogroup" aria-label="选择世界配置界面主题">
@@ -27,6 +24,7 @@
           :key="theme.id"
           class="theme-option"
           :class="{ active: theme.id === activeTheme }"
+          :data-theme-option="theme.id"
           type="button"
           role="radio"
           :aria-checked="theme.id === activeTheme"
@@ -573,7 +571,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import {
   BookOpen,
   Check,
@@ -600,7 +598,58 @@ import {
   WandSparkles,
 } from '@lucide/vue';
 import { storeToRefs } from 'pinia';
+import themeArchiveFontUrl from './fonts/theme-archive.woff2?url';
+import themeAstrolabeFontUrl from './fonts/theme-astrolabe.woff2?url';
+import themeNeonFontUrl from './fonts/theme-neon.woff2?url';
+import themeTerminalFontUrl from './fonts/theme-terminal.woff2?url';
 import { useDataStore } from './store';
+
+const themeFontStyleId = 'human-revision-theme-preview-fonts';
+let injectedThemeFontStyle: HTMLStyleElement | null = null;
+
+onMounted(() => {
+  if (document.getElementById(themeFontStyleId)) return;
+
+  const style = document.createElement('style');
+  style.id = themeFontStyleId;
+  style.textContent = `
+    @font-face {
+      font-family: 'Theme Archive Preview';
+      src: url("${themeArchiveFontUrl}") format('woff2');
+      font-display: swap;
+      font-style: normal;
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'Theme Astrolabe Preview';
+      src: url("${themeAstrolabeFontUrl}") format('woff2');
+      font-display: swap;
+      font-style: normal;
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'Theme Terminal Preview';
+      src: url("${themeTerminalFontUrl}") format('woff2');
+      font-display: swap;
+      font-style: normal;
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'Theme Neon Preview';
+      src: url("${themeNeonFontUrl}") format('woff2');
+      font-display: swap;
+      font-style: oblique;
+      font-weight: 400;
+    }
+  `;
+  document.head.appendChild(style);
+  injectedThemeFontStyle = style;
+});
+
+onUnmounted(() => {
+  injectedThemeFontStyle?.remove();
+  injectedThemeFontStyle = null;
+});
 
 type RuleEntry = { 名称: string; 内容: string };
 type CharacterEntry = {
@@ -620,7 +669,6 @@ const themeOptions = [
     name: '官署卷宗',
     caption: '仿古官署卷宗风格，以暖纸、黛墨和朱砂红为主色。',
     registry: 'WORLD REGISTRY · NO. 0047',
-    subtitle: '仿古官署卷宗风格，以暖纸、黛墨和朱砂红为主色。',
     seal: '受理',
     chapterLabel: 'CHAPTER',
     characterFile: 'CHARACTER FILE',
@@ -635,7 +683,6 @@ const themeOptions = [
     name: '命盘推演',
     caption: '东方星盘仪轨风格，以墨蓝、铜金和米白微光为主色。',
     registry: 'FATE ORBIT · CALC. 0047',
-    subtitle: '东方星盘仪轨风格，以墨蓝、铜金和米白微光为主色。',
     seal: '推演',
     chapterLabel: 'ORBIT',
     characterFile: 'FATE SUBJECT',
@@ -650,7 +697,6 @@ const themeOptions = [
     name: '管理终端',
     caption: '冷峻工业控制台风格，以骨白、碳黑和警示红为主色。',
     registry: 'REALITY CONTROL · NODE. 0047',
-    subtitle: '冷峻工业控制台风格，以骨白、碳黑和警示红为主色。',
     seal: '在线',
     chapterLabel: 'STAGE',
     characterFile: 'SUBJECT RECORD',
@@ -665,7 +711,6 @@ const themeOptions = [
     name: '霓虹夜城',
     caption: '赛博朋克夜城风格，以深紫黑、电光青和霓虹粉为主色。',
     registry: 'NIGHT CITY // LINK 0047',
-    subtitle: '赛博朋克夜城风格，以深紫黑、电光青和霓虹粉为主色。',
     seal: '接入',
     chapterLabel: 'SECTOR',
     characterFile: 'IDENTITY SHARD',
@@ -688,7 +733,7 @@ function readSavedTheme(): ThemeId {
       return savedTheme as ThemeId;
     }
   } catch (error) {
-    console.warn('[造化弄人·世界配置] 主题偏好读取失败，将使用默认主题。', error);
+    console.warn('[人间修订中·世界配置] 主题偏好读取失败，将使用默认主题。', error);
   }
   return 'archive';
 }
@@ -701,7 +746,7 @@ function setTheme(theme: ThemeId) {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch (error) {
-    console.warn('[造化弄人·世界配置] 主题偏好保存失败，本次切换仍然有效。', error);
+    console.warn('[人间修订中·世界配置] 主题偏好保存失败，本次切换仍然有效。', error);
   }
 }
 
@@ -1006,7 +1051,7 @@ async function startGame() {
     await generateOpening(activeRules);
     status.value = '开场已生成！往下翻看新楼层，开始游玩。';
   } catch (error) {
-    console.error('[造化弄人·世界配置]', error);
+    console.error('[人间修订中·世界配置]', error);
     toastr.error(error instanceof Error ? error.message : String(error), '现实编辑器报错');
     status.value = '生成失败，可重试';
   } finally {
@@ -1504,28 +1549,11 @@ function buildStyleRule(style: string): string {
   font-family: var(--ui-font);
 }
 
-.theme-dock-heading > div {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 9px;
-}
-
 .theme-dock-heading span {
   color: var(--shell-ink);
   font-size: 13px;
   font-weight: 750;
   letter-spacing: 0.04em;
-}
-
-.theme-dock-heading small {
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .theme-dock-heading > strong {
@@ -1537,7 +1565,7 @@ function buildStyleRule(style: string): string {
 
 .theme-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--theme-border);
   border-radius: 8px;
@@ -1545,48 +1573,52 @@ function buildStyleRule(style: string): string {
 }
 
 .theme-option {
+  --preview-accent: var(--cinnabar-active);
+  --preview-background: var(--theme-panel);
+  --preview-border: var(--theme-border);
+  --preview-ink: var(--shell-ink);
+  --preview-muted: var(--shell-muted);
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 90px;
-  grid-template-columns: 34px minmax(0, 1fr) 16px;
-  align-items: center;
-  gap: 12px;
+  min-height: 168px;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 11px;
   border: 0;
   border-right: 1px solid var(--theme-border);
-  border-bottom: 1px solid var(--theme-border);
-  background: transparent;
-  color: var(--shell-muted);
-  padding: 12px 14px;
+  background: var(--preview-background);
+  color: var(--preview-ink);
+  padding: 14px;
   text-align: left;
   cursor: pointer;
   transition:
     background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-    color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.theme-option:nth-child(2n) {
+.theme-option:last-child {
   border-right: 0;
 }
 
-.theme-option:nth-last-child(-n + 2) {
-  border-bottom: 0;
-}
-
 .theme-option:hover {
-  background: var(--theme-hover);
-  color: var(--shell-ink);
+  z-index: 1;
+  color: var(--preview-ink);
+  transform: translateY(-2px);
 }
 
 .theme-option:focus-visible {
-  z-index: 1;
-  outline: 2px solid var(--cinnabar-active);
+  z-index: 2;
+  outline: 2px solid var(--preview-accent);
   outline-offset: -3px;
 }
 
 .theme-option.active {
-  background: var(--selected-surface);
-  color: var(--shell-ink);
+  z-index: 1;
+  color: var(--preview-ink);
+  box-shadow: inset 0 0 0 2px var(--preview-accent);
 }
 
 .theme-glyph {
@@ -1596,7 +1628,7 @@ function buildStyleRule(style: string): string {
   place-items: center;
   border: 1px solid currentColor;
   border-radius: 50%;
-  color: var(--brass);
+  color: var(--preview-accent);
 }
 
 .theme-option-copy {
@@ -1613,24 +1645,112 @@ function buildStyleRule(style: string): string {
 
 .theme-option-copy strong {
   color: inherit;
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.35;
-  letter-spacing: 0.02em;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
 }
 
 .theme-option-copy small {
   display: -webkit-box;
-  color: var(--shell-muted);
-  font-size: 13px;
+  color: var(--preview-muted);
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
 }
 
 .theme-check {
-  color: var(--cinnabar-active);
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--preview-accent);
+}
+
+.theme-option[data-theme-option='archive'] {
+  --preview-accent: oklch(0.54 0.18 31);
+  --preview-background:
+    repeating-linear-gradient(0deg, transparent 0 5px, oklch(0.42 0.04 58 / 0.035) 5px 6px), oklch(0.91 0.03 78);
+  --preview-ink: oklch(0.25 0.025 55);
+  --preview-muted: oklch(0.43 0.03 60);
+}
+
+.theme-option[data-theme-option='archive'] .theme-glyph {
+  border-radius: 3px;
+  transform: rotate(-3deg);
+}
+
+.theme-option[data-theme-option='archive'] .theme-option-copy strong {
+  font-family: 'Theme Archive Preview', 'Noto Serif SC', 'Songti SC', serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.theme-option[data-theme-option='astrolabe'] {
+  --preview-accent: oklch(0.78 0.12 76);
+  --preview-background:
+    radial-gradient(circle at 78% 18%, transparent 0 18px, oklch(0.78 0.11 76 / 0.16) 19px 20px, transparent 21px),
+    radial-gradient(circle at 78% 18%, oklch(0.38 0.07 247 / 0.55), transparent 42%), oklch(0.17 0.04 252);
+  --preview-ink: oklch(0.94 0.025 82);
+  --preview-muted: oklch(0.76 0.04 80);
+}
+
+.theme-option[data-theme-option='astrolabe'] .theme-glyph {
+  box-shadow: 0 0 18px oklch(0.78 0.12 76 / 0.2);
+}
+
+.theme-option[data-theme-option='astrolabe'] .theme-option-copy strong {
+  font-family: 'Theme Astrolabe Preview', 'STKaiti', 'KaiTi', serif;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.theme-option[data-theme-option='terminal'] {
+  --preview-accent: oklch(0.5 0.22 29);
+  --preview-background:
+    linear-gradient(90deg, oklch(0.24 0.01 55 / 0.055) 1px, transparent 1px),
+    linear-gradient(oklch(0.24 0.01 55 / 0.05) 1px, transparent 1px), oklch(0.96 0.008 80);
+  --preview-ink: oklch(0.18 0.012 55);
+  --preview-muted: oklch(0.39 0.014 58);
+  background-size: 14px 14px;
+}
+
+.theme-option[data-theme-option='terminal'] .theme-glyph {
+  border-width: 2px;
+  border-radius: 2px;
+}
+
+.theme-option[data-theme-option='terminal'] .theme-option-copy strong {
+  font-family: 'Theme Terminal Preview', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.theme-option[data-theme-option='neon'] {
+  --preview-accent: oklch(0.84 0.17 194);
+  --preview-background:
+    linear-gradient(135deg, oklch(0.72 0.22 330 / 0.16), transparent 38%),
+    repeating-linear-gradient(0deg, transparent 0 3px, oklch(0.84 0.17 194 / 0.035) 3px 4px), oklch(0.125 0.052 282);
+  --preview-ink: oklch(0.94 0.04 205);
+  --preview-muted: oklch(0.75 0.075 214);
+}
+
+.theme-option[data-theme-option='neon'] .theme-glyph {
+  border-radius: 2px;
+  box-shadow: 0 0 14px oklch(0.84 0.17 194 / 0.2);
+}
+
+.theme-option[data-theme-option='neon'] .theme-option-copy strong {
+  color: oklch(0.78 0.2 330);
+  font-family: 'Theme Neon Preview', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 18px;
+  font-style: oblique;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 14px oklch(0.78 0.2 330 / 0.24);
 }
 
 .world-forge[data-theme='astrolabe'] .masthead-seal {
@@ -1770,10 +1890,6 @@ function buildStyleRule(style: string): string {
   background: linear-gradient(90deg, var(--brass) 0 28%, var(--cinnabar) 28% 100%);
   box-shadow: 0 0 12px var(--cinnabar);
   clip-path: none;
-}
-
-.world-forge[data-theme='neon'] .theme-option.active {
-  box-shadow: inset 3px 0 0 var(--cinnabar);
 }
 
 .world-forge[data-theme='neon'] .approval-mark {
@@ -2582,20 +2698,13 @@ textarea.control {
     padding: 0 12px 16px;
   }
   .theme-options {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .theme-option {
-    min-height: 84px;
-    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    min-height: 174px;
+    grid-template-columns: 1fr;
     gap: 10px;
-    border-bottom: 1px solid var(--theme-border);
-    padding: 10px 12px;
-  }
-  .theme-option:nth-child(2n) {
-    border-right: 0;
-  }
-  .theme-option:nth-last-child(-n + 2) {
-    border-bottom: 0;
+    padding: 12px 10px;
   }
   .theme-glyph {
     width: 32px;
@@ -2674,7 +2783,7 @@ textarea.control {
   }
 }
 
-@container (max-width: 420px) {
+@container (max-width: 460px) {
   .masthead {
     align-items: flex-start;
   }
@@ -2690,9 +2799,6 @@ textarea.control {
   .masthead-seal {
     flex-basis: 52px;
   }
-  .theme-dock-heading small {
-    display: none;
-  }
   .theme-options {
     grid-template-columns: 1fr;
     border-radius: 5px;
@@ -2705,10 +2811,8 @@ textarea.control {
     border-bottom: 1px solid var(--theme-border);
     padding: 10px 12px;
   }
-  .theme-option:nth-last-child(-n + 2) {
-    border-bottom: 1px solid var(--theme-border);
-  }
   .theme-option:last-child {
+    border-right: 0;
     border-bottom: 0;
   }
   .theme-glyph {

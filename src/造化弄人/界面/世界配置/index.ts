@@ -17,7 +17,7 @@ async function waitForMvuData() {
       { timeout: 5000, intervalBetweenAttempts: 120 },
     );
   } catch (error) {
-    console.warn('[造化弄人·世界配置] 未在 5 秒内读取到楼层 MVU 数据，将使用默认值渲染。', error);
+    console.warn('[人间修订中·世界配置] 未在 5 秒内读取到楼层 MVU 数据，将使用默认值渲染。', error);
   }
 }
 
