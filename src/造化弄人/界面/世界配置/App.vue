@@ -1162,6 +1162,8 @@ function buildStyleRule(style: string): string {
 
 <style scoped>
 .world-forge {
+  --ui-font: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono-font: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
   --canvas: oklch(0.16 0.012 55);
   --canvas-raised: oklch(0.21 0.014 55);
   --paper: oklch(0.92 0.025 78);
@@ -1223,6 +1225,7 @@ function buildStyleRule(style: string): string {
   box-shadow: var(--shell-shadow);
   color: var(--shell-ink);
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  text-rendering: optimizeLegibility;
   container-type: inline-size;
   transition:
     background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -1434,15 +1437,16 @@ function buildStyleRule(style: string): string {
 .character-record header span,
 .legal-note {
   margin: 0;
-  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
-  font-size: 10px;
+  font-family: var(--mono-font);
+  font-size: 12px;
   font-weight: 650;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .registry-no {
   color: var(--brass);
+  letter-spacing: 0.12em;
 }
 
 .masthead h1 {
@@ -1456,8 +1460,11 @@ function buildStyleRule(style: string): string {
 .masthead-subtitle {
   margin: 0;
   color: var(--shell-muted);
-  font-size: 13px;
-  letter-spacing: 0.12em;
+  font-family: var(--ui-font);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
 }
 
 .masthead-seal {
@@ -1476,24 +1483,25 @@ function buildStyleRule(style: string): string {
 
 .masthead-seal span {
   margin-top: -7px;
-  font-size: 10px;
+  font-family: var(--ui-font);
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.08em;
 }
 
 .theme-dock {
   display: grid;
-  gap: 9px;
-  padding: 0 16px 16px;
+  gap: 12px;
+  padding: 0 20px 20px;
 }
 
 .theme-dock-heading {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   color: var(--shell-muted);
-  font-family: 'IBM Plex Mono', 'Cascadia Mono', 'Microsoft YaHei', monospace;
+  font-family: var(--ui-font);
 }
 
 .theme-dock-heading > div {
@@ -1505,23 +1513,25 @@ function buildStyleRule(style: string): string {
 
 .theme-dock-heading span {
   color: var(--shell-ink);
-  font-size: 10px;
-  font-weight: 760;
-  letter-spacing: 0.13em;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
 }
 
 .theme-dock-heading small {
   overflow: hidden;
-  font-size: 9px;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .theme-dock-heading > strong {
   color: var(--brass);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
@@ -1538,16 +1548,16 @@ function buildStyleRule(style: string): string {
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 72px;
-  grid-template-columns: 30px minmax(0, 1fr) 16px;
+  min-height: 90px;
+  grid-template-columns: 34px minmax(0, 1fr) 16px;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   border: 0;
   border-right: 1px solid var(--theme-border);
   border-bottom: 1px solid var(--theme-border);
   background: transparent;
   color: var(--shell-muted);
-  padding: 8px 10px;
+  padding: 12px 14px;
   text-align: left;
   cursor: pointer;
   transition:
@@ -1581,8 +1591,8 @@ function buildStyleRule(style: string): string {
 
 .theme-glyph {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   border: 1px solid currentColor;
   border-radius: 50%;
@@ -1592,7 +1602,8 @@ function buildStyleRule(style: string): string {
 .theme-option-copy {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  gap: 5px;
+  font-family: var(--ui-font);
 }
 
 .theme-option-copy strong,
@@ -1602,16 +1613,18 @@ function buildStyleRule(style: string): string {
 
 .theme-option-copy strong {
   color: inherit;
-  font-size: 11px;
-  font-weight: 760;
-  letter-spacing: 0.04em;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
 }
 
 .theme-option-copy small {
   display: -webkit-box;
   color: var(--shell-muted);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1780,17 +1793,17 @@ function buildStyleRule(style: string): string {
 .chapter-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  padding: 0 16px 16px;
+  padding: 0 20px 18px;
 }
 
 .chapter-tab {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 58px;
+  min-height: 70px;
   align-items: center;
-  gap: 9px;
-  padding: 8px 9px;
+  gap: 10px;
+  padding: 10px;
   border: 0;
   border-bottom: 1px solid var(--tab-line);
   background: transparent;
@@ -1819,7 +1832,7 @@ function buildStyleRule(style: string): string {
 }
 .chapter-tab:disabled {
   cursor: default;
-  opacity: 0.46;
+  opacity: 0.72;
 }
 .chapter-tab.active {
   color: var(--shell-ink);
@@ -1833,9 +1846,9 @@ function buildStyleRule(style: string): string {
 
 .chapter-icon {
   display: grid;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   border: 1px solid currentColor;
   border-radius: 50%;
@@ -1845,19 +1858,21 @@ function buildStyleRule(style: string): string {
   display: grid;
   min-width: 0;
   gap: 3px;
+  font-family: var(--ui-font);
 }
 .chapter-copy small {
   font:
-    9px/1.1 'IBM Plex Mono',
+    12px/1.3 'IBM Plex Mono',
     'Cascadia Mono',
     sans-serif;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 .chapter-copy strong {
   overflow: hidden;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2019,9 +2034,10 @@ function buildStyleRule(style: string): string {
 }
 .field-label em {
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: 12px;
   font-style: normal;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .control {
@@ -2209,8 +2225,8 @@ textarea.control {
 .switch-row small {
   color: var(--ink-muted);
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .tone-row input {
   width: 100%;
@@ -2301,12 +2317,12 @@ textarea.control {
 }
 .rule-tab span {
   display: grid;
-  min-width: 19px;
-  height: 19px;
+  min-width: 22px;
+  height: 22px;
   place-items: center;
   border-radius: 50%;
   background: var(--count-surface);
-  font-size: 10px;
+  font-size: 12px;
 }
 .rule-tab.active {
   border-color: var(--cinnabar);
@@ -2409,7 +2425,7 @@ textarea.control {
   gap: 5px;
   color: var(--cinnabar);
   font:
-    700 11px/1 'Noto Sans SC',
+    700 12px/1.2 'Noto Sans SC',
     sans-serif;
 }
 
@@ -2440,9 +2456,9 @@ textarea.control {
   letter-spacing: 0.08em;
 }
 .approval-mark small {
-  margin-top: -20px;
+  margin-top: -16px;
   font:
-    650 7px/1 'IBM Plex Mono',
+    650 12px/1 'IBM Plex Mono',
     monospace;
 }
 
@@ -2557,23 +2573,23 @@ textarea.control {
     padding: 20px 18px 16px;
   }
   .masthead h1 {
-    font-size: 25px;
+    font-size: 28px;
   }
   .masthead-seal {
     flex-basis: 50px;
   }
   .theme-dock {
-    padding: 0 8px 12px;
+    padding: 0 12px 16px;
   }
   .theme-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .theme-option {
-    min-height: 64px;
-    grid-template-columns: 28px minmax(0, 1fr) 14px;
-    gap: 6px;
+    min-height: 84px;
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    gap: 10px;
     border-bottom: 1px solid var(--theme-border);
-    padding: 7px;
+    padding: 10px 12px;
   }
   .theme-option:nth-child(2n) {
     border-right: 0;
@@ -2582,21 +2598,21 @@ textarea.control {
     border-bottom: 0;
   }
   .theme-glyph {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
   .chapter-strip {
-    padding: 0 8px 12px;
+    padding: 0 12px 14px;
   }
   .chapter-tab {
     justify-content: center;
     gap: 0;
-    padding: 7px 4px;
+    padding: 9px 4px;
     text-align: center;
   }
   .chapter-icon {
-    width: 27px;
-    height: 27px;
+    width: 30px;
+    height: 30px;
   }
   .chapter-copy small {
     display: none;
@@ -2604,7 +2620,7 @@ textarea.control {
   .chapter-copy strong {
     max-width: 4.4em;
     margin-left: 6px;
-    font-size: 11px;
+    font-size: 13px;
     white-space: normal;
   }
   .dossier {
@@ -2663,41 +2679,51 @@ textarea.control {
     align-items: flex-start;
   }
   .registry-no {
-    font-size: 9px;
+    font-size: 12px;
   }
   .masthead h1 {
-    font-size: 23px;
+    font-size: 26px;
   }
   .masthead-subtitle {
-    font-size: 11px;
+    font-size: 14px;
   }
   .masthead-seal {
-    flex-basis: 46px;
+    flex-basis: 52px;
   }
   .theme-dock-heading small {
     display: none;
   }
   .theme-options {
+    grid-template-columns: 1fr;
     border-radius: 5px;
   }
   .theme-option {
-    min-height: 68px;
-    grid-template-columns: 26px minmax(0, 1fr);
-    gap: 6px;
-    padding: 7px 6px;
+    min-height: 82px;
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    gap: 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--theme-border);
+    padding: 10px 12px;
+  }
+  .theme-option:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--theme-border);
+  }
+  .theme-option:last-child {
+    border-bottom: 0;
   }
   .theme-glyph {
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
   }
   .theme-option-copy strong {
-    font-size: 10px;
+    font-size: 14px;
     white-space: normal;
   }
   .theme-option-copy small {
     display: -webkit-box;
     overflow: hidden;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.5;
     text-overflow: clip;
     white-space: normal;
     -webkit-box-orient: vertical;
@@ -2709,9 +2735,9 @@ textarea.control {
     right: 4px;
   }
   .chapter-tab {
-    min-height: 62px;
+    min-height: 72px;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
   }
   .chapter-copy {
     display: block;
@@ -2719,14 +2745,14 @@ textarea.control {
   .chapter-copy strong {
     max-width: none;
     margin-left: 0;
-    font-size: 10px;
+    font-size: 13px;
     white-space: nowrap;
   }
   .chapter-heading h2 {
     font-size: 23px;
   }
   .chapter-folio {
-    font-size: 10px;
+    font-size: 12px;
   }
   .section-heading-actions {
     grid-template-columns: 36px 1fr;
