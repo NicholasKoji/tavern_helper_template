@@ -74,7 +74,7 @@
           "disabled": false,
           "runOnEdit": false,
           "findRegex": "<StatusPlaceHolderImpl/>",
-          "replaceString": "```\n<body>\n<script>\nconst status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@c522195b3a17edd8f1df71cd5f275669ec243f2c/dist/造化弄人/界面/状态栏/index.html';\n$('body').load(`${status_bar_url}?t=${Date.now()}`)\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nconst status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/状态栏/index.html';\n$('body').load(`${status_bar_url}?t=${Date.now()}`)\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -91,7 +91,7 @@
           "disabled": false,
           "runOnEdit": false,
           "findRegex": "<WorldConfigurator/>",
-          "replaceString": "```\n<body>\n<script>\nconst world_config_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@c522195b3a17edd8f1df71cd5f275669ec243f2c/dist/造化弄人/界面/世界配置/index.html';\n$('body').load(`${world_config_url}?t=${Date.now()}`)\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nconst world_config_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html';\n$('body').load(`${world_config_url}?t=${Date.now()}`)\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
