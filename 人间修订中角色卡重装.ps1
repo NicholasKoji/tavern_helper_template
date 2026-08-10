@@ -29,6 +29,10 @@ $script:MaxAvatarSuffixProbe = $MaxAvatarSuffixProbe
 $CardName = '人间修订中'
 $WorldbookName = '人间修订中'
 $CardFileName = '人间修订中.png'
+$LegacyCardNames = @('造化弄人')
+$ManagedCardNames = @($CardName) + $LegacyCardNames
+$ManagedWorldbookNames = @($WorldbookName) + $LegacyCardNames
+$ManagedAvatarBaseNames = @([IO.Path]::GetFileNameWithoutExtension($CardFileName)) + $LegacyCardNames
 $CardPath = Join-Path $ProjectRoot 'src\人间修订中\人间修订中.png'
 $BackupDirectory = Join-Path $ProjectRoot '.codex\人间修订中-重装'
 $ExpectedRegexNames = @(
@@ -169,46 +173,55 @@ function Test-TargetCharacter {
     $avatar = [IO.Path]::GetFileName($avatarValue)
     $world = [string](Get-PropertyValue $extensions 'world' '')
     $bookName = [string](Get-PropertyValue $book 'name' '')
-    $nameMatches = [string](Get-PropertyValue $Character 'name' '') -eq $script:CardName
-    $avatarMatches = $avatar -match '^人间修订中\d*\.png$'
+    $characterName = [string](Get-PropertyValue $Character 'name' '')
+    if ([string]::IsNullOrWhiteSpace($characterName)) {
+        $characterName = [string](Get-PropertyValue $data 'name' '')
+    }
+    $nameMatches = $script:ManagedCardNames -contains $characterName
+    $avatarMatches = @($script:ManagedAvatarBaseNames | Where-Object {
+        $avatar -match ('^' + [regex]::Escape($_) + '\d*\.png$')
+    }).Count -gt 0
+    $worldMatches = $script:ManagedWorldbookNames -contains $world
+    $bookMatches = $script:ManagedWorldbookNames -contains $bookName
 
-    return [bool]($nameMatches -and ($avatarMatches -or $world -eq $script:WorldbookName -or $bookName -eq $script:WorldbookName))
+    return [bool]($nameMatches -and ($avatarMatches -or $worldMatches -or $bookMatches))
 }
 
 function Get-TargetCharacterRecords {
-    $records = @()
-    $baseName = [IO.Path]::GetFileNameWithoutExtension($script:CardFileName)
+    $records = [ordered]@{}
 
-    for ($suffix = 0; $suffix -le $script:MaxAvatarSuffixProbe; $suffix++) {
-        $avatar = if ($suffix -eq 0) {
-            $script:CardFileName
-        } else {
-            "$baseName$suffix.png"
-        }
+    foreach ($baseName in $script:ManagedAvatarBaseNames) {
+        for ($suffix = 0; $suffix -le $script:MaxAvatarSuffixProbe; $suffix++) {
+            $avatar = if ($suffix -eq 0) {
+                "$baseName.png"
+            } else {
+                "$baseName$suffix.png"
+            }
 
-        $character = Invoke-StJson '/api/characters/get' @{ avatar_url = $avatar } -AllowNotFound
-        if ($null -eq $character) {
-            continue
-        }
+            $character = Invoke-StJson '/api/characters/get' @{ avatar_url = $avatar } -AllowNotFound
+            if ($null -eq $character) {
+                continue
+            }
 
-        if (Test-TargetCharacter -Character $character -AvatarOverride $avatar) {
-            $records += [pscustomobject]@{
-                avatar = $avatar
-                character = $character
+            if (Test-TargetCharacter -Character $character -AvatarOverride $avatar) {
+                $records[$avatar] = [pscustomobject]@{
+                    avatar = $avatar
+                    character = $character
+                }
             }
         }
+
+        $lastAvatar = if ($script:MaxAvatarSuffixProbe -eq 0) {
+            "$baseName.png"
+        } else {
+            "$baseName$($script:MaxAvatarSuffixProbe).png"
+        }
+        if ($records.Contains($lastAvatar)) {
+            throw "角色卡候选探测已达到 $lastAvatar；请提高 -MaxAvatarSuffixProbe 后再重装。"
+        }
     }
 
-    $lastAvatar = if ($script:MaxAvatarSuffixProbe -eq 0) {
-        $script:CardFileName
-    } else {
-        "$baseName$($script:MaxAvatarSuffixProbe).png"
-    }
-    if (@($records | Where-Object { $_.avatar -eq $lastAvatar }).Count -gt 0) {
-        throw "角色卡候选探测已达到 $lastAvatar；请提高 -MaxAvatarSuffixProbe 后再重装。"
-    }
-
-    return @($records)
+    return @($records.Values)
 }
 
 function Convert-CharacterBookToWorldInfo {
@@ -391,15 +404,30 @@ try {
     $script:StHeaders = @{ 'X-CSRF-Token' = $script:CsrfToken; Accept = 'application/json' }
 
     $targetCharacters = @(Get-TargetCharacterRecords)
-    $existingWorld = Invoke-StJson '/api/worldinfo/get' @{ name = $WorldbookName }
-    $existingWorldEntryCount = if ($null -ne $existingWorld -and $null -ne $existingWorld.entries) {
-        @($existingWorld.entries.PSObject.Properties).Count
-    } else {
-        0
+    $existingWorldbooks = @()
+    foreach ($managedWorldbookName in $ManagedWorldbookNames) {
+        $existingWorld = Invoke-StJson '/api/worldinfo/get' @{ name = $managedWorldbookName }
+        $existingWorldEntryCount = if ($null -ne $existingWorld -and $null -ne $existingWorld.entries) {
+            @($existingWorld.entries.PSObject.Properties).Count
+        } else {
+            0
+        }
+        if ($existingWorldEntryCount -gt 0) {
+            $existingWorldbooks += [pscustomobject]@{
+                name = $managedWorldbookName
+                entry_count = $existingWorldEntryCount
+                data = $existingWorld
+            }
+        }
     }
-    $hasExistingWorld = $existingWorldEntryCount -gt 0
 
-    Write-Status ("发现目标角色卡 {0} 张；世界书={1}；定向探测上限={2}" -f $targetCharacters.Count, $hasExistingWorld, $MaxAvatarSuffixProbe)
+    $existingWorldbookSummary = if ($existingWorldbooks.Count -gt 0) {
+        @($existingWorldbooks | ForEach-Object { "$($_.name)($($_.entry_count))" }) -join ', '
+    } else {
+        '无'
+    }
+    $currentWorldbookBackup = $existingWorldbooks | Where-Object { $_.name -eq $WorldbookName } | Select-Object -First 1
+    Write-Status ("发现目标角色卡 {0} 张；世界书={1}；定向探测上限={2}" -f $targetCharacters.Count, $existingWorldbookSummary, $MaxAvatarSuffixProbe)
 
     if (-not $WhatIfPreference) {
         New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
@@ -416,7 +444,9 @@ try {
                 }
                 $character
             })
-            worldbook = if ($hasExistingWorld) { $existingWorld } else { $null }
+            worldbook = if ($null -ne $currentWorldbookBackup) { $currentWorldbookBackup.data } else { $null }
+            worldbooks = @($existingWorldbooks)
+            managed_names = @($ManagedCardNames)
         }
         $snapshot | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $backupPath -Encoding UTF8
         Write-Status "已保存网页端重装前备份=$backupPath"
@@ -430,9 +460,12 @@ try {
         }
     }
 
-    if ($hasExistingWorld -and $PSCmdlet.ShouldProcess("世界书 $WorldbookName", '删除旧版本')) {
-        Invoke-StJson '/api/worldinfo/delete' @{ name = $WorldbookName } | Out-Null
-        Write-Status "已删除旧世界书=$WorldbookName"
+    foreach ($existingWorldbook in $existingWorldbooks) {
+        $existingWorldbookName = [string]$existingWorldbook.name
+        if ($PSCmdlet.ShouldProcess("世界书 $existingWorldbookName", '删除旧版本或旧名称版本')) {
+            Invoke-StJson '/api/worldinfo/delete' @{ name = $existingWorldbookName } | Out-Null
+            Write-Status "已删除旧世界书=$existingWorldbookName"
+        }
     }
 
     if ($WhatIfPreference) {
@@ -486,6 +519,18 @@ try {
         throw '重装后世界书没有条目。'
     }
 
+    foreach ($legacyWorldbookName in $LegacyCardNames) {
+        $legacyWorld = Invoke-StJson '/api/worldinfo/get' @{ name = $legacyWorldbookName }
+        $legacyWorldEntryCount = if ($null -ne $legacyWorld -and $null -ne $legacyWorld.entries) {
+            @($legacyWorld.entries.PSObject.Properties).Count
+        } else {
+            0
+        }
+        if ($legacyWorldEntryCount -gt 0) {
+            throw "重装后仍存在旧名世界书=$legacyWorldbookName。"
+        }
+    }
+
     $regexScripts = @(Get-PropertyValue $finalExtensions 'regex_scripts' @())
     $regexNames = @($regexScripts | ForEach-Object { [string](Get-PropertyValue $_ 'scriptName' '') })
     $sortedRegex = @($regexNames | Sort-Object) -join '|'
@@ -511,6 +556,7 @@ try {
         worldbook_entries = $worldEntryCount
         regex_count = $regexScripts.Count
         helper_scripts = $helperNames
+        migrated_legacy_names = @($LegacyCardNames)
         backup_directory = $BackupDirectory
         note = '角色卡、世界书、角色正则和酒馆助手角色脚本已由同一脚本完成重装并验收。'
     }
