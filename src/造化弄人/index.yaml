@@ -282,8 +282,25 @@
         ```
         <body>
         <script>
-        const world_config_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html';
-        $('body').load(`${world_config_url}?t=${Date.now()}`)
+        const world_config_path = '/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html';
+        const world_config_hosts = ['https://fastly.jsdelivr.net', 'https://gcore.jsdelivr.net', 'https://testingcf.jsdelivr.net'];
+        const load_world_config = index => {
+          if (index >= world_config_hosts.length) {
+            $('body').text('世界配置界面加载失败，请稍后重试');
+            return;
+          }
+          const url = `${world_config_hosts[index]}${world_config_path}?t=${Date.now()}`;
+          $('body').load(url, (_response, status) => {
+            if (status === 'error') {
+              load_world_config(index + 1);
+              return;
+            }
+            setTimeout(() => {
+              if (!document.querySelector('.theme-dock')) load_world_config(index + 1);
+            }, 1500);
+          });
+        };
+        load_world_config(0);
         </script>
         </body>
         ```
