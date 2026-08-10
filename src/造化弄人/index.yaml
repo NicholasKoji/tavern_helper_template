@@ -282,21 +282,26 @@
         ```
         <body>
         <script>
-        const world_config_path = '/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html';
-        const world_config_hosts = ['https://fastly.jsdelivr.net', 'https://gcore.jsdelivr.net', 'https://testingcf.jsdelivr.net'];
+        const world_config_urls = [
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/refs/heads/codex/zaohua-nongren/dist/造化弄人/界面/世界配置/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex%2Fzaohua-nongren/dist/造化弄人/界面/世界配置/index.html',
+        ];
+        const world_config_revision = '[aria-label^="霓虹夜城："]';
         const load_world_config = index => {
-          if (index >= world_config_hosts.length) {
+          if (index >= world_config_urls.length) {
             $('body').text('世界配置界面加载失败，请稍后重试');
             return;
           }
-          const url = `${world_config_hosts[index]}${world_config_path}?t=${Date.now()}`;
+          const url = `${world_config_urls[index]}?t=${Date.now()}`;
           $('body').load(url, (_response, status) => {
             if (status === 'error') {
               load_world_config(index + 1);
               return;
             }
             setTimeout(() => {
-              if (!document.querySelector('.theme-dock')) load_world_config(index + 1);
+              if (!document.querySelector(world_config_revision)) load_world_config(index + 1);
             }, 1500);
           });
         };
