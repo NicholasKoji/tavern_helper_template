@@ -7,12 +7,89 @@
       "type": "object",
       "properties": {
         "地点": {
-          "default": "待生成",
-          "type": "string"
+          "default": {},
+          "type": "object",
+          "properties": {
+            "一级区域": {
+              "default": "待生成",
+              "type": "string"
+            },
+            "二级区域": {
+              "default": "待生成",
+              "type": "string"
+            },
+            "三级地点": {
+              "default": "待生成",
+              "type": "string"
+            }
+          }
+        },
+        "日期": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "年": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "月": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "日": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
         },
         "时间": {
-          "default": "待生成",
-          "type": "string"
+          "default": {},
+          "type": "object",
+          "properties": {
+            "时": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "分": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
         },
         "摘要": {
           "default": "等待玩家完成世界配置",

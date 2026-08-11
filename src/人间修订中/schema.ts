@@ -1,8 +1,46 @@
 export const Schema = z.object({
   当前场景: z
     .object({
-      地点: z.string().prefault('待生成'),
-      时间: z.string().prefault('待生成'),
+      地点: z
+        .object({
+          一级区域: z.string().prefault('待生成'),
+          二级区域: z.string().prefault('待生成'),
+          三级地点: z.string().prefault('待生成'),
+        })
+        .prefault({}),
+      日期: z
+        .object({
+          年: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 1, 9999))
+            .nullable()
+            .prefault(null),
+          月: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 1, 12))
+            .nullable()
+            .prefault(null),
+          日: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 1, 31))
+            .nullable()
+            .prefault(null),
+        })
+        .prefault({}),
+      时间: z
+        .object({
+          时: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 0, 23))
+            .nullable()
+            .prefault(null),
+          分: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 0, 59))
+            .nullable()
+            .prefault(null),
+        })
+        .prefault({}),
       摘要: z.string().prefault('等待玩家完成世界配置'),
     })
     .prefault({}),

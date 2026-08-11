@@ -1,8 +1,17 @@
 # yaml-language-server: $schema=../../schema.json
 # 在编写 initvar 之前, 请先保证终端有在运行 `pnpm watch`, 这会生成 schema.json 用于检验 initvar 是否有效
 当前场景:
-  地点: 待生成
-  时间: 待生成
+  地点:
+    一级区域: 待生成
+    二级区域: 待生成
+    三级地点: 待生成
+  日期:
+    年: null
+    月: null
+    日: null
+  时间:
+    时: null
+    分: null
   摘要: 等待玩家完成世界配置
 世界配置:
   世界模板: 现代都市
