@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 # 这个配置文件仅作为使用同步脚本的提示. 同步脚本并不是必须使用, 但可以让你的角色卡完全做到自动更新, 具体请参考: https://stagedog.github.io/青空莉/工具经验/实时编写角色卡、世界书或预设/
 头像: 头像
-版本: 0.2.0
+版本: 0.3.0
 作者: NicholasKoji
 备注: '五步世界配置 + 主角开关 + 第一幕人物白名单'
 
@@ -262,8 +262,30 @@
         ```
         <body>
         <script>
-        const status_bar_url = 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/界面/状态栏/index.html';
-        $('body').load(`${status_bar_url}?t=${Date.now()}`)
+        const status_bar_urls = [
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
+        ];
+        const status_bar_revision = '[data-status-bar="human-revision-status-v1"]';
+        const load_status_bar = index => {
+          if (index >= status_bar_urls.length) {
+            $('body').text('状态栏加载失败，请稍后重试');
+            return;
+          }
+          const url = `${status_bar_urls[index]}?t=${Date.now()}`;
+          $('body').load(url, (_response, status) => {
+            if (status === 'error') {
+              load_status_bar(index + 1);
+              return;
+            }
+            setTimeout(() => {
+              if (!document.querySelector(status_bar_revision)) load_status_bar(index + 1);
+            }, 1500);
+          });
+        };
+        load_status_bar(0);
         </script>
         </body>
         ```
@@ -283,10 +305,10 @@
         <body>
         <script>
         const world_config_urls = [
-          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/界面/世界配置/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/界面/世界配置/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/界面/世界配置/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/界面/世界配置/index.html',
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
         ];
         const world_config_revision = '[aria-label^="霓虹夜城："]';
         const load_world_config = index => {
@@ -342,4 +364,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@b534c37b5772f0a65ee1a33703664e38db687b6c/dist/人间修订中/脚本/变量结构/index.js';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/脚本/变量结构/index.js';
