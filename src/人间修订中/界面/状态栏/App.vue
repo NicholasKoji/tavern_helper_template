@@ -84,15 +84,6 @@
               <div class="data-val">{{ data.世界配置.叙事文风 }}</div>
             </div>
           </div>
-          <div class="tone-block">
-            <div v-for="tone in tones" :key="tone.key" class="tone-row">
-              <span class="tone-label">{{ tone.label }}</span>
-              <span class="meter" aria-hidden="true">
-                <span class="meter-fill" :style="{ width: `${tone.value}%` }" />
-              </span>
-              <span class="tone-value">{{ tone.value }}</span>
-            </div>
-          </div>
         </article>
 
         <article class="card">
@@ -114,18 +105,34 @@
               </div>
             </div>
           </div>
-          <div v-if="ruleGroups.length" class="rules">
-            <details v-for="[category, rules] in ruleGroups" :key="category" class="rule-group">
+          <div v-if="ruleScopeCount > 0" class="rules">
+            <details v-for="scope in ruleScopes" :key="scope.key" class="rule-group">
               <summary>
-                <span>{{ category }}</span>
-                <span class="rule-count">{{ Object.keys(rules).length }}</span>
+                <span>{{ scope.title }}</span>
+                <span class="rule-count">{{ scope.count }}</span>
               </summary>
-              <ul>
-                <li v-for="(content, name) in rules" :key="name">
-                  <b>{{ name }}</b
-                  >：{{ content }}
-                </li>
-              </ul>
+              <template v-if="scope.key === '世界规则'">
+                <ul>
+                  <li v-for="(content, name) in data.现实编辑器.生效规则.世界规则" :key="name">
+                    <b>{{ name }}</b
+                    >：{{ content }}
+                  </li>
+                </ul>
+              </template>
+              <template v-else>
+                <details v-for="[target, rules] in Object.entries(scope.entries)" :key="target" class="rule-subgroup">
+                  <summary>
+                    <span>{{ target }}</span>
+                    <span class="rule-count">{{ Object.keys(rules).length }}</span>
+                  </summary>
+                  <ul>
+                    <li v-for="(content, name) in rules" :key="name">
+                      <b>{{ name }}</b
+                      >：{{ content }}
+                    </li>
+                  </ul>
+                </details>
+              </template>
             </details>
           </div>
           <p v-else class="empty-state">暂无生效规则</p>
@@ -374,13 +381,31 @@ const tabs = [
 const protagonistEnabled = computed(() => data.value.世界配置.主角启用);
 const npcEntries = computed(() => Object.entries(data.value.NPC序列 ?? {}));
 const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列[selectedNpcName.value] : undefined));
-const ruleGroups = computed(() => Object.entries(data.value.现实编辑器.生效规则 ?? {}));
+const ruleScopes = computed(() => {
+  const rules = data.value.现实编辑器.生效规则;
+  return [
+    {
+      key: '世界规则' as const,
+      title: '世界规则',
+      count: Object.keys(rules.世界规则 ?? {}).length,
+      entries: null,
+    },
+    {
+      key: '区域规则' as const,
+      title: '区域规则',
+      count: Object.values(rules.区域规则 ?? {}).reduce((sum, group) => sum + Object.keys(group).length, 0),
+      entries: rules.区域规则 ?? {},
+    },
+    {
+      key: '个人规则' as const,
+      title: '个人规则',
+      count: Object.values(rules.个人规则 ?? {}).reduce((sum, group) => sum + Object.keys(group).length, 0),
+      entries: rules.个人规则 ?? {},
+    },
+  ];
+});
+const ruleScopeCount = computed(() => ruleScopes.value.reduce((sum, scope) => sum + scope.count, 0));
 const privateStateEntries = computed(() => Object.entries(selectedNpc.value?.私密状态 ?? {}));
-const tones = computed(() => [
-  { key: '色情浓度', label: '色情', value: data.value.世界配置.基调.色情浓度 },
-  { key: '搞笑程度', label: '搞笑', value: data.value.世界配置.基调.搞笑程度 },
-  { key: '轻松程度', label: '轻松', value: data.value.世界配置.基调.轻松程度 },
-]);
 
 const formatDate = computed(() => {
   const date = scene.value.日期;

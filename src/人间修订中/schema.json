@@ -202,24 +202,6 @@
             }
           }
         },
-        "基调": {
-          "default": {},
-          "type": "object",
-          "properties": {
-            "色情浓度": {
-              "default": 40,
-              "type": "number"
-            },
-            "搞笑程度": {
-              "default": 70,
-              "type": "number"
-            },
-            "轻松程度": {
-              "default": 70,
-              "type": "number"
-            }
-          }
-        },
         "允许黑深残": {
           "default": false,
           "type": "boolean"
@@ -254,54 +236,6 @@
               "default": false,
               "type": "boolean"
             }
-          }
-        },
-        "常识规则": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "规则名"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "description": "规则内容"
-          }
-        },
-        "行为习惯": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "习惯名"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "description": "习惯内容"
-          }
-        },
-        "物理规则": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "规则名"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "description": "规则内容"
-          }
-        },
-        "超自然规则": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "规则名"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "description": "规则内容"
           }
         },
         "创建时间": {
@@ -348,19 +282,56 @@
         "生效规则": {
           "default": {},
           "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "description": "规则类别"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "description": "规则名"
+          "properties": {
+            "世界规则": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "description": "规则名"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "description": "规则内容"
+              }
             },
-            "additionalProperties": {
-              "type": "string",
-              "description": "规则内容"
+            "区域规则": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "description": "区域名"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "description": "规则名"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "description": "规则内容"
+                }
+              }
+            },
+            "个人规则": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "description": "对象名"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "description": "规则名"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "description": "规则内容"
+                }
+              }
             }
           }
         }

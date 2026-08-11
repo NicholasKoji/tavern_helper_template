@@ -376,28 +376,8 @@
               <span class="section-icon"><Gauge :size="19" /></span>
               <div>
                 <span>{{ activeThemeMeta.sectionLabels.rules }} 02</span>
-                <h3>世界基调</h3>
+                <h3>尺度边界</h3>
               </div>
-            </div>
-            <div class="tone-list">
-              <label class="tone-row"
-                ><span><strong>色情浓度</strong><small>亲密描写的直接程度</small></span
-                ><input v-model.number="form.基调.色情浓度" type="range" min="0" max="100" step="5" /><output>{{
-                  form.基调.色情浓度
-                }}</output></label
-              >
-              <label class="tone-row"
-                ><span><strong>搞笑程度</strong><small>荒诞与幽默出现的频率</small></span
-                ><input v-model.number="form.基调.搞笑程度" type="range" min="0" max="100" step="5" /><output>{{
-                  form.基调.搞笑程度
-                }}</output></label
-              >
-              <label class="tone-row"
-                ><span><strong>轻松程度</strong><small>整体情绪的明亮程度</small></span
-                ><input v-model.number="form.基调.轻松程度" type="range" min="0" max="100" step="5" /><output>{{
-                  form.基调.轻松程度
-                }}</output></label
-              >
             </div>
             <label class="switch-row"
               ><span><strong>允许黑深残走向</strong><small>允许剧情进入更压抑、残酷的分支</small></span
@@ -431,7 +411,19 @@
               <WandSparkles :size="22" />
               <p>这一类还没有规则，留空即不设限。</p>
             </div>
-            <div v-for="(rule, index) in rules[activeRuleGroup]" :key="index" class="rule-record">
+            <div
+              v-for="(rule, index) in rules[activeRuleGroup]"
+              :key="index"
+              class="rule-record"
+              :class="{ 'rule-record-scoped': activeRuleGroup !== '世界规则' }"
+            >
+              <input
+                v-if="activeRuleGroup !== '世界规则'"
+                v-model="rule.对象"
+                class="control"
+                type="text"
+                :placeholder="groupInfo(activeRuleGroup).targetPlaceholder"
+              />
               <input v-model="rule.名称" class="control" type="text" placeholder="规则名称" />
               <input
                 v-model="rule.内容"
@@ -563,7 +555,7 @@
             </div>
             <div class="receipt-group">
               <header>
-                <div><Scale :size="18" /><strong>法则与基调</strong></div>
+                <div><Scale :size="18" /><strong>法则边界</strong></div>
                 <button type="button" @click="goToStep(3)"><Pencil :size="14" />修改</button>
               </header>
               <dl>
@@ -572,8 +564,8 @@
                   <dd>{{ receipt.玩法模式 }}</dd>
                 </div>
                 <div>
-                  <dt>基调</dt>
-                  <dd>{{ receipt.基调 }}</dd>
+                  <dt>尺度</dt>
+                  <dd>{{ receipt.尺度 }}</dd>
                 </div>
                 <div>
                   <dt>生效规则</dt>
@@ -716,7 +708,7 @@ onUnmounted(() => {
   injectedThemeFontStyle = null;
 });
 
-type RuleEntry = { 名称: string; 内容: string };
+type RuleEntry = { 对象: string; 名称: string; 内容: string };
 type CharacterEntry = {
   姓名: string;
   性别: string;
@@ -726,7 +718,7 @@ type CharacterEntry = {
   外貌特征: string;
   性格: string;
 };
-type RuleGroup = { key: string; title: string; placeholder: string };
+type RuleGroup = { key: string; title: string; placeholder: string; targetPlaceholder?: string };
 
 const themeOptions = [
   {
@@ -862,21 +854,33 @@ const styleOptions = [
   { value: '古风', label: '古风 · 七分白话三分文言' },
   { value: '西幻', label: '西幻 · 世界质感与博弈' },
   { value: '漫画分镜', label: '漫画分镜 · 画面节奏' },
-  { value: '微色情', label: '微色情 · 含蓄反差（配合色情浓度）' },
+  { value: '微色情', label: '微色情 · 含蓄反差' },
 ];
 
 const ruleGroups: RuleGroup[] = [
-  { key: '常识规则', title: '常识规则', placeholder: '例如：所有人听到“茄子”都要单脚跳一下' },
-  { key: '行为习惯', title: '行为习惯', placeholder: '例如：开口前必须先说“打扰了”' },
-  { key: '物理规则', title: '物理规则', placeholder: '例如：午夜十二点后重力减弱 50%' },
-  { key: '超自然规则', title: '超自然规则', placeholder: '例如：灵气浓度每三年翻一倍' },
+  {
+    key: '世界规则',
+    title: '世界规则',
+    placeholder: '作用于整个世界。例如：所有人听到“茄子”都要单脚跳一下',
+  },
+  {
+    key: '区域规则',
+    title: '区域规则',
+    placeholder: '该区域内生效的内容。例如：入夜后禁止通行',
+    targetPlaceholder: '区域名，如：云溪城·十里亭',
+  },
+  {
+    key: '个人规则',
+    title: '个人规则',
+    placeholder: '只对该对象生效的内容。例如：不得说谎',
+    targetPlaceholder: '对象名，如：沈青梧',
+  },
 ];
 
 const rules = reactive<Record<string, RuleEntry[]>>({
-  常识规则: [],
-  行为习惯: [],
-  物理规则: [],
-  超自然规则: [],
+  世界规则: [],
+  区域规则: [],
+  个人规则: [],
 });
 
 const form = reactive({
@@ -898,11 +902,6 @@ const form = reactive({
   主角性格: '',
   主角目标: '',
   与编辑器关系: '刚捡到',
-  基调: {
-    色情浓度: 40,
-    搞笑程度: 70,
-    轻松程度: 70,
-  },
   允许黑深残: false,
   主角补充设定: '',
   剧情方向: {
@@ -929,7 +928,7 @@ const stepCount = steps.length;
 const currentStep = ref(0);
 const maxVisitedStep = ref(0);
 const slideDir = ref<'next' | 'back'>('next');
-const activeRuleGroup = ref('常识规则');
+const activeRuleGroup = ref('世界规则');
 
 const isLastStep = computed(() => currentStep.value === stepCount - 1);
 const namedCharacters = computed(() => form.角色列表.filter(character => character.姓名.trim()));
@@ -960,8 +959,8 @@ const receipt = computed(() => ({
   玩法模式: form.主角启用
     ? `认知 ${form.玩法模式.认知} · 使用 ${form.玩法模式.使用} · 受控 ${form.玩法模式.受控} · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`
     : `主角权限停用 · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`,
-  基调: `色情 ${form.基调.色情浓度} · 搞笑 ${form.基调.搞笑程度} · 轻松 ${form.基调.轻松程度}${form.允许黑深残 ? ' · 允许黑深残' : ''}`,
-  生效规则: `${ruleCount.value} 条`,
+  尺度: form.允许黑深残 ? '允许黑深残走向' : '禁止黑深残走向',
+  生效规则: `世界 ${rules.世界规则.length} 条 · 区域 ${rules.区域规则.length} 条 · 个人 ${rules.个人规则.length} 条`,
   剧情方向: `${form.剧情方向.开局场景} · ${form.剧情方向.主线目标.trim() || '未填写'} · ${form.剧情方向.节奏}${form.剧情方向.暧昧开局 && openingCastCount.value >= 2 ? ' · 暧昧开局' : ''}`,
 }));
 
@@ -1010,7 +1009,7 @@ function onTemplateChange() {
 }
 
 function addRule(key: string) {
-  rules[key].push({ 名称: '', 内容: '' });
+  rules[key].push({ 对象: '', 名称: '', 内容: '' });
 }
 
 function removeRule(key: string, index: number) {
@@ -1038,12 +1037,25 @@ function toRecord(entries: RuleEntry[]) {
   );
 }
 
+function toScopedRecord(entries: RuleEntry[]) {
+  const result: Record<string, Record<string, string>> = {};
+  for (const item of entries) {
+    const target = item.对象.trim();
+    const name = item.名称.trim();
+    if (!target || !name) {
+      continue;
+    }
+    result[target] ??= {};
+    result[target][name] = item.内容.trim() || '已生效';
+  }
+  return result;
+}
+
 function buildActiveRules() {
   return {
-    常识规则: toRecord(rules.常识规则),
-    行为习惯: toRecord(rules.行为习惯),
-    物理规则: toRecord(rules.物理规则),
-    超自然规则: toRecord(rules.超自然规则),
+    世界规则: toRecord(rules.世界规则),
+    区域规则: toScopedRecord(rules.区域规则),
+    个人规则: toScopedRecord(rules.个人规则),
   };
 }
 
@@ -1058,13 +1070,32 @@ function buildCharacters() {
       基础信息: {
         姓名: name,
         性别: character.性别.trim() || '女',
-        年龄: character.年龄.trim(),
+        年龄: Number(character.年龄) || 18,
         身份: character.身份.trim(),
         关系定位: character.关系定位.trim(),
-        外貌特征: character.外貌特征.trim(),
-        性格: character.性格.trim(),
       },
-      当前想法: '',
+      外貌: {
+        身高: '',
+        罩杯: '',
+        体型: '',
+        面容气质: character.外貌特征.trim(),
+        身体特征: '',
+      },
+      性格: {
+        底色: character.性格.trim(),
+        主色调: '',
+      },
+      当前状态: '待记录',
+      穿着: {
+        上装: '待记录',
+        下装: '待记录',
+        内衣: '待记录',
+        袜子: '待记录',
+        鞋子: '待记录',
+        配饰: '无',
+      },
+      当前想法: '待记录',
+      私密状态: {},
     };
   }
   return result;
@@ -1117,11 +1148,6 @@ async function startGame() {
       叙事文风: form.文风 as '细腻写实' | '通用白描' | '轻小说' | '古风' | '西幻' | '漫画分镜' | '微色情',
       视角角色: needsFocalCharacter.value ? form.视角角色 : '',
       玩法模式: { ...form.玩法模式 },
-      基调: {
-        色情浓度: Number(form.基调.色情浓度),
-        搞笑程度: Number(form.基调.搞笑程度),
-        轻松程度: Number(form.基调.轻松程度),
-      },
       允许黑深残: form.允许黑深残,
       主角补充设定: form.主角启用 ? form.主角补充设定.trim() || '暂无补充设定' : '',
       剧情方向: {
@@ -1130,10 +1156,6 @@ async function startGame() {
         节奏: form.剧情方向.节奏 as '日常' | '冒险' | '悬疑' | '轻松',
         暧昧开局: form.剧情方向.暧昧开局 && openingCastCount.value >= 2,
       },
-      常识规则: activeRules.常识规则,
-      行为习惯: activeRules.行为习惯,
-      物理规则: activeRules.物理规则,
-      超自然规则: activeRules.超自然规则,
       创建时间: new Date().toLocaleString('zh-CN', { hour12: false }),
     };
     data.value.现实编辑器.生效规则 = activeRules;
@@ -1186,7 +1208,11 @@ async function startGame() {
   }
 }
 
-async function generateOpening(activeRules: Record<string, Record<string, string>>) {
+async function generateOpening(activeRules: {
+  世界规则: Record<string, string>;
+  区域规则: Record<string, Record<string, string>>;
+  个人规则: Record<string, Record<string, string>>;
+}) {
   const old_data = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
   const mainCharacters = form.角色列表.map(character => ({
     姓名: character.姓名.trim(),
@@ -1208,7 +1234,6 @@ async function generateOpening(activeRules: Record<string, Record<string, string
     核心冲突: form.核心冲突,
     主角启用: form.主角启用,
     玩法模式: { ...form.玩法模式 },
-    基调: form.基调,
     允许黑深残: form.允许黑深残,
     主角: form.主角启用
       ? {
@@ -1292,9 +1317,9 @@ ${JSON.stringify(config, null, 2)}
 ${buildPlayerRoleRule(protagonistEnabled)}
 ${buildPovRule(pov, protagonistEnabled, focusCharacter)}
 
-【文风与基调】
+【文风】
 ${buildStyleRule(String(config.文风))}
-色情浓度、搞笑程度、轻松程度是三个独立的 0~100 强度值：0 表示正文中不主动表现，100 表示该维度占据显著比重。严格按配置决定尺度，不预设轻松或搞笑为主。
+${config.允许黑深残 ? '允许黑深残走向：可以进入压抑、残酷的分支，但不得无故堆砌黑暗。' : '禁止黑深残走向：剧情不得引向苦大仇深。'}
 
 【开场人物集合】
 - “必须登场”和“允许登场”是同一个封闭集合，正文人物集合必须与它完全相等。
@@ -1364,14 +1389,13 @@ function buildPovRule(pov: string, protagonistEnabled = true, focusCharacter = '
 
 function buildStyleRule(style: string): string {
   const rules: Record<string, string> = {
-    细腻写实:
-      '细腻写实、慢节奏：五感细节、人物外貌身材穿着具体描写、心理活动丰富；按色情浓度决定露骨程度，浓度高时描写直白不回避。',
+    细腻写实: '细腻写实、慢节奏：五感细节、人物外貌身材穿着具体描写、心理活动丰富；尺度由剧情自然决定。',
     通用白描: '白描优先，语言克制，情感靠动作和细节；默认不用比喻；禁止空泛抒情。',
     轻小说: '口语化日常对话驱动，叙述像角色在说话；对话独立成段，少用对话标签；轻松有活力。',
     古风: '七分白话三分文言；称谓和用词要符合时代；禁止“温度”“数据”“系统”等现代词。',
     西幻: '世界有质感：写材质、重量、温度、气味；场景即叙事；对话即博弈，人人说话都有目的。',
     漫画分镜: '文字即分镜：短段成格，一次换行一次镜头切换；强动词优先，情感具象化；高潮用极端细节“破框”。',
-    微色情: '日常含蓄、性爱直接：日常用若隐若现的描写，色情浓度按配置自然呈现，反差制造张力。',
+    微色情: '日常含蓄、性爱直接：日常用若隐若现的描写，亲密场景自然呈现，反差制造张力。',
   };
   return rules[style] ?? rules['通用白描'];
 }
@@ -2696,6 +2720,9 @@ textarea.control {
   gap: 8px;
   margin-bottom: 9px;
 }
+.rule-record-scoped {
+  grid-template-columns: minmax(90px, 0.6fr) minmax(110px, 0.75fr) minmax(180px, 1.4fr) 40px;
+}
 .add-record {
   display: flex;
   width: 100%;
@@ -3005,6 +3032,10 @@ textarea.control {
   .rule-record .control:nth-child(2) {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+  .rule-record-scoped .control:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 3;
   }
   .rule-record .icon-button {
     grid-column: 2;

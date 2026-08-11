@@ -70,22 +70,6 @@ export const Schema = z.object({
             .prefault('D-完全禁止'),
         })
         .prefault({}),
-      基调: z
-        .object({
-          色情浓度: z.coerce
-            .number()
-            .transform(value => _.clamp(value, 0, 100))
-            .prefault(40),
-          搞笑程度: z.coerce
-            .number()
-            .transform(value => _.clamp(value, 0, 100))
-            .prefault(70),
-          轻松程度: z.coerce
-            .number()
-            .transform(value => _.clamp(value, 0, 100))
-            .prefault(70),
-        })
-        .prefault({}),
       允许黑深残: z.boolean().prefault(false),
       主角补充设定: z.string().prefault('暂无补充设定'),
       剧情方向: z
@@ -96,10 +80,6 @@ export const Schema = z.object({
           暧昧开局: z.boolean().prefault(false),
         })
         .prefault({}),
-      常识规则: z.record(z.string().describe('规则名'), z.string().describe('规则内容')).prefault({}),
-      行为习惯: z.record(z.string().describe('习惯名'), z.string().describe('习惯内容')).prefault({}),
-      物理规则: z.record(z.string().describe('规则名'), z.string().describe('规则内容')).prefault({}),
-      超自然规则: z.record(z.string().describe('规则名'), z.string().describe('规则内容')).prefault({}),
       创建时间: z.string().prefault(''),
     })
     .prefault({}),
@@ -116,10 +96,21 @@ export const Schema = z.object({
         })
         .prefault({}),
       生效规则: z
-        .record(
-          z.string().describe('规则类别'),
-          z.record(z.string().describe('规则名'), z.string().describe('规则内容')),
-        )
+        .object({
+          世界规则: z.record(z.string().describe('规则名'), z.string().describe('规则内容')).prefault({}),
+          区域规则: z
+            .record(
+              z.string().describe('区域名'),
+              z.record(z.string().describe('规则名'), z.string().describe('规则内容')),
+            )
+            .prefault({}),
+          个人规则: z
+            .record(
+              z.string().describe('对象名'),
+              z.record(z.string().describe('规则名'), z.string().describe('规则内容')),
+            )
+            .prefault({}),
+        })
         .prefault({}),
     })
     .prefault({}),
