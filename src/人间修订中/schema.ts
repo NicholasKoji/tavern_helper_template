@@ -117,12 +117,56 @@ export const Schema = z.object({
 
   主角: z
     .object({
-      姓名: z.string().prefault(''),
-      身份: z.string().prefault('普通居民'),
-      补充设定: z.string().prefault(''),
-      性格: z.string().prefault(''),
-      目标: z.string().prefault(''),
-      与编辑器关系: z.string().prefault('刚捡到'),
+      基础信息: z
+        .object({
+          姓名: z.string().prefault(''),
+          性别: z.string().prefault('男'),
+          年龄: z.coerce
+            .number()
+            .transform(value => _.clamp(value, 0, 200))
+            .prefault(23),
+          身份: z.string().prefault('普通居民'),
+          目标: z.string().prefault(''),
+          与编辑器关系: z.string().prefault('刚捡到'),
+        })
+        .prefault({}),
+      外貌: z
+        .object({
+          身高: z.string().prefault('待记录'),
+          体型: z.string().prefault('待记录'),
+          面容气质: z.string().prefault('待记录'),
+          身体特征: z.string().prefault('待记录'),
+        })
+        .prefault({}),
+      性格: z
+        .object({
+          底色: z.string().prefault('待记录'),
+          主色调: z.string().prefault('待记录'),
+        })
+        .prefault({}),
+      补充设定: z.string().prefault('暂无补充设定'),
+      当前状态: z.string().prefault('待记录'),
+      穿着: z
+        .object({
+          上装: z.string().prefault('待记录'),
+          下装: z.string().prefault('待记录'),
+          内衣: z.string().prefault('待记录'),
+          袜子: z.string().prefault('待记录'),
+          鞋子: z.string().prefault('待记录'),
+          配饰: z.string().prefault('无'),
+        })
+        .prefault({}),
+      私密状态: z
+        .record(
+          z.string().describe('部位名称'),
+          z
+            .object({
+              外观描述: z.string().prefault('待记录'),
+              当前状态: z.string().prefault('待记录'),
+            })
+            .prefault({}),
+        )
+        .prefault({}),
     })
     .prefault({}),
 

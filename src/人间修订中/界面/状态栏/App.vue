@@ -150,33 +150,120 @@
         <article v-if="protagonistEnabled" class="card">
           <header class="card-header">
             <h2 class="card-title"><User :size="17" stroke-width="1.8" />主角档案</h2>
+            <span class="status-tag">{{ data.主角.基础信息.身份 || '身份未记录' }}</span>
           </header>
+
+          <h3 class="sub-title">基础信息</h3>
           <div class="data-list">
             <div class="data-row">
               <div class="data-key">姓名</div>
-              <div class="data-val">{{ data.主角.姓名 }}</div>
+              <div class="data-val">{{ data.主角.基础信息.姓名 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">性别</div>
+              <div class="data-val">{{ data.主角.基础信息.性别 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">年龄</div>
+              <div class="data-val">{{ data.主角.基础信息.年龄 }}</div>
             </div>
             <div class="data-row">
               <div class="data-key">身份</div>
-              <div class="data-val">{{ data.主角.身份 }}</div>
-            </div>
-            <div class="data-row">
-              <div class="data-key">性格</div>
-              <div class="data-val">{{ data.主角.性格 }}</div>
+              <div class="data-val">{{ data.主角.基础信息.身份 }}</div>
             </div>
             <div class="data-row">
               <div class="data-key">目标</div>
-              <div class="data-val">{{ data.主角.目标 }}</div>
+              <div class="data-val">{{ data.主角.基础信息.目标 }}</div>
             </div>
             <div class="data-row">
               <div class="data-key">与编辑器关系</div>
-              <div class="data-val">{{ data.主角.与编辑器关系 }}</div>
-            </div>
-            <div class="data-row">
-              <div class="data-key">补充设定</div>
-              <div class="data-val">{{ data.主角.补充设定 }}</div>
+              <div class="data-val">{{ data.主角.基础信息.与编辑器关系 }}</div>
             </div>
           </div>
+
+          <h3 class="sub-title">外貌</h3>
+          <div class="data-list">
+            <div class="data-row">
+              <div class="data-key">身高</div>
+              <div class="data-val">{{ data.主角.外貌.身高 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">体型</div>
+              <div class="data-val">{{ data.主角.外貌.体型 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">面容气质</div>
+              <div class="data-val">{{ data.主角.外貌.面容气质 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">身体特征</div>
+              <div class="data-val">{{ data.主角.外貌.身体特征 }}</div>
+            </div>
+          </div>
+
+          <h3 class="sub-title">性格</h3>
+          <div class="data-list">
+            <div class="data-row">
+              <div class="data-key">底色</div>
+              <div class="data-val">{{ data.主角.性格.底色 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">主色调</div>
+              <div class="data-val">{{ data.主角.性格.主色调 }}</div>
+            </div>
+          </div>
+
+          <h3 class="sub-title">当前状态</h3>
+          <p class="paragraph">{{ data.主角.当前状态 }}</p>
+
+          <h3 class="sub-title">穿着</h3>
+          <div class="data-list">
+            <div class="data-row">
+              <div class="data-key">上装</div>
+              <div class="data-val">{{ data.主角.穿着.上装 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">下装</div>
+              <div class="data-val">{{ data.主角.穿着.下装 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">内衣</div>
+              <div class="data-val">{{ data.主角.穿着.内衣 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">袜子</div>
+              <div class="data-val">{{ data.主角.穿着.袜子 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">鞋子</div>
+              <div class="data-val">{{ data.主角.穿着.鞋子 }}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-key">配饰</div>
+              <div class="data-val">{{ data.主角.穿着.配饰 }}</div>
+            </div>
+          </div>
+
+          <h3 class="sub-title">补充设定</h3>
+          <p class="paragraph">{{ data.主角.补充设定 }}</p>
+
+          <div v-if="protagonistPrivateEntries.length" class="private-state">
+            <h3 class="sub-title">私密状态</h3>
+            <details v-for="[part, state] in protagonistPrivateEntries" :key="part" class="sub-block">
+              <summary>{{ part }}</summary>
+              <div class="detail-body">
+                <div class="data-row">
+                  <div class="data-key">外观描述</div>
+                  <div class="data-val">{{ state.外观描述 }}</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-key">当前状态</div>
+                  <div class="data-val">{{ state.当前状态 }}</div>
+                </div>
+              </div>
+            </details>
+          </div>
+          <p v-else class="empty-state">暂无私密状态记录</p>
         </article>
         <p v-else class="notice-state">
           <strong>主角未启用</strong>
@@ -406,6 +493,7 @@ const ruleScopes = computed(() => {
 });
 const ruleScopeCount = computed(() => ruleScopes.value.reduce((sum, scope) => sum + scope.count, 0));
 const privateStateEntries = computed(() => Object.entries(selectedNpc.value?.私密状态 ?? {}));
+const protagonistPrivateEntries = computed(() => Object.entries(data.value.主角.私密状态 ?? {}));
 
 const formatDate = computed(() => {
   const date = scene.value.日期;
