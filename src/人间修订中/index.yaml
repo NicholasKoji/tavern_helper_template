@@ -263,10 +263,10 @@
         <body>
         <script>
         const status_bar_urls = [
-          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/状态栏/index.html',
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/状态栏/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/状态栏/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/状态栏/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/状态栏/index.html',
         ];
         const status_bar_revision = '[data-status-bar="human-revision-status-v1"]';
         const load_status_bar = index => {
@@ -305,10 +305,10 @@
         <body>
         <script>
         const world_config_urls = [
-          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/界面/世界配置/index.html',
+          'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/世界配置/index.html',
+          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/世界配置/index.html',
+          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/世界配置/index.html',
+          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/界面/世界配置/index.html',
         ];
         const world_config_revision = '[aria-label^="霓虹夜城："]';
         const load_world_config = index => {
@@ -364,4 +364,4 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@def70ddfbe73974107626e18ef0808d0a01471d1/dist/人间修订中/脚本/变量结构/index.js';
+          import 'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@7dfbc2a9c38679157efd0bbf67556ed4e9797f20/dist/人间修订中/脚本/变量结构/index.js';
