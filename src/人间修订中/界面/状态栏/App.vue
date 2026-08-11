@@ -106,7 +106,7 @@
             </div>
           </div>
           <div v-if="ruleScopeCount > 0" class="rules">
-            <details v-for="scope in ruleScopes" :key="scope.key" class="rule-group">
+            <details v-for="scope in ruleScopes" :key="scope.key" class="rule-group" open>
               <summary>
                 <span>{{ scope.title }}</span>
                 <span class="rule-count">{{ scope.count }}</span>
@@ -120,7 +120,12 @@
                 </ul>
               </template>
               <template v-else>
-                <details v-for="[target, rules] in Object.entries(scope.entries)" :key="target" class="rule-subgroup">
+                <details
+                  v-for="[target, rules] in Object.entries(scope.entries)"
+                  :key="target"
+                  class="rule-subgroup"
+                  open
+                >
                   <summary>
                     <span>{{ target }}</span>
                     <span class="rule-count">{{ Object.keys(rules).length }}</span>
@@ -249,7 +254,7 @@
 
           <div v-if="protagonistPrivateEntries.length" class="private-state">
             <h3 class="sub-title">私密状态</h3>
-            <details v-for="[part, state] in protagonistPrivateEntries" :key="part" class="sub-block">
+            <details v-for="[part, state] in protagonistPrivateEntries" :key="part" class="sub-block" open>
               <summary>{{ part }}</summary>
               <div class="detail-body">
                 <div class="data-row">
@@ -401,7 +406,7 @@
 
             <div v-if="privateStateEntries.length" class="private-state">
               <h3 class="sub-title">私密状态</h3>
-              <details v-for="[part, state] in privateStateEntries" :key="part" class="sub-block">
+              <details v-for="[part, state] in privateStateEntries" :key="part" class="sub-block" open>
                 <summary>{{ part }}</summary>
                 <div class="detail-body">
                   <div class="data-row">
