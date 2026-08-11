@@ -420,8 +420,8 @@
                 "type": "string"
               },
               "年龄": {
-                "default": "",
-                "type": "string"
+                "default": 18,
+                "type": "number"
               },
               "身份": {
                 "default": "",
@@ -431,19 +431,111 @@
                 "default": "",
                 "type": "string"
               },
-              "外貌特征": {
-                "default": "",
+              "好感度": {
+                "default": 50,
+                "type": "number"
+              }
+            }
+          },
+          "外貌": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "身高": {
+                "default": "待记录",
                 "type": "string"
               },
-              "性格": {
-                "default": "",
+              "罩杯": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "体型": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "面容气质": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "身体特征": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          },
+          "性格": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "底色": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "主色调": {
+                "default": "待记录",
+                "type": "string"
+              }
+            }
+          },
+          "当前状态": {
+            "default": "待记录",
+            "type": "string"
+          },
+          "穿着": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "上装": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "下装": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "内衣": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "袜子": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "鞋子": {
+                "default": "待记录",
+                "type": "string"
+              },
+              "配饰": {
+                "default": "无",
                 "type": "string"
               }
             }
           },
           "当前想法": {
-            "default": "",
+            "default": "待记录",
             "type": "string"
+          },
+          "私密状态": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "description": "部位名称"
+            },
+            "additionalProperties": {
+              "default": {},
+              "type": "object",
+              "properties": {
+                "外观描述": {
+                  "default": "待记录",
+                  "type": "string"
+                },
+                "当前状态": {
+                  "default": "待记录",
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

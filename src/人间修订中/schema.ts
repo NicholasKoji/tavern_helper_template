@@ -144,14 +144,56 @@ export const Schema = z.object({
             .object({
               姓名: z.string().prefault(''),
               性别: z.string().prefault('女'),
-              年龄: z.string().prefault(''),
+              年龄: z.coerce
+                .number()
+                .transform(value => _.clamp(value, 0, 200))
+                .prefault(18),
               身份: z.string().prefault(''),
               关系定位: z.string().prefault(''),
-              外貌特征: z.string().prefault(''),
-              性格: z.string().prefault(''),
+              好感度: z.coerce
+                .number()
+                .transform(value => _.clamp(value, 0, 100))
+                .prefault(50),
             })
             .prefault({}),
-          当前想法: z.string().prefault(''),
+          外貌: z
+            .object({
+              身高: z.string().prefault('待记录'),
+              罩杯: z.string().prefault('待记录'),
+              体型: z.string().prefault('待记录'),
+              面容气质: z.string().prefault('待记录'),
+              身体特征: z.string().prefault('待记录'),
+            })
+            .prefault({}),
+          性格: z
+            .object({
+              底色: z.string().prefault('待记录'),
+              主色调: z.string().prefault('待记录'),
+            })
+            .prefault({}),
+          当前状态: z.string().prefault('待记录'),
+          穿着: z
+            .object({
+              上装: z.string().prefault('待记录'),
+              下装: z.string().prefault('待记录'),
+              内衣: z.string().prefault('待记录'),
+              袜子: z.string().prefault('待记录'),
+              鞋子: z.string().prefault('待记录'),
+              配饰: z.string().prefault('无'),
+            })
+            .prefault({}),
+          当前想法: z.string().prefault('待记录'),
+          私密状态: z
+            .record(
+              z.string().describe('部位名称'),
+              z
+                .object({
+                  外观描述: z.string().prefault('待记录'),
+                  当前状态: z.string().prefault('待记录'),
+                })
+                .prefault({}),
+            )
+            .prefault({}),
         })
         .prefault({}),
     )

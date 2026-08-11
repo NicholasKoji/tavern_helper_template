@@ -197,12 +197,16 @@
             >
               <strong>{{ name }}</strong>
               <span>{{ npc.基础信息.身份 || '身份未记录' }}</span>
+              <span class="npc-favor">好感 {{ npc.基础信息.好感度 ?? '--' }}</span>
             </button>
           </aside>
           <article v-if="selectedNpc" class="card npc-detail">
             <header class="card-header">
               <h2 class="card-title"><Users :size="17" stroke-width="1.8" />{{ selectedNpcName }}</h2>
+              <span class="status-tag">好感 {{ selectedNpc.基础信息.好感度 ?? '--' }}</span>
             </header>
+
+            <h3 class="sub-title">基础信息</h3>
             <div class="data-list">
               <div class="data-row">
                 <div class="data-key">性别</div>
@@ -221,18 +225,103 @@
                 <div class="data-val">{{ selectedNpc.基础信息.关系定位 }}</div>
               </div>
               <div class="data-row">
-                <div class="data-key">外貌特征</div>
-                <div class="data-val">{{ selectedNpc.基础信息.外貌特征 }}</div>
-              </div>
-              <div class="data-row">
-                <div class="data-key">性格</div>
-                <div class="data-val">{{ selectedNpc.基础信息.性格 }}</div>
-              </div>
-              <div class="data-row thought">
-                <div class="data-key">当前想法</div>
-                <div class="data-val">{{ selectedNpc.当前想法 }}</div>
+                <div class="data-key">好感度</div>
+                <div class="data-val favor-row">
+                  <span class="meter" aria-hidden="true">
+                    <span class="meter-fill" :style="{ width: `${selectedNpc.基础信息.好感度 || 0}%` }" />
+                  </span>
+                  <span class="tone-value">{{ selectedNpc.基础信息.好感度 }}</span>
+                </div>
               </div>
             </div>
+
+            <h3 class="sub-title">外貌</h3>
+            <div class="data-list">
+              <div class="data-row">
+                <div class="data-key">身高</div>
+                <div class="data-val">{{ selectedNpc.外貌.身高 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">罩杯</div>
+                <div class="data-val">{{ selectedNpc.外貌.罩杯 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">体型</div>
+                <div class="data-val">{{ selectedNpc.外貌.体型 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">面容气质</div>
+                <div class="data-val">{{ selectedNpc.外貌.面容气质 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">身体特征</div>
+                <div class="data-val">{{ selectedNpc.外貌.身体特征 }}</div>
+              </div>
+            </div>
+
+            <h3 class="sub-title">性格</h3>
+            <div class="data-list">
+              <div class="data-row">
+                <div class="data-key">底色</div>
+                <div class="data-val">{{ selectedNpc.性格.底色 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">主色调</div>
+                <div class="data-val">{{ selectedNpc.性格.主色调 }}</div>
+              </div>
+            </div>
+
+            <h3 class="sub-title">当前状态</h3>
+            <p class="paragraph">{{ selectedNpc.当前状态 }}</p>
+
+            <h3 class="sub-title">穿着</h3>
+            <div class="data-list">
+              <div class="data-row">
+                <div class="data-key">上装</div>
+                <div class="data-val">{{ selectedNpc.穿着.上装 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">下装</div>
+                <div class="data-val">{{ selectedNpc.穿着.下装 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">内衣</div>
+                <div class="data-val">{{ selectedNpc.穿着.内衣 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">袜子</div>
+                <div class="data-val">{{ selectedNpc.穿着.袜子 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">鞋子</div>
+                <div class="data-val">{{ selectedNpc.穿着.鞋子 }}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-key">配饰</div>
+                <div class="data-val">{{ selectedNpc.穿着.配饰 }}</div>
+              </div>
+            </div>
+
+            <h3 class="sub-title">当前想法</h3>
+            <p class="paragraph">{{ selectedNpc.当前想法 }}</p>
+
+            <div v-if="privateStateEntries.length" class="private-state">
+              <h3 class="sub-title">私密状态</h3>
+              <details v-for="[part, state] in privateStateEntries" :key="part" class="sub-block">
+                <summary>{{ part }}</summary>
+                <div class="detail-body">
+                  <div class="data-row">
+                    <div class="data-key">外观描述</div>
+                    <div class="data-val">{{ state.外观描述 }}</div>
+                  </div>
+                  <div class="data-row">
+                    <div class="data-key">当前状态</div>
+                    <div class="data-val">{{ state.当前状态 }}</div>
+                  </div>
+                </div>
+              </details>
+            </div>
+            <p v-else class="empty-state">暂无私密状态记录</p>
           </article>
         </div>
         <p v-else class="notice-state">
@@ -286,6 +375,7 @@ const protagonistEnabled = computed(() => data.value.世界配置.主角启用);
 const npcEntries = computed(() => Object.entries(data.value.NPC序列 ?? {}));
 const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列[selectedNpcName.value] : undefined));
 const ruleGroups = computed(() => Object.entries(data.value.现实编辑器.生效规则 ?? {}));
+const privateStateEntries = computed(() => Object.entries(selectedNpc.value?.私密状态 ?? {}));
 const tones = computed(() => [
   { key: '色情浓度', label: '色情', value: data.value.世界配置.基调.色情浓度 },
   { key: '搞笑程度', label: '搞笑', value: data.value.世界配置.基调.搞笑程度 },
