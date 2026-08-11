@@ -146,49 +146,94 @@
         </template>
 
         <template v-else-if="currentStep === 1">
-          <p class="chapter-lead">登记你的入世身份与关键关系。姓名继续使用当前玩家名，无需重复填写。</p>
+          <p class="chapter-lead">先确定叙述镜头与文字质感。人物是否进入故事，将在下一章由主角档案开关决定。</p>
 
           <section class="dossier-section">
             <div class="section-heading">
-              <span class="section-icon"><UserRound :size="19" /></span>
+              <span class="section-icon"><Feather :size="19" /></span>
               <div>
-                <span>{{ activeThemeMeta.sectionLabels.people }} 01</span>
-                <h3>主角档案</h3>
+                <span>{{ activeThemeMeta.sectionLabels.narrative }} 01</span>
+                <h3>叙事定位</h3>
               </div>
             </div>
             <div class="form-grid two-col">
               <label class="field">
-                <span class="field-label">身份职业</span>
-                <input v-model="form.主角身份" class="control" type="text" placeholder="例如：调查记者、大学生" />
-              </label>
-              <label class="field">
-                <span class="field-label">与编辑器关系</span>
+                <span class="field-label">叙事视角</span>
                 <span class="select-wrap">
-                  <select v-model="form.与编辑器关系" class="control">
-                    <option v-for="relation in relationOptions" :key="relation" :value="relation">
-                      {{ relation }}
+                  <select v-model="form.视角" class="control">
+                    <option v-for="option in povOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
                     </option>
                   </select>
                 </span>
               </label>
               <label class="field">
-                <span class="field-label">性格关键词</span>
-                <input v-model="form.主角性格" class="control" type="text" placeholder="例如：嘴硬、敏锐、怕麻烦" />
-              </label>
-              <label class="field">
-                <span class="field-label">当前目标</span>
-                <input v-model="form.主角目标" class="control" type="text" placeholder="此刻最想完成什么" />
+                <span class="field-label">叙事文风</span>
+                <span class="select-wrap">
+                  <select v-model="form.文风" class="control">
+                    <option v-for="option in styleOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </span>
               </label>
             </div>
-            <label class="field">
-              <span class="field-label">补充设定 <em>选填</em></span>
-              <textarea
-                v-model="form.主角补充设定"
-                class="control"
-                rows="3"
-                placeholder="习惯、秘密、偏好或其他需要被记住的细节"
-              />
-            </label>
+            <div class="narrative-brief">
+              <Feather :size="18" aria-hidden="true" />
+              <p>{{ povSummary }}</p>
+            </div>
+          </section>
+        </template>
+
+        <template v-else-if="currentStep === 2">
+          <p class="chapter-lead">登记你的入世身份与关键关系。姓名继续使用当前玩家名，无需重复填写。</p>
+
+          <section class="dossier-section" :class="{ 'protagonist-disabled': !form.主角启用 }">
+            <div class="section-heading section-heading-actions protagonist-heading">
+              <span class="section-icon"><UserRound :size="19" /></span>
+              <div>
+                <span>{{ activeThemeMeta.sectionLabels.people }} 01</span>
+                <h3>主角档案</h3>
+              </div>
+              <label class="record-switch">
+                <input v-model="form.主角启用" type="checkbox" role="switch" aria-label="启用主角档案" />
+              </label>
+            </div>
+            <fieldset class="protagonist-fields" :disabled="!form.主角启用">
+              <div class="form-grid two-col">
+                <label class="field">
+                  <span class="field-label">身份职业</span>
+                  <input v-model="form.主角身份" class="control" type="text" placeholder="例如：调查记者、大学生" />
+                </label>
+                <label class="field">
+                  <span class="field-label">与编辑器关系</span>
+                  <span class="select-wrap">
+                    <select v-model="form.与编辑器关系" class="control">
+                      <option v-for="relation in relationOptions" :key="relation" :value="relation">
+                        {{ relation }}
+                      </option>
+                    </select>
+                  </span>
+                </label>
+                <label class="field">
+                  <span class="field-label">性格关键词</span>
+                  <input v-model="form.主角性格" class="control" type="text" placeholder="例如：嘴硬、敏锐、怕麻烦" />
+                </label>
+                <label class="field">
+                  <span class="field-label">当前目标</span>
+                  <input v-model="form.主角目标" class="control" type="text" placeholder="此刻最想完成什么" />
+                </label>
+              </div>
+              <label class="field">
+                <span class="field-label">补充设定 <em>选填</em></span>
+                <textarea
+                  v-model="form.主角补充设定"
+                  class="control"
+                  rows="3"
+                  placeholder="习惯、秘密、偏好或其他需要被记住的细节"
+                />
+              </label>
+            </fieldset>
           </section>
 
           <section class="dossier-section">
@@ -205,7 +250,7 @@
               <UsersRound :size="28" stroke-width="1.5" aria-hidden="true" />
               <div>
                 <strong>尚未登记主要角色</strong>
-                <p>可以留空，开场时编辑器会临时指派一位。</p>
+                <p>可以留空；第一幕严格按登记名单生成，名单为空时采用纯环境开场。</p>
               </div>
               <button type="button" @click="addCharacter"><Plus :size="16" />添加第一位角色</button>
             </div>
@@ -245,8 +290,12 @@
                   ><input v-model="character.身份" class="control" type="text" placeholder="职业或身份"
                 /></label>
                 <label class="field"
-                  ><span class="field-label">与主角关系</span
-                  ><input v-model="character.与主角关系" class="control" type="text" placeholder="朋友、同事、宿敌……"
+                  ><span class="field-label">关系定位</span
+                  ><input
+                    v-model="character.关系定位"
+                    class="control"
+                    type="text"
+                    placeholder="与主角、其他角色或世界的关系"
                 /></label>
               </div>
               <label class="field"
@@ -258,10 +307,22 @@
                 ><input v-model="character.性格" class="control" type="text" placeholder="性格、口癖与相处方式"
               /></label>
             </article>
+
+            <label v-if="needsFocalCharacter" class="field focal-character-field">
+              <span class="field-label">视角角色</span>
+              <span class="select-wrap">
+                <select v-model="form.视角角色" class="control">
+                  <option value="" disabled>请选择一名已登记主要角色</option>
+                  <option v-for="character in namedCharacters" :key="character.姓名" :value="character.姓名.trim()">
+                    {{ character.姓名.trim() }}
+                  </option>
+                </select>
+              </span>
+            </label>
           </section>
         </template>
 
-        <template v-else-if="currentStep === 2">
+        <template v-else-if="currentStep === 3">
           <p class="chapter-lead">决定现实编辑器能做什么、谁会被规则影响，以及这个世界应当保持怎样的温度。</p>
 
           <section class="dossier-section">
@@ -273,26 +334,26 @@
               </div>
             </div>
             <div class="form-grid two-col">
-              <label class="field"
+              <label class="field" :class="{ 'field-disabled': !form.主角启用 }"
                 ><span class="field-label">主角知道编辑器存在</span
                 ><span class="select-wrap"
-                  ><select v-model="form.玩法模式.认知" class="control">
+                  ><select v-model="form.玩法模式.认知" class="control" :disabled="!form.主角启用">
                     <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
                   </select></span
                 ></label
               >
-              <label class="field"
+              <label class="field" :class="{ 'field-disabled': !form.主角启用 }"
                 ><span class="field-label">主角可以使用编辑器</span
                 ><span class="select-wrap"
-                  ><select v-model="form.玩法模式.使用" class="control">
+                  ><select v-model="form.玩法模式.使用" class="control" :disabled="!form.主角启用">
                     <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
                   </select></span
                 ></label
               >
-              <label class="field"
+              <label class="field" :class="{ 'field-disabled': !form.主角启用 }"
                 ><span class="field-label">主角受规则制约</span
                 ><span class="select-wrap"
-                  ><select v-model="form.玩法模式.受控" class="control">
+                  ><select v-model="form.玩法模式.受控" class="control" :disabled="!form.主角启用">
                     <option v-for="option in yesNoOptions" :key="option" :value="option">{{ option }}</option>
                   </select></span
                 ></label
@@ -421,26 +482,6 @@
                   </select></span
                 ></label
               >
-              <label class="field"
-                ><span class="field-label">叙事视角</span
-                ><span class="select-wrap"
-                  ><select v-model="form.视角" class="control">
-                    <option v-for="option in povOptions" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select></span
-                ></label
-              >
-              <label class="field"
-                ><span class="field-label">叙事文风</span
-                ><span class="select-wrap"
-                  ><select v-model="form.文风" class="control">
-                    <option v-for="option in styleOptions" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select></span
-                ></label
-              >
             </div>
             <label class="field"
               ><span class="field-label">主线目标</span
@@ -450,9 +491,13 @@
                 type="text"
                 placeholder="第一幕之后，故事要往哪里走"
             /></label>
-            <label class="switch-row"
-              ><span><strong>暧昧开局</strong><small>让主要角色在第一幕有更亲密的互动</small></span
-              ><input v-model="form.剧情方向.暧昧开局" type="checkbox" role="switch"
+            <label class="switch-row">
+              <span
+                ><strong>暧昧开局</strong
+                ><small>{{
+                  openingCastCount < 2 ? '开场人物少于两人，当前不可用' : '让开场人物在第一幕有更亲密的互动'
+                }}</small></span
+              ><input v-model="form.剧情方向.暧昧开局" type="checkbox" role="switch" :disabled="openingCastCount < 2"
             /></label>
           </section>
 
@@ -471,8 +516,8 @@
               </header>
               <dl>
                 <div>
-                  <dt>{{ receipt[0].key }}</dt>
-                  <dd>{{ receipt[0].value }}</dd>
+                  <dt>世界模板</dt>
+                  <dd>{{ receipt.世界模板 }}</dd>
                 </div>
                 <div>
                   <dt>核心冲突</dt>
@@ -482,53 +527,73 @@
             </div>
             <div class="receipt-group">
               <header>
-                <div><UsersRound :size="18" /><strong>人物关系</strong></div>
+                <div><Feather :size="18" /><strong>叙事定位</strong></div>
                 <button type="button" @click="goToStep(1)"><Pencil :size="14" />修改</button>
               </header>
               <dl>
                 <div>
-                  <dt>{{ receipt[1].key }}</dt>
-                  <dd>{{ receipt[1].value }}</dd>
+                  <dt>叙事</dt>
+                  <dd>{{ receipt.叙事 }}</dd>
                 </div>
                 <div>
-                  <dt>{{ receipt[2].key }}</dt>
-                  <dd>{{ receipt[2].value }}</dd>
+                  <dt>视角角色</dt>
+                  <dd>{{ receipt.视角角色 }}</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="receipt-group">
+              <header>
+                <div><UsersRound :size="18" /><strong>人物档案</strong></div>
+                <button type="button" @click="goToStep(2)"><Pencil :size="14" />修改</button>
+              </header>
+              <dl>
+                <div>
+                  <dt>主角</dt>
+                  <dd>{{ receipt.主角 }}</dd>
+                </div>
+                <div>
+                  <dt>主要角色</dt>
+                  <dd>{{ receipt.主要角色 }}</dd>
+                </div>
+                <div>
+                  <dt>第一幕人物</dt>
+                  <dd>{{ receipt.开场人物 }}</dd>
                 </div>
               </dl>
             </div>
             <div class="receipt-group">
               <header>
                 <div><Scale :size="18" /><strong>法则与基调</strong></div>
-                <button type="button" @click="goToStep(2)"><Pencil :size="14" />修改</button>
+                <button type="button" @click="goToStep(3)"><Pencil :size="14" />修改</button>
               </header>
               <dl>
                 <div>
-                  <dt>{{ receipt[3].key }}</dt>
-                  <dd>{{ receipt[3].value }}</dd>
+                  <dt>玩法模式</dt>
+                  <dd>{{ receipt.玩法模式 }}</dd>
                 </div>
                 <div>
-                  <dt>{{ receipt[4].key }}</dt>
-                  <dd>{{ receipt[4].value }}</dd>
+                  <dt>基调</dt>
+                  <dd>{{ receipt.基调 }}</dd>
                 </div>
                 <div>
-                  <dt>{{ receipt[7].key }}</dt>
-                  <dd>{{ receipt[7].value }}</dd>
+                  <dt>生效规则</dt>
+                  <dd>{{ receipt.生效规则 }}</dd>
                 </div>
               </dl>
             </div>
             <div class="receipt-group">
               <header>
-                <div><Feather :size="18" /><strong>叙事开局</strong></div>
+                <div><Stamp :size="18" /><strong>开局签发</strong></div>
                 <span class="verified"><Check :size="13" />已核</span>
               </header>
               <dl>
                 <div>
-                  <dt>{{ receipt[5].key }}</dt>
-                  <dd>{{ receipt[5].value }}</dd>
+                  <dt>剧情方向</dt>
+                  <dd>{{ receipt.剧情方向 }}</dd>
                 </div>
                 <div>
-                  <dt>{{ receipt[6].key }}</dt>
-                  <dd>{{ receipt[6].value }}</dd>
+                  <dt>额外人物</dt>
+                  <dd>禁止加入第一幕</dd>
                 </div>
               </dl>
             </div>
@@ -571,7 +636,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import {
   BookOpen,
   Check,
@@ -657,7 +722,7 @@ type CharacterEntry = {
   性别: string;
   年龄: string;
   身份: string;
-  与主角关系: string;
+  关系定位: string;
   外貌特征: string;
   性格: string;
 };
@@ -672,7 +737,7 @@ const themeOptions = [
     seal: '受理',
     chapterLabel: 'CHAPTER',
     characterFile: 'CHARACTER FILE',
-    sectionLabels: { world: '卷宗', people: '人事卷', rules: '敕令', issue: '签发' },
+    sectionLabels: { world: '卷宗', narrative: '叙事卷', people: '人事卷', rules: '敕令', issue: '签发' },
     approval: '准予签发',
     approvalCaption: 'REALITY EDITOR',
     footer: 'WORLD ARCHIVE',
@@ -686,7 +751,7 @@ const themeOptions = [
     seal: '推演',
     chapterLabel: 'ORBIT',
     characterFile: 'FATE SUBJECT',
-    sectionLabels: { world: '天盘', people: '人盘', rules: '律盘', issue: '定盘' },
+    sectionLabels: { world: '天盘', narrative: '镜盘', people: '人盘', rules: '律盘', issue: '定盘' },
     approval: '推演成局',
     approvalCaption: 'FATE ENGINE',
     footer: 'ORBITAL DIVINATION',
@@ -700,7 +765,7 @@ const themeOptions = [
     seal: '在线',
     chapterLabel: 'STAGE',
     characterFile: 'SUBJECT RECORD',
-    sectionLabels: { world: 'WORLD', people: 'IDENTITY', rules: 'POLICY', issue: 'EXECUTE' },
+    sectionLabels: { world: 'WORLD', narrative: 'CAMERA', people: 'IDENTITY', rules: 'POLICY', issue: 'EXECUTE' },
     approval: '参数就绪',
     approvalCaption: 'REALITY NODE',
     footer: 'CONTROL PLANE',
@@ -714,7 +779,7 @@ const themeOptions = [
     seal: '接入',
     chapterLabel: 'SECTOR',
     characterFile: 'IDENTITY SHARD',
-    sectionLabels: { world: 'ZONE', people: 'AVATAR', rules: 'PROTOCOL', issue: 'DEPLOY' },
+    sectionLabels: { world: 'ZONE', narrative: 'LENS', people: 'AVATAR', rules: 'PROTOCOL', issue: 'DEPLOY' },
     approval: '链路已同步',
     approvalCaption: 'NEON GRID',
     footer: 'NIGHT CITY PROTOCOL',
@@ -822,6 +887,7 @@ const form = reactive({
   地理与气候: '普通城市环境，四季分明',
   历史与事件: '无特殊历史事件',
   核心冲突: '暂无明确主线，先由日常荒诞展开',
+  主角启用: true,
   玩法模式: {
     认知: '是',
     使用: '是',
@@ -848,13 +914,15 @@ const form = reactive({
   角色列表: [] as CharacterEntry[],
   视角: '第三人称限定',
   文风: '细腻写实',
+  视角角色: '',
 });
 
 const steps = [
   { key: 'world', kicker: '第一章', title: '世界底稿', icon: BookOpen },
-  { key: 'people', kicker: '第二章', title: '入世档案', icon: UsersRound },
-  { key: 'rules', kicker: '第三章', title: '法则敕令', icon: Scale },
-  { key: 'issue', kicker: '第四章', title: '签发世界', icon: Stamp },
+  { key: 'narrative', kicker: '第二章', title: '叙事定位', icon: Feather },
+  { key: 'people', kicker: '第三章', title: '人物档案', icon: UsersRound },
+  { key: 'rules', kicker: '第四章', title: '法则敕令', icon: Scale },
+  { key: 'issue', kicker: '第五章', title: '开局签发', icon: Stamp },
 ] as const;
 
 const stepCount = steps.length;
@@ -865,34 +933,41 @@ const activeRuleGroup = ref('常识规则');
 
 const isLastStep = computed(() => currentStep.value === stepCount - 1);
 const namedCharacters = computed(() => form.角色列表.filter(character => character.姓名.trim()));
+const needsFocalCharacter = computed(
+  () =>
+    form.视角 === '第一人称角色' ||
+    (form.视角 === '第三人称限定' && !form.主角启用 && namedCharacters.value.length > 0),
+);
+const openingCastNames = computed(() => [
+  ...(form.主角启用 ? ['主角（<user>）'] : []),
+  ...namedCharacters.value.map(character => character.姓名.trim()),
+]);
+const openingCastCount = computed(() => openingCastNames.value.length);
+const povSummary = computed(() => buildPovRule(form.视角, form.主角启用, form.视角角色 || '待指定'));
 const ruleCount = computed(() =>
   Object.values(rules).reduce((sum, list) => sum + list.filter(rule => rule.名称.trim()).length, 0),
 );
 
-const receipt = computed(() => [
-  { key: '世界模板', value: `${form.世界模板} · ${form.时代背景}` },
-  { key: '主角身份', value: form.主角身份.trim() || '普通居民' },
-  {
-    key: '主要角色',
-    value: namedCharacters.value.length
-      ? namedCharacters.value.map(character => character.姓名.trim()).join('、')
-      : '未登记（开场时将自动生成一位）',
-  },
-  {
-    key: '玩法模式',
-    value: `认知 ${form.玩法模式.认知} · 使用 ${form.玩法模式.使用} · 受控 ${form.玩法模式.受控} · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`,
-  },
-  {
-    key: '基调',
-    value: `色情 ${form.基调.色情浓度} · 搞笑 ${form.基调.搞笑程度} · 轻松 ${form.基调.轻松程度}${form.允许黑深残 ? ' · 允许黑深残' : ''}`,
-  },
-  {
-    key: '剧情方向',
-    value: `${form.剧情方向.开局场景} · ${form.剧情方向.主线目标.trim() || '未填写'} · ${form.剧情方向.节奏}${form.剧情方向.暧昧开局 ? ' · 暧昧开局' : ''}`,
-  },
-  { key: '叙事', value: `${form.视角} · ${form.文风}` },
-  { key: '生效规则', value: `${ruleCount.value} 条` },
-]);
+const receipt = computed(() => ({
+  世界模板: `${form.世界模板} · ${form.时代背景}`,
+  叙事: `${form.视角} · ${form.文风}`,
+  视角角色: needsFocalCharacter.value ? form.视角角色 || '待指定' : '由当前视角自动确定',
+  主角: form.主角启用 ? `启用 · ${form.主角身份.trim() || '普通居民'}` : '关闭',
+  主要角色: namedCharacters.value.length
+    ? namedCharacters.value.map(character => character.姓名.trim()).join('、')
+    : '未登记',
+  开场人物: openingCastNames.value.length ? openingCastNames.value.join('、') : '无人物 · 纯环境开场',
+  玩法模式: form.主角启用
+    ? `认知 ${form.玩法模式.认知} · 使用 ${form.玩法模式.使用} · 受控 ${form.玩法模式.受控} · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`
+    : `主角权限停用 · 篡改 ${form.玩法模式.编辑器篡改.split('-')[1] ?? form.玩法模式.编辑器篡改}`,
+  基调: `色情 ${form.基调.色情浓度} · 搞笑 ${form.基调.搞笑程度} · 轻松 ${form.基调.轻松程度}${form.允许黑深残 ? ' · 允许黑深残' : ''}`,
+  生效规则: `${ruleCount.value} 条`,
+  剧情方向: `${form.剧情方向.开局场景} · ${form.剧情方向.主线目标.trim() || '未填写'} · ${form.剧情方向.节奏}${form.剧情方向.暧昧开局 && openingCastCount.value >= 2 ? ' · 暧昧开局' : ''}`,
+}));
+
+watch(openingCastCount, count => {
+  if (count < 2) form.剧情方向.暧昧开局 = false;
+});
 
 function moveToStep(index: number) {
   if (index < 0 || index >= stepCount || index > maxVisitedStep.value) {
@@ -943,11 +1018,13 @@ function removeRule(key: string, index: number) {
 }
 
 function addCharacter() {
-  form.角色列表.push({ 姓名: '', 性别: '女', 年龄: '', 身份: '', 与主角关系: '', 外貌特征: '', 性格: '' });
+  form.角色列表.push({ 姓名: '', 性别: '女', 年龄: '', 身份: '', 关系定位: '', 外貌特征: '', 性格: '' });
 }
 
 function removeCharacter(index: number) {
+  const removedName = form.角色列表[index]?.姓名.trim();
   form.角色列表.splice(index, 1);
+  if (removedName && form.视角角色 === removedName) form.视角角色 = '';
 }
 
 const store = useDataStore();
@@ -983,7 +1060,7 @@ function buildCharacters() {
         性别: character.性别.trim() || '女',
         年龄: character.年龄.trim(),
         身份: character.身份.trim(),
-        与主角关系: character.与主角关系.trim(),
+        关系定位: character.关系定位.trim(),
         外貌特征: character.外貌特征.trim(),
         性格: character.性格.trim(),
       },
@@ -993,10 +1070,35 @@ function buildCharacters() {
   return result;
 }
 
+function validateConfiguration(): string | null {
+  const blankIndex = form.角色列表.findIndex(character => !character.姓名.trim());
+  if (blankIndex >= 0) return `角色档案 ${blankIndex + 1} 缺少姓名`;
+
+  const names = namedCharacters.value.map(character => character.姓名.trim());
+  const duplicate = names.find((name, index) => names.indexOf(name) !== index);
+  if (duplicate) return `主要角色姓名重复：${duplicate}`;
+
+  if (needsFocalCharacter.value) {
+    if (!names.length) return `${form.视角}需要至少登记一名主要角色`;
+    if (!names.includes(form.视角角色)) return '请选择一名已登记主要角色作为视角角色';
+  }
+
+  return null;
+}
+
 async function startGame() {
   if (starting.value) {
     return;
   }
+
+  const validationError = validateConfiguration();
+  if (validationError) {
+    status.value = `配置失败：${validationError}`;
+    toastr.warning(validationError, '请检查人物档案');
+    if (maxVisitedStep.value >= 2) moveToStep(2);
+    return;
+  }
+
   starting.value = true;
   status.value = '正在写入世界配置…';
 
@@ -1010,6 +1112,10 @@ async function startGame() {
       地理与气候: form.地理与气候.trim() || '普通城市环境，四季分明',
       历史与事件: form.历史与事件.trim() || '无特殊历史事件',
       核心冲突: form.核心冲突.trim() || '暂无明确主线，先由日常荒诞展开',
+      主角启用: form.主角启用,
+      叙事视角: form.视角 as '第二人称' | '第三人称上帝' | '第三人称限定' | '第一人称玩家' | '第一人称角色',
+      叙事文风: form.文风 as '细腻写实' | '通用白描' | '轻小说' | '古风' | '西幻' | '漫画分镜' | '微色情',
+      视角角色: needsFocalCharacter.value ? form.视角角色 : '',
       玩法模式: { ...form.玩法模式 },
       基调: {
         色情浓度: Number(form.基调.色情浓度),
@@ -1017,12 +1123,12 @@ async function startGame() {
         轻松程度: Number(form.基调.轻松程度),
       },
       允许黑深残: form.允许黑深残,
-      主角补充设定: form.主角补充设定.trim() || '暂无补充设定',
+      主角补充设定: form.主角启用 ? form.主角补充设定.trim() || '暂无补充设定' : '',
       剧情方向: {
         开局场景: form.剧情方向.开局场景,
         主线目标: form.剧情方向.主线目标.trim() || '先弄清楚现实编辑器的来历与能力',
         节奏: form.剧情方向.节奏 as '日常' | '冒险' | '悬疑' | '轻松',
-        暧昧开局: form.剧情方向.暧昧开局,
+        暧昧开局: form.剧情方向.暧昧开局 && openingCastCount.value >= 2,
       },
       常识规则: activeRules.常识规则,
       行为习惯: activeRules.行为习惯,
@@ -1037,14 +1143,23 @@ async function startGame() {
       时间: '待生成',
       摘要: '世界已配置，等待开场生成',
     };
-    data.value.主角 = {
-      姓名: data.value.主角.姓名,
-      身份: form.主角身份.trim() || '普通居民',
-      补充设定: form.主角补充设定.trim(),
-      性格: form.主角性格.trim(),
-      目标: form.主角目标.trim(),
-      与编辑器关系: form.与编辑器关系,
-    };
+    data.value.主角 = form.主角启用
+      ? {
+          姓名: data.value.主角.姓名,
+          身份: form.主角身份.trim() || '普通居民',
+          补充设定: form.主角补充设定.trim(),
+          性格: form.主角性格.trim(),
+          目标: form.主角目标.trim(),
+          与编辑器关系: form.与编辑器关系,
+        }
+      : {
+          姓名: '',
+          身份: '',
+          补充设定: '',
+          性格: '',
+          目标: '',
+          与编辑器关系: '',
+        };
     data.value.NPC序列 = buildCharacters();
 
     status.value = '正在生成开场…';
@@ -1061,6 +1176,16 @@ async function startGame() {
 
 async function generateOpening(activeRules: Record<string, Record<string, string>>) {
   const old_data = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
+  const mainCharacters = form.角色列表.map(character => ({
+    姓名: character.姓名.trim(),
+    性别: character.性别.trim(),
+    年龄: character.年龄.trim(),
+    身份: character.身份.trim(),
+    关系定位: character.关系定位.trim(),
+    外貌特征: character.外貌特征.trim(),
+    性格: character.性格.trim(),
+  }));
+  const targetLengthExtra = Math.max(0, openingCastCount.value - 4);
   const config = {
     世界模板: form.世界模板,
     世界观描述: form.世界观描述,
@@ -1069,123 +1194,157 @@ async function generateOpening(activeRules: Record<string, Record<string, string
     地理与气候: form.地理与气候,
     历史与事件: form.历史与事件,
     核心冲突: form.核心冲突,
+    主角启用: form.主角启用,
     玩法模式: { ...form.玩法模式 },
     基调: form.基调,
     允许黑深残: form.允许黑深残,
-    主角补充设定: form.主角补充设定,
-    主角: {
-      身份: form.主角身份,
-      性格: form.主角性格,
-      目标: form.主角目标,
-      与编辑器关系: form.与编辑器关系,
+    主角: form.主角启用
+      ? {
+          身份: form.主角身份.trim() || '普通居民',
+          性格: form.主角性格.trim(),
+          目标: form.主角目标.trim(),
+          补充设定: form.主角补充设定.trim(),
+          与编辑器关系: form.与编辑器关系,
+        }
+      : null,
+    剧情方向: {
+      ...form.剧情方向,
+      暧昧开局: form.剧情方向.暧昧开局 && openingCastCount.value >= 2,
     },
-    剧情方向: { ...form.剧情方向 },
-    主要角色: form.角色列表
-      .filter(character => character.姓名.trim())
-      .map(character => ({
-        姓名: character.姓名.trim(),
-        性别: character.性别.trim(),
-        年龄: character.年龄.trim(),
-        身份: character.身份.trim(),
-        与主角关系: character.与主角关系.trim(),
-        外貌特征: character.外貌特征.trim(),
-        性格: character.性格.trim(),
-      })),
+    主要角色: mainCharacters,
     视角: form.视角,
     文风: form.文风,
+    视角角色: needsFocalCharacter.value ? form.视角角色 : '',
     生效规则: activeRules,
+    开场人物约束: {
+      必须登场: [...openingCastNames.value],
+      允许登场: [...openingCastNames.value],
+      额外人物: '禁止',
+    },
+    目标篇幅: `${1000 + targetLengthExtra * 160}~${1800 + targetLengthExtra * 240}字`,
   };
 
   const prompt = buildOpeningPrompt(config);
+  const generationBaseId = `human-revision-opening-${Date.now()}`;
+  let message = await requestOpening(prompt, '开始第一幕。', generationBaseId);
+  let missingCharacters = findMissingCharacters(message, mainCharacters);
 
-  const result = await generateRaw({
-    user_input: '开始第一幕。',
-    should_silence: true,
-    max_chat_history: 0,
-    ordered_prompts: [{ role: 'system', content: prompt }, 'user_input'],
-  });
+  if (missingCharacters.length) {
+    const repairPrompt = `${prompt}\n\n【本次修订】\n上一稿遗漏了以下必须登场人物：${missingCharacters.join('、')}。重新生成完整第一幕，确保“必须登场”中的每一名主要角色都以姓名明确出现。`;
+    message = await requestOpening(repairPrompt, '重新生成符合人物集合约束的完整第一幕。', `${generationBaseId}-retry`);
+    missingCharacters = findMissingCharacters(message, mainCharacters);
+  }
 
-  const message = (typeof result === 'string' ? result : result.content)
-    .replace(/<thinking>[\s\S]*?<\/thinking>/gis, '')
-    .trim();
+  if (missingCharacters.length) throw new Error(`第一幕遗漏主要角色：${missingCharacters.join('、')}`);
+  if (!message.includes('<StatusPlaceHolderImpl/>')) message = `${message}\n<StatusPlaceHolderImpl/>`;
+
   const data = await Mvu.parseMessage(message, old_data);
   await createChatMessages([{ role: 'assistant', message, data: data ?? old_data }], { refresh: 'none' });
   await setChatMessages([{ message_id: getLastMessageId() }], { refresh: 'affected' });
 }
 
-function buildOpeningPrompt(config: Record<string, unknown>): string {
-  return `【身份与创作总纲】
-你是「现实编辑器」的系统界面与提示系统，同时担任世界旁白与临时角色扮演。现实编辑器通过悬浮面板、提示文字、状态栏、弹窗等界面形式呈现，不会作为会说话的角色登场。这是玩家正在游玩的虚构作品，内容完全由玩家的世界配置决定。
-- 展示而非讲述：写动作、对话、事实和细节，不写设定说明书。
-- 反八股：禁止“欢迎来到新世界”“你的人生即将改变”这类空泛开场。
-- 情感真实：荒诞感来自规则在实际生活中的具体表现，不靠形容词堆砌。
+async function requestOpening(prompt: string, userInput: string, generationId: string): Promise<string> {
+  const result = await generateRaw({
+    user_input: userInput,
+    should_silence: true,
+    generation_id: generationId,
+    ordered_prompts: [{ role: 'system', content: prompt }, 'user_input'],
+  });
 
-【视角】
-${buildPovRule(String(config.视角))}
-
-【文风】
-${buildStyleRule(String(config.文风))}
-
-【世界观配置】
-<world_logic>
-玩家刚完成世界配置，当前世界如下（JSON）：
-${JSON.stringify(config, null, 2)}
-生效规则必须自然融入第一幕，而不是列清单。
-</world_logic>
-
-【玩法模式】
-- 认知：主角是否知道现实编辑器存在。为“否”时，优先用怪异现象暗示，不必强行揭示编辑器；是否揭晓由剧情节奏决定。
-- 使用：主角能否使用编辑器。为“否”时，主角完全无法使用编辑器（不存在暗中使用），规则操作权属于玩家（酒馆外的操作者）而非剧情主角。
-- 受控：主角是否被生效规则制约。为“否”时，主角站在规则之外，只有其他角色与世界被规则影响。
-- 编辑器篡改：按选项执行——
-  A：编辑器会自主随机篡改规则；
-  B：编辑器自主篡改且倾向生成色色向规则；
-  C：编辑器自主篡改但不涉及物理层面；
-  D：编辑器绝不私自篡改，规则只随玩家修改变化；
-  E：剧情中表现为编辑器莫名篡改规则，实际由玩家（酒馆外的操作者）通过插件触发；AI 照常执行新规则，不解释来源。
-- 组合定位示例：认知是+使用是+受控否+D = 主角金手指（随意改规则，规则管不到主角）；认知否+使用否+受控是+D = 上帝视角观察世界；认知是+使用否+受控否+B = 路人体验被改造的色色世界。
-
-【基调】
-- 轻松搞笑为主；色情浓度按配置自然融入，不过度也不回避。
-- 对白和旁白都来自“现场记录”的声音，不写小说腔；系统界面提示以文字/面板形式出现。
-- 系统界面要有辨识度：干巴巴的官方文案，偶尔一本正经地胡说八道（以提示文字、弹窗、公告形式呈现）。
-
-【开场结构】
-- 场景必须具体：结合“开局场景 + 时代背景 + 地理与气候”给出完整的时间地点（例如“临海市老城区五星街14号402室，晚上11点55分”），用光线、声音、温度、气味建立环境，让读者一进来就“看见”这个房间。
-- 按「玩法模式」定位开场：认知否时优先用怪异现象暗示；使用否时主角完全无法使用编辑器；受控否时主角不受规则影响；编辑器篡改按选项执行。
-- 开场从“醒来 / 恢复意识 / 与设备建立连接”的瞬间切入，让玩家和现实编辑器完成第一次接触；玩家与编辑器的关系按配置呈现（刚捡到 / 恢复记忆 / 绑定获得 / 穿越获得），不要一上来解释设定。
-- 现实编辑器要有实体感：它长什么样、拿在手里什么感觉、屏幕显示什么，写具体。
-- 角色登场：若配置了“主要角色”，优先让其中一位在本幕登场，严格使用其外貌特征、性格、与主角关系；若没有配置，则创造一位鲜活角色。外貌、身材、穿着、动作、语气都要细腻呈现，色情浓度越高描写越直白；暧昧开局开启时互动更亲密。
-- 生效规则用日常事件自然显现，不许列清单、不许报菜单；荒诞感来自“世界按新规则运转”的错位。
-- 核心冲突只需埋一句伏笔，不要展开。
-- 节奏按配置（日常 / 冒险 / 悬疑 / 轻松）调节：日常重生活细节，冒险重事件推进，悬疑重信息差，轻松重趣味。
-- 结尾停在日常互动或规则造成的悬念里，留一个玩家能自然接上的口子。
-
-【思维链】
-在写正文前，先在 <thinking> 标签内完成以下思考，再写正文：
-1. 场景：时间、地点、光线、声音、温度、气味分别是什么？
-2. 玩家与“现实编辑器”的关系：刚获得还是恢复？它是什么形态、什么手感、屏幕上显示什么？
-3. 玩法模式：主角知不知道编辑器、能不能用、受不受控、规则会不会自己变？开场如何体现这套定位？
-4. 哪一两条生效规则会在这一幕里自然显现？会制造什么错位或荒诞？
-5. 登场角色：若配置了主要角色，怎么用其外貌特征、性格、关系登场？若没有，创造谁？开场如何与暧昧开局配合？
-6. 按所选视角和文风，第一段从哪里切入？结尾停在什么状态？
-<thinking> 内容不要出现在正文里。
-
-【输出格式】
-- 正文长度 1000~1800 字（按中文计算）。
-- 结尾另起一行输出 <StatusPlaceHolderImpl/>。
-- 禁止输出 <WorldConfigurator/>，禁止输出 JSON，禁止输出规则列表，禁止解释任何宏。`;
+  return (typeof result === 'string' ? result : result.content).replace(/<thinking>[\s\S]*?<\/thinking>/gis, '').trim();
 }
 
-function buildPovRule(pov: string): string {
+function findMissingCharacters(message: string, characters: Array<{ 姓名: string }>): string[] {
+  return characters.map(character => character.姓名).filter(name => !message.includes(name));
+}
+
+function buildOpeningPrompt(config: Record<string, unknown>): string {
+  const protagonistEnabled = Boolean(config.主角启用);
+  const pov = String(config.视角);
+  const focusCharacter = String(config.视角角色 || '');
+  return `【本次任务】
+你是第一幕叙事引擎。只根据本提示词生成世界配置完成后的第一幕。现实编辑器以悬浮面板、提示文字、状态栏或弹窗呈现，始终是非人格化界面。
+
+【创作总纲】
+- 展示而非讲述：通过动作、对话、事实与可观察细节呈现设定。
+- 视觉先行：先建立具体时间、地点、光线、声音、温度与气味，再推动事件。
+- 配置优先：留白可以合理补全，已配置内容保持原意。
+- 反八股：从开局场景里最早发生的具体变化切入，不使用空泛欢迎词或命运宣告。
+
+【世界配置】
+<opening_config>
+${JSON.stringify(config, null, 2)}
+</opening_config>
+
+【叙事身份】
+${buildPlayerRoleRule(protagonistEnabled)}
+${buildPovRule(pov, protagonistEnabled, focusCharacter)}
+
+【文风与基调】
+${buildStyleRule(String(config.文风))}
+色情浓度、搞笑程度、轻松程度是三个独立的 0~100 强度值：0 表示正文中不主动表现，100 表示该维度占据显著比重。严格按配置决定尺度，不预设轻松或搞笑为主。
+
+【开场人物集合】
+- “必须登场”和“允许登场”是同一个封闭集合，正文人物集合必须与它完全相等。
+- 人物指具有人格化身份、动作、台词、心理或观察视角的存在；现实编辑器界面、环境、物体与自然现象不计为人物。
+- “必须登场”中的每一名主要角色都要在第一幕明确出现，姓名至少出现一次，并具有可辨认的动作、台词或现场反应。
+- 集合为空时，整幕只写环境、物体、事件与现实编辑器界面，以世界变化构成承接点。
+- 暧昧开局只有在集合中至少有两名人物时生效。
+
+【玩法模式】
+${buildGameplayRule(protagonistEnabled)}
+- 编辑器篡改严格按配置值执行：A 可随机改动；B 可自主改动且倾向色色；C 可自主改动但避开物理层面；D 只执行玩家明确修改；E 只执行玩家插件触发的变更，正文不解释来源。
+
+【场景构造】
+- 根据“开局场景 + 时代背景 + 地理与气候”给出完整而具体的时间地点。
+- 从当前场景里最早发生的变化切入；主角启用时可以表现其与编辑器建立联系，主角关闭时通过登记角色、环境或界面事件表现编辑器生效。
+- 生效规则通过允许人物、物体或环境变化自然显现，不列清单，不解释“因为规则”。
+- 核心冲突只埋入一句或一个可感知迹象，不在第一幕展开说明。
+- 结尾停在未完成动作、规则变化、环境异常或人物互动上，留下自然承接点。
+
+【写前检查】
+在 <thinking> 标签内依次核对：
+1. 主角开关如何决定玩家在故事内外的身份？
+2. 当前视角跟随谁，信息边界是什么？
+3. 必须登场人物是否全部获得明确位置和动作？
+4. 草稿人物集合是否与允许登场集合完全相等？
+5. 规则通过哪些允许人物、物体或环境变化体现？
+6. 结尾如何让玩家自然承接？
+</thinking> 结束后直接输出正文。
+
+【输出格式】
+- 正文目标长度：${String(config.目标篇幅)}。
+- 结尾另起一行输出 <StatusPlaceHolderImpl/>。
+- 最终输出只包含正文和状态栏占位符，省略配置 JSON、规则列表、宏解释和思考内容。`;
+}
+
+function buildPlayerRoleRule(protagonistEnabled: boolean): string {
+  return protagonistEnabled
+    ? '- 主角启用：<user> 是世界中的主角，也是现实编辑器的持有者；主角档案与玩法模式中的认知、使用、受控均生效。'
+    : '- 主角关闭：<user> 是故事外的现实编辑器操作者，不作为人物进入正文；主角档案以及认知、使用、受控均不参与本幕。';
+}
+
+function buildGameplayRule(protagonistEnabled: boolean): string {
+  return protagonistEnabled
+    ? '- 认知决定主角是否知道编辑器存在；使用决定主角是否能操作编辑器；受控决定主角是否受生效规则制约。三个字段彼此独立。'
+    : '- 主角关闭时，认知、使用、受控字段全部忽略；规则作用于已登记主要角色与世界，仍严格服从具体作用范围。';
+}
+
+function buildPovRule(pov: string, protagonistEnabled = true, focusCharacter = ''): string {
   const rules: Record<string, string> = {
-    第二人称:
-      '用第二人称“你”面向玩家（玩家名用 <user> 宏代替），只写“你”看到、听到、感受到的内容，不写“你”不知道的事。',
+    第二人称: protagonistEnabled
+      ? '使用第二人称“你”指代 <user>，只呈现主角能够观察或感受到的信息。'
+      : '使用第二人称“你”指代故事外的编辑器操作者；“你”只观察界面与世界，不作为正文人物行动。',
     第三人称上帝: '用第三人称叙述（他/她/角色名），全景叙事，禁止用“你”指代任何角色。',
-    第三人称限定:
-      '用第三人称叙述（他/她/角色名），以 <user> 为主视角，只写 <user> 看到、听到、感受到的内容，禁止写其他角色视角。',
-    第一人称玩家: '用第一人称“我”扮演 <user>，只写“我”看到、听到、感受到、想到的内容，不写其他角色的内心想法。',
-    第一人称角色: '用第一人称“我”扮演当前主要角色，只写“我”看到、听到、感受到的内容，禁止写 <user> 的视角。',
+    第三人称限定: protagonistEnabled
+      ? '使用第三人称，以 <user> 为唯一限定视角，只呈现主角能够观察或感受到的信息。'
+      : focusCharacter
+        ? `使用第三人称，以主要角色“${focusCharacter}”为唯一限定视角，只呈现该角色能够观察或感受到的信息。`
+        : '开场人物集合为空，使用第三人称环境镜头，只呈现可观察的空间、物体与事件，不建立人物焦点。',
+    第一人称玩家: protagonistEnabled
+      ? '使用第一人称“我”指代 <user>，只呈现主角能够观察、感受到或想到的信息。'
+      : '使用第一人称“我”指代故事外的编辑器操作者，只描述界面观察与操作，不把“我”写成正文人物。',
+    第一人称角色: `使用第一人称“我”扮演主要角色“${focusCharacter}”，只呈现该角色能够观察、感受到或想到的信息；<user> 是否为主角由主角开关单独决定。`,
   };
   return rules[pov] ?? rules['第二人称'];
 }
@@ -1908,7 +2067,7 @@ function buildStyleRule(style: string): string {
 
 .chapter-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 0 20px 18px;
 }
 
@@ -2102,6 +2261,49 @@ function buildStyleRule(style: string): string {
 
 .section-heading-actions {
   grid-template-columns: 36px 1fr auto;
+}
+
+.narrative-brief {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--cinnabar);
+  background: var(--record-surface);
+  color: var(--ink-muted);
+}
+.narrative-brief svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--cinnabar);
+}
+.narrative-brief p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.protagonist-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transition: opacity 160ms ease-out;
+}
+.protagonist-disabled .protagonist-fields {
+  opacity: 0.42;
+}
+.protagonist-fields:disabled .control,
+.field-disabled .control {
+  cursor: not-allowed;
+}
+.field-disabled {
+  opacity: 0.48;
+}
+.focal-character-field {
+  margin-top: 18px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 .section-icon {
   display: grid;
@@ -2372,7 +2574,8 @@ textarea.control {
   display: grid;
   gap: 4px;
 }
-.switch-row input {
+.switch-row input,
+.record-switch input {
   position: relative;
   width: 46px;
   height: 26px;
@@ -2384,7 +2587,8 @@ textarea.control {
   cursor: pointer;
   transition: background-color 160ms ease-out;
 }
-.switch-row input::after {
+.switch-row input::after,
+.record-switch input::after {
   position: absolute;
   top: 3px;
   left: 3px;
@@ -2396,16 +2600,31 @@ textarea.control {
   content: '';
   transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.switch-row input:checked {
+.switch-row input:checked,
+.record-switch input:checked {
   border-color: var(--cinnabar);
   background: var(--cinnabar);
 }
-.switch-row input:checked::after {
+.switch-row input:checked::after,
+.record-switch input:checked::after {
   transform: translateX(20px);
 }
-.switch-row input:focus-visible {
+.switch-row input:focus-visible,
+.record-switch input:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
+}
+.switch-row input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.record-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 40px;
+  cursor: pointer;
 }
 
 .rule-tabs {
@@ -2861,6 +3080,9 @@ textarea.control {
   .section-heading-actions {
     grid-template-columns: 36px 1fr;
   }
+  .section-heading-actions.protagonist-heading {
+    grid-template-columns: 36px 1fr auto;
+  }
   .section-heading-actions .text-action {
     grid-column: 1 / -1;
     justify-self: stretch;
@@ -2900,7 +3122,9 @@ textarea.control {
   .button,
   .control,
   .switch-row input,
-  .switch-row input::after {
+  .switch-row input::after,
+  .record-switch input,
+  .record-switch input::after {
     transition-duration: 0.01ms;
   }
 }

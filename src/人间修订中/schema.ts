@@ -7,7 +7,7 @@ export const Schema = z.object({
     })
     .prefault({}),
 
- 世界配置: z
+  世界配置: z
     .object({
       世界模板: z.string().prefault('现代都市'),
       世界观描述: z.string().prefault('普通现代都市，玩家刚捡到现实编辑器'),
@@ -16,6 +16,12 @@ export const Schema = z.object({
       地理与气候: z.string().prefault('普通城市环境，四季分明'),
       历史与事件: z.string().prefault('无特殊历史事件'),
       核心冲突: z.string().prefault('暂无明确主线，先由日常荒诞展开'),
+      主角启用: z.boolean().prefault(true),
+      叙事视角: z
+        .enum(['第二人称', '第三人称上帝', '第三人称限定', '第一人称玩家', '第一人称角色'])
+        .prefault('第三人称限定'),
+      叙事文风: z.enum(['细腻写实', '通用白描', '轻小说', '古风', '西幻', '漫画分镜', '微色情']).prefault('细腻写实'),
+      视角角色: z.string().prefault(''),
       玩法模式: z
         .object({
           认知: z.enum(['是', '否']).prefault('是'),
@@ -60,7 +66,7 @@ export const Schema = z.object({
     })
     .prefault({}),
 
- 现实编辑器: z
+  现实编辑器: z
     .object({
       状态: z.enum(['正常', '维护中', '待机']).prefault('待机'),
       版本: z.string().prefault('v0.1.0-alpha'),
@@ -102,7 +108,7 @@ export const Schema = z.object({
               性别: z.string().prefault('女'),
               年龄: z.string().prefault(''),
               身份: z.string().prefault(''),
-              与主角关系: z.string().prefault(''),
+              关系定位: z.string().prefault(''),
               外貌特征: z.string().prefault(''),
               性格: z.string().prefault(''),
             })

@@ -52,6 +52,38 @@
           "default": "暂无明确主线，先由日常荒诞展开",
           "type": "string"
         },
+        "主角启用": {
+          "default": true,
+          "type": "boolean"
+        },
+        "叙事视角": {
+          "default": "第三人称限定",
+          "type": "string",
+          "enum": [
+            "第二人称",
+            "第三人称上帝",
+            "第三人称限定",
+            "第一人称玩家",
+            "第一人称角色"
+          ]
+        },
+        "叙事文风": {
+          "default": "细腻写实",
+          "type": "string",
+          "enum": [
+            "细腻写实",
+            "通用白描",
+            "轻小说",
+            "古风",
+            "西幻",
+            "漫画分镜",
+            "微色情"
+          ]
+        },
+        "视角角色": {
+          "default": "",
+          "type": "string"
+        },
         "玩法模式": {
           "default": {},
           "type": "object",
@@ -318,7 +350,7 @@
                 "default": "",
                 "type": "string"
               },
-              "与主角关系": {
+              "关系定位": {
                 "default": "",
                 "type": "string"
               },
