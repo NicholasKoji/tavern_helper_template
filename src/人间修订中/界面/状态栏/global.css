@@ -187,6 +187,7 @@ button {
 .content {
   max-height: 560px;
   padding: 12px;
+  background: var(--paper-deep);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -215,7 +216,7 @@ button {
 .card {
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--paper-soft);
   box-shadow: inset 0 0 0 1px oklch(0.45 0.045 62 / 0.08);
 }
