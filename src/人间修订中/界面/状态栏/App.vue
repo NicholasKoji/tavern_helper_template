@@ -485,6 +485,15 @@
               </span>
             </header>
 
+            <div v-if="aiDraft[group.key].主题" class="ai-system-banner">
+              <span class="ai-system-tag">AI 体系草稿</span>
+              <strong>{{ aiDraft[group.key].主题 }}</strong>
+              <p v-if="aiDraft[group.key].说明">{{ aiDraft[group.key].说明 }}</p>
+              <p v-if="group.scoped && aiDraft[group.key].对象" class="ai-system-scope">
+                作用范围：{{ aiDraft[group.key].对象 }}
+              </p>
+            </div>
+
             <p v-if="ruleEditorState[group.key].length === 0" class="rule-editor-empty">该类暂无规则，留空即不设限。</p>
 
             <div
@@ -720,6 +729,11 @@ type AnnouncementItem = {
   内容: string;
   范围: string;
 };
+type AiSystemDraft = {
+  主题: string;
+  说明: string;
+  对象: string;
+};
 
 const ruleEditorOpen = ref(false);
 const busy = ref(false);
@@ -731,6 +745,11 @@ const aiBusy = reactive<Record<RuleGroupKey, boolean>>({
 const aiHint = ref('');
 const editorError = ref('');
 const announcement = ref<{ items: AnnouncementItem[] } | null>(null);
+const aiDraft = reactive<Record<RuleGroupKey, AiSystemDraft>>({
+  世界规则: { 主题: '', 说明: '', 对象: '' },
+  区域规则: { 主题: '', 说明: '', 对象: '' },
+  个人规则: { 主题: '', 说明: '', 对象: '' },
+});
 let modSeq = 0;
 const anyAiBusy = computed(() => Object.values(aiBusy).some(Boolean));
 
@@ -759,6 +778,9 @@ function toScopedDrafts(record: Record<string, Record<string, string>>): RuleRow
 
 function openRuleEditor() {
   editorError.value = '';
+  aiDraft.世界规则 = { 主题: '', 说明: '', 对象: '' };
+  aiDraft.区域规则 = { 主题: '', 说明: '', 对象: '' };
+  aiDraft.个人规则 = { 主题: '', 说明: '', 对象: '' };
   const rules = data.value.现实编辑器.生效规则;
   ruleEditorState.世界规则 = Object.entries(rules.世界规则 ?? {}).map(([名称, 内容]) => ({ 对象: '', 名称, 内容 }));
   ruleEditorState.区域规则 = toScopedDrafts(rules.区域规则 ?? {});
@@ -950,19 +972,28 @@ function parseJsonLoose(text: string): unknown {
   }
 }
 
-function buildSuggestionPrompt(groupKey: RuleGroupKey, hint: string): string {
+function buildWorldviewPrompt(groupKey: RuleGroupKey, hint: string): string {
   const world = data.value.世界配置;
   const scene = data.value.当前场景;
   const rules = data.value.现实编辑器.生效规则;
   const scopeRule =
     groupKey === '世界规则'
-      ? '作用于整个世界与所有公共场景，不点名具体对象。'
+      ? '作用于整个世界与所有公共场景，不点名具体对象；体系应塑造整个社会的运转逻辑。'
       : groupKey === '区域规则'
-        ? '必须绑定一个清晰空间边界（区域名，如建筑、房间、街区、场馆），只在该区域内生效。'
-        : '必须绑定一个具体对象（角色或物品名），只影响该对象。';
-  return `你是「现实编辑器」的规则起草引擎，为玩家签发新规则提供草稿。只输出规则建议，不解释、不评价、不输出任何其他内容。
+        ? '必须绑定一个清晰空间边界（区域名，如建筑、房间、街区、场馆），只在该区域内生效；体系应解释该区域为何如此运转、与外界的关系、区域内人群的默认观念，以及离开区域后的边界。'
+        : '必须绑定一个具体对象（角色或物品名），只影响该对象；体系应解释该对象的行为逻辑、自我认同、内在矛盾，以及外人视角下的怪异或正常。';
+  const ruleCount = groupKey === '世界规则' ? '5~8 条' : '3~5 条';
+  const scopeNameField = groupKey === '区域规则' ? '「区域名」' : groupKey === '个人规则' ? '「对象名」' : '';
+  const formatJson =
+    groupKey === '世界规则'
+      ? '{"主题":"...","说明":"...","规则列表":[{"名称":"...","内容":"..."}]}'
+      : groupKey === '区域规则'
+        ? '{"主题":"...","说明":"...","区域名":"...","规则列表":[{"名称":"...","内容":"..."}]}'
+        : '{"主题":"...","说明":"...","对象名":"...","规则列表":[{"名称":"...","内容":"..."}]}';
+  return `你是「现实编辑器」的规则世界观起草引擎。玩家会通过状态栏把整套规则写入世界，并在下一轮剧情中立即显化。你的任务不是列点子，而是生成一套逻辑自洽、互相咬合、能产生叙事摩擦的规则体系。
 【目标类别】${groupKey}
-${hint ? `【玩家方向】${hint}` : ''}
+${hint ? `【玩家方向】${hint}` : '【玩家方向】未指定，请结合世界配置自由发挥一个有吸引力的主题。'}
+
 【世界背景】
 - 世界模板：${world.世界模板}
 - 时代背景：${world.时代背景}
@@ -974,42 +1005,66 @@ ${hint ? `【玩家方向】${hint}` : ''}
 【当前场景】${scene.地点.一级区域}/${scene.地点.二级区域}/${scene.地点.三级地点}
 【当前生效规则】
 ${JSON.stringify(rules, null, 2)}
-【起草要求】
-1. 产出 3 条${groupKey}草稿，每条包含「名称」和「内容」${groupKey !== '世界规则' ? '；区域规则填「生效对象」为区域名，个人规则填「生效对象」为对象名' : ''}。
-2. 规则内容必须具体、可显现：落到动作、对白、身体反应或环境细节，禁止抽象口号。
-3. 禁止出现“规则”“编辑器”“系统”等元叙述词；正文角色把它当作天然秩序。
-4. 禁止与当前生效规则明显冲突；内容符合世界模板与尺度（${world.允许黑深残 ? '允许压抑残酷但不得无故堆砌' : '禁止苦大仇深'}）。
-5. ${scopeRule}
-6. 名称 2~12 字，内容一句话以内，明确、无歧义。
-7. 只输出 JSON，不要输出任何解释、Markdown 代码块或额外文本。格式：{"规则列表":[{"名称":"...","内容":"..."}${groupKey !== '世界规则' ? ',"生效对象":"..."' : ''}]}。`;
+【体系结构要求】
+一套${groupKey}体系必须按以下层次组织（每层至少覆盖一项，可合并但不得缺失逻辑环节）：
+1. 起因：打破常态的前提或危机（它制造什么问题）。
+2. 机制：社会或对象如何回应（制度、行为机制、习惯）。
+3. 伦理或常识配套：社会共识如何改写，让机制运转而不崩（区域：该地人群的默认观念；个人：该对象的自我说服或习惯）。
+4. 张力与摩擦：保留某样人性常态或矛盾，制造持续冲突。
+5. 日常纹理：一条恒定、可感知、被视为理所当然的规则，渗透进日常生活。
+6. 收束：边界、例外或后果，让体系闭环。
+
+【一致性自检】
+为每条规则依次回答：制造什么问题 / 解决什么问题 / 需要什么配套 / 产生什么摩擦。答不上来或与其它规则矛盾的，必须调整或删除。规则之间允许有因果链，禁止孤立堆砌。
+
+【作用域】
+${scopeRule}
+
+【尺度与文风】
+- 内容尺度服从世界配置：${world.允许黑深残 ? '允许黑深残走向，可涉及压抑、残酷、制度性压迫，但不得无故堆砌' : '禁止苦大仇深'}；成人向内容按既有文风自然融入，不回避，但必须服务于体系逻辑与叙事。
+- 规则内容必须具体、可显现：落到动作、对白、身体反应、环境细节或社会惯例，禁止抽象口号。
+- 禁止出现“规则”“编辑器”“系统”等元叙述词；正文角色把它当作天然秩序。
+
+【输出】
+产出 ${ruleCount}${groupKey}，全部属于同一套体系；${scopeNameField ? `并在${scopeNameField}中填写统一作用范围。` : ''}每条「名称」2~12 字，「内容」一句话以内、明确无歧义。
+只输出 JSON，不要输出任何解释、Markdown 代码块或额外文本。格式：${formatJson}`;
 }
 
 function suggestionSchema(groupKey: RuleGroupKey) {
-  const scoped = groupKey !== '世界规则';
-  const properties: Record<string, { type: string }> = { 名称: { type: 'string' }, 内容: { type: 'string' } };
-  const required = ['名称', '内容'];
-  if (scoped) {
-    properties.生效对象 = { type: 'string' };
-    required.push('生效对象');
+  const rootProperties: Record<string, unknown> = {
+    主题: { type: 'string' },
+    说明: { type: 'string' },
+  };
+  const rootRequired = ['主题', '说明', '规则列表'];
+  if (groupKey === '区域规则') {
+    rootProperties.区域名 = { type: 'string' };
+    rootRequired.push('区域名');
+  } else if (groupKey === '个人规则') {
+    rootProperties.对象名 = { type: 'string' };
+    rootRequired.push('对象名');
   }
   return {
     name: `rule_suggestions_${groupKey}`,
-    description: `为${groupKey}起草规则建议`,
+    description: `为${groupKey}起草规则体系建议`,
     value: {
       type: 'object',
       additionalProperties: false,
       properties: {
+        ...rootProperties,
         规则列表: {
           type: 'array',
           items: {
             type: 'object',
             additionalProperties: false,
-            properties,
-            required,
+            properties: {
+              名称: { type: 'string' },
+              内容: { type: 'string' },
+            },
+            required: ['名称', '内容'],
           },
         },
       },
-      required: ['规则列表'],
+      required: rootRequired,
     },
   };
 }
@@ -1038,8 +1093,14 @@ async function suggestRules(groupKey: RuleGroupKey) {
   editorError.value = '';
   try {
     const hint = aiHint.value.trim();
-    const prompt = buildSuggestionPrompt(groupKey, hint);
-    let parsed: { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> } | null = null;
+    const prompt = buildWorldviewPrompt(groupKey, hint);
+    let parsed: {
+      主题?: string;
+      说明?: string;
+      区域名?: string;
+      对象名?: string;
+      规则列表?: Array<{ 名称?: string; 内容?: string }>;
+    } | null = null;
     let lastError: unknown = null;
     for (let attempt = 0; attempt < 2 && !parsed; attempt += 1) {
       try {
@@ -1056,7 +1117,13 @@ async function suggestRules(groupKey: RuleGroupKey) {
           continue;
         }
         try {
-          parsed = parseJsonLoose(text) as { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> };
+          parsed = parseJsonLoose(text) as {
+            主题?: string;
+            说明?: string;
+            区域名?: string;
+            对象名?: string;
+            规则列表?: Array<{ 名称?: string; 内容?: string }>;
+          };
         } catch (error) {
           lastError = error;
           console.warn(
@@ -1077,8 +1144,20 @@ async function suggestRules(groupKey: RuleGroupKey) {
     }
     const list = Array.isArray(parsed?.规则列表) ? parsed.规则列表 : [];
     if (!list.length) {
-      throw new Error('AI 未返回可用的规则建议');
+      throw new Error('AI 未返回可用的规则体系');
     }
+    const scopeName =
+      groupKey === '世界规则'
+        ? ''
+        : (parsed.区域名 ?? parsed.对象名 ?? '').trim() || ruleEditorState[groupKey][0]?.对象?.trim() || '';
+    if (groupKey !== '世界规则' && !scopeName) {
+      throw new Error(groupKey === '区域规则' ? 'AI 未返回区域名' : 'AI 未返回对象名');
+    }
+    aiDraft[groupKey] = {
+      主题: (parsed.主题 ?? '').trim() || `${groupKey}体系`,
+      说明: (parsed.说明 ?? '').trim(),
+      对象: scopeName,
+    };
     let added = 0;
     for (const item of list) {
       const name = (item.名称 ?? '').trim();
@@ -1092,14 +1171,14 @@ async function suggestRules(groupKey: RuleGroupKey) {
       if (groupKey === '世界规则') {
         ruleEditorState.世界规则.push({ 对象: '', 名称: name, 内容: content, _ai: true });
       } else {
-        ruleEditorState[groupKey].push({ 对象: (item.生效对象 ?? '').trim(), 名称: name, 内容: content, _ai: true });
+        ruleEditorState[groupKey].push({ 对象: scopeName, 名称: name, 内容: content, _ai: true });
       }
       added += 1;
     }
     if (!added) {
       throw new Error('AI 返回的规则缺少名称或内容');
     }
-    toastr.success(`已填入 ${added} 条 AI 草稿，请核对后确认`, '现实编辑器');
+    toastr.success(`已生成 ${added} 条${groupKey}草稿，请核对后确认`, '现实编辑器');
   } catch (error) {
     console.error('[人间修订中·状态栏] AI 起草失败', error);
     const message = error instanceof Error ? error.message : String(error);

@@ -780,6 +780,38 @@ button {
   text-align: center;
 }
 
+.ai-system-banner {
+  display: grid;
+  gap: 4px;
+  margin: 0 11px 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--brass);
+  background: oklch(0.9 0.05 78 / 0.45);
+}
+
+.ai-system-tag {
+  color: var(--brass);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.ai-system-banner strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ai-system-banner p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-system-banner .ai-system-scope {
+  color: var(--cinnabar);
+}
+
 .rule-editor-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
