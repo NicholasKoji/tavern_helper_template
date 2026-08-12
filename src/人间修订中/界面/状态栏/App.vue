@@ -8,6 +8,9 @@
       </div>
       <span class="editor-badge">{{ data.现实编辑器.状态 }}</span>
       <span class="version">{{ data.现实编辑器.版本 }}</span>
+      <button class="rule-edit-button" type="button" @click="openRuleEditor">
+        <PenLine :size="14" stroke-width="1.8" />改规则
+      </button>
     </header>
 
     <section class="meta-strip" aria-label="当前场景">
@@ -429,6 +432,124 @@
         </p>
       </section>
     </div>
+
+    <div
+      v-if="ruleEditorOpen"
+      class="rule-editor-backdrop"
+      @click.self="closeRuleEditor"
+      @keydown.esc="closeRuleEditor"
+    >
+      <section class="rule-editor" role="dialog" aria-modal="true" aria-labelledby="rule-editor-title">
+        <header class="rule-editor-header">
+          <div>
+            <span class="rule-editor-kicker">REALITY EDITOR · RULE REVISION</span>
+            <h2 id="rule-editor-title">现实编辑器 · 规则修订</h2>
+          </div>
+          <button class="rule-editor-close" type="button" aria-label="关闭规则编辑器" @click="closeRuleEditor">
+            <X :size="18" />
+          </button>
+        </header>
+
+        <p class="rule-editor-lead">
+          在此签发、修订或废止生效规则。确认后立即写入最新楼层变量，下一轮正文将按协议显化。
+        </p>
+
+        <label class="ai-hint">
+          <span>AI 起草方向（可选）</span>
+          <input
+            v-model="aiHint"
+            class="rule-control"
+            type="text"
+            maxlength="120"
+            placeholder="例如：来一条让主角在奶茶店尴尬的规则"
+          />
+        </label>
+
+        <div class="rule-editor-groups">
+          <section v-for="group in editorGroups" :key="group.key" class="rule-editor-group">
+            <header class="rule-editor-group-header">
+              <h3>{{ group.title }}</h3>
+              <span class="rule-editor-count">{{ ruleEditorState[group.key].length }}</span>
+              <span class="rule-editor-group-actions">
+                <button class="rule-tool-button" type="button" :disabled="aiBusy" @click="suggestRules(group.key)">
+                  <WandSparkles :size="14" />{{ aiBusy ? '起草中…' : 'AI 出主意' }}
+                </button>
+                <button class="rule-tool-button" type="button" @click="addRuleRow(group.key)">
+                  <Plus :size="14" />添加
+                </button>
+              </span>
+            </header>
+
+            <p v-if="ruleEditorState[group.key].length === 0" class="rule-editor-empty">该类暂无规则，留空即不设限。</p>
+
+            <div
+              v-for="(row, index) in ruleEditorState[group.key]"
+              :key="`${group.key}-${index}`"
+              class="rule-editor-row"
+              :class="{ scoped: group.scoped }"
+            >
+              <input
+                v-if="group.scoped"
+                v-model="row.对象"
+                class="rule-control"
+                type="text"
+                :placeholder="group.scopePlaceholder"
+                :aria-label="`${group.title}生效范围`"
+              />
+              <input
+                v-model="row.名称"
+                class="rule-control"
+                type="text"
+                placeholder="规则名称"
+                :aria-label="`${group.title}规则名称`"
+              />
+              <input
+                v-model="row.内容"
+                class="rule-control"
+                type="text"
+                placeholder="规则内容"
+                :aria-label="`${group.title}规则内容`"
+              />
+              <div class="rule-editor-row-actions">
+                <span v-if="row._ai" class="rule-ai-badge">AI 草稿</span>
+                <button
+                  class="rule-row-remove"
+                  type="button"
+                  :aria-label="`删除${group.title}第 ${index + 1} 条`"
+                  @click="removeRuleRow(group.key, index)"
+                >
+                  <Trash2 :size="15" />
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="rule-editor-footer">
+          <p v-if="editorError" class="rule-editor-error">{{ editorError }}</p>
+          <div class="rule-editor-actions">
+            <button class="rule-action ghost" type="button" :disabled="busy" @click="closeRuleEditor">取消</button>
+            <button class="rule-action primary" type="button" :disabled="busy" @click="confirmRules">
+              {{ busy ? '写入中…' : '确认修订' }}
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+
+    <div v-if="announcement" class="system-notice" role="status" aria-live="polite">
+      <header>
+        <span>现实编辑器 · 系统公告</span>
+        <button type="button" aria-label="关闭公告" @click="announcement = null">
+          <X :size="14" />
+        </button>
+      </header>
+      <ul>
+        <li v-for="item in announcement.items" :key="item.编号">
+          <b>{{ item.编号 }}</b> {{ item.类型 }} {{ item.范围 }}「{{ item.名称 }}」：{{ item.内容 }}
+        </li>
+      </ul>
+    </div>
   </main>
   <div class="sr-only" aria-live="polite">{{ announcer }}</div>
 </template>
@@ -440,13 +561,18 @@ import {
   Clock3,
   LayoutDashboard,
   MapPin,
+  PenLine,
+  Plus,
   ScrollText,
   ShieldCheck,
+  Trash2,
   User,
   Users,
+  WandSparkles,
+  X,
 } from '@lucide/vue';
 import { useLocalStorage } from '@vueuse/core';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import themeArchiveFontUrl from '../世界配置/fonts/theme-archive.woff2?url';
 import { useDataStore } from './store';
 
@@ -572,6 +698,350 @@ onUnmounted(() => {
   injectedThemeFontStyle?.remove();
   injectedThemeFontStyle = null;
 });
+
+type RuleGroupKey = '世界规则' | '区域规则' | '个人规则';
+type RuleRowDraft = {
+  对象: string;
+  名称: string;
+  内容: string;
+  _ai?: boolean;
+};
+type RuleEditorState = Record<RuleGroupKey, RuleRowDraft[]>;
+type RulePatchOp = { op: 'insert' | 'replace' | 'remove'; path: string; value?: string };
+type AnnouncementItem = {
+  编号: string;
+  类型: '新增' | '修订' | '废止';
+  名称: string;
+  内容: string;
+  范围: string;
+};
+
+const ruleEditorOpen = ref(false);
+const busy = ref(false);
+const aiBusy = ref(false);
+const aiHint = ref('');
+const editorError = ref('');
+const announcement = ref<{ items: AnnouncementItem[] } | null>(null);
+let modSeq = 0;
+
+const editorGroups: Array<{
+  key: RuleGroupKey;
+  title: string;
+  scoped: boolean;
+  scopePlaceholder: string;
+}> = [
+  { key: '世界规则', title: '世界规则', scoped: false, scopePlaceholder: '' },
+  { key: '区域规则', title: '区域规则', scoped: true, scopePlaceholder: '区域名（如：云溪城）' },
+  { key: '个人规则', title: '个人规则', scoped: true, scopePlaceholder: '对象名（如：沈青梧）' },
+];
+
+const ruleEditorState = reactive<RuleEditorState>({
+  世界规则: [],
+  区域规则: [],
+  个人规则: [],
+});
+
+function toScopedDrafts(record: Record<string, Record<string, string>>): RuleRowDraft[] {
+  return Object.entries(record).flatMap(([target, rules]) =>
+    Object.entries(rules).map(([名称, 内容]) => ({ 对象: target, 名称, 内容 })),
+  );
+}
+
+function openRuleEditor() {
+  editorError.value = '';
+  const rules = data.value.现实编辑器.生效规则;
+  ruleEditorState.世界规则 = Object.entries(rules.世界规则 ?? {}).map(([名称, 内容]) => ({ 对象: '', 名称, 内容 }));
+  ruleEditorState.区域规则 = toScopedDrafts(rules.区域规则 ?? {});
+  ruleEditorState.个人规则 = toScopedDrafts(rules.个人规则 ?? {});
+  ruleEditorOpen.value = true;
+}
+
+function closeRuleEditor() {
+  if (busy.value) {
+    return;
+  }
+  ruleEditorOpen.value = false;
+  editorError.value = '';
+}
+
+function addRuleRow(groupKey: RuleGroupKey) {
+  ruleEditorState[groupKey].push({ 对象: '', 名称: '', 内容: '' });
+}
+
+function removeRuleRow(groupKey: RuleGroupKey, index: number) {
+  ruleEditorState[groupKey].splice(index, 1);
+}
+
+function assertSafePathSegment(value: string, label: string, errors: string[]) {
+  if (/[/~.]/.test(value)) {
+    errors.push(`${label}「${value}」不能包含 / ~ . 字符`);
+  }
+}
+
+function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: AnnouncementItem[] } {
+  const rules = data.value.现实编辑器.生效规则;
+  const current = {
+    世界规则: rules.世界规则 ?? {},
+    区域规则: rules.区域规则 ?? {},
+    个人规则: rules.个人规则 ?? {},
+  };
+  const ops: RulePatchOp[] = [];
+  const items: AnnouncementItem[] = [];
+  const errors: string[] = [];
+
+  const worldNames = new Set<string>();
+  for (const row of ruleEditorState.世界规则) {
+    const name = row.名称.trim();
+    if (!name) {
+      errors.push('世界规则存在未命名的规则');
+      continue;
+    }
+    assertSafePathSegment(name, '规则名', errors);
+    if (worldNames.has(name)) {
+      errors.push(`世界规则规则名重复：${name}`);
+      continue;
+    }
+    worldNames.add(name);
+    const content = row.内容.trim() || '已生效';
+    const path = `/现实编辑器/生效规则/世界规则/${name}`;
+    if (current.世界规则[name] === undefined) {
+      ops.push({ op: 'insert', path, value: content });
+      items.push({ 编号: '', 类型: '新增', 名称: name, 内容: content, 范围: '整个世界' });
+    } else if (current.世界规则[name] !== content) {
+      ops.push({ op: 'replace', path, value: content });
+      items.push({ 编号: '', 类型: '修订', 名称: name, 内容: content, 范围: '整个世界' });
+    }
+  }
+  for (const name of Object.keys(current.世界规则)) {
+    if (!worldNames.has(name)) {
+      ops.push({ op: 'remove', path: `/现实编辑器/生效规则/世界规则/${name}` });
+      items.push({ 编号: '', 类型: '废止', 名称: name, 内容: '', 范围: '整个世界' });
+    }
+  }
+
+  const handleScoped = (groupKey: '区域规则' | '个人规则') => {
+    const scopeLabel = groupKey === '区域规则' ? '区域名' : '对象名';
+    const seenKeys = new Set<string>();
+    for (const row of ruleEditorState[groupKey]) {
+      const target = row.对象?.trim() ?? '';
+      const name = row.名称.trim();
+      if (!target) {
+        errors.push(`${groupKey}存在未填写${scopeLabel}的行`);
+        continue;
+      }
+      if (!name) {
+        errors.push(`${groupKey}「${target}」存在未命名的规则`);
+        continue;
+      }
+      assertSafePathSegment(target, scopeLabel, errors);
+      assertSafePathSegment(name, '规则名', errors);
+      const mapKey = `${target}\u0000${name}`;
+      if (seenKeys.has(mapKey)) {
+        errors.push(`${groupKey}重复：${target} / ${name}`);
+        continue;
+      }
+      seenKeys.add(mapKey);
+      const content = row.内容.trim() || '已生效';
+      const path = `/现实编辑器/生效规则/${groupKey}/${target}/${name}`;
+      const scopeText = groupKey === '区域规则' ? `指定区域（${target}）` : `指定对象（${target}）`;
+      const oldContent = current[groupKey][target]?.[name];
+      if (oldContent === undefined) {
+        ops.push({ op: 'insert', path, value: content });
+        items.push({ 编号: '', 类型: '新增', 名称: name, 内容: content, 范围: scopeText });
+      } else if (oldContent !== content) {
+        ops.push({ op: 'replace', path, value: content });
+        items.push({ 编号: '', 类型: '修订', 名称: name, 内容: content, 范围: scopeText });
+      }
+    }
+    for (const [target, ruleMap] of Object.entries(current[groupKey] ?? {})) {
+      for (const name of Object.keys(ruleMap)) {
+        if (!seenKeys.has(`${target}\u0000${name}`)) {
+          ops.push({ op: 'remove', path: `/现实编辑器/生效规则/${groupKey}/${target}/${name}` });
+          items.push({
+            编号: '',
+            类型: '废止',
+            名称: name,
+            内容: '',
+            范围: groupKey === '区域规则' ? `指定区域（${target}）` : `指定对象（${target}）`,
+          });
+        }
+      }
+    }
+  };
+
+  handleScoped('区域规则');
+  handleScoped('个人规则');
+
+  if (errors.length) {
+    return { error: errors.join('；') };
+  }
+  return { ops, items };
+}
+
+async function confirmRules() {
+  if (busy.value) {
+    return;
+  }
+  const { error, ops, items } = buildRuleDiff();
+  if (error) {
+    editorError.value = error;
+    return;
+  }
+  if (!items.length) {
+    editorError.value = '没有检测到任何规则变更';
+    return;
+  }
+
+  busy.value = true;
+  editorError.value = '';
+  try {
+    const patchMessage = `<UpdateVariable>\n<Analysis>现实编辑器持有者签发规则修订。</Analysis>\n<JSONPatch>\n${JSON.stringify(ops, null, 2)}\n</JSONPatch>\n</UpdateVariable>`;
+    const oldData = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
+    const newData = await Mvu.parseMessage(patchMessage, oldData);
+    await Mvu.replaceMvuData(newData, { type: 'message', message_id: getCurrentMessageId() });
+    data.value.现实编辑器.生效规则 = newData.stat_data.现实编辑器.生效规则;
+
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    announcement.value = {
+      items: items.map(item => ({
+        ...item,
+        编号: `MOD-${stamp}-${String(++modSeq).padStart(3, '0')}`,
+      })),
+    };
+    ruleEditorOpen.value = false;
+    window.setTimeout(() => {
+      if (announcement.value) {
+        announcement.value = null;
+      }
+    }, 12000);
+  } catch (error) {
+    console.error('[人间修订中·状态栏] 规则修订失败', error);
+    toastr.error(error instanceof Error ? error.message : String(error), '现实编辑器报错');
+  } finally {
+    busy.value = false;
+  }
+}
+
+function parseJsonLoose(text: string): unknown {
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '');
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    }
+    throw new Error('AI 返回的内容不是可解析的 JSON');
+  }
+}
+
+function buildSuggestionPrompt(groupKey: RuleGroupKey, hint: string): string {
+  const world = data.value.世界配置;
+  const scene = data.value.当前场景;
+  const rules = data.value.现实编辑器.生效规则;
+  const scopeRule =
+    groupKey === '世界规则'
+      ? '作用于整个世界与所有公共场景，不点名具体对象。'
+      : groupKey === '区域规则'
+        ? '必须绑定一个清晰空间边界（区域名，如建筑、房间、街区、场馆），只在该区域内生效。'
+        : '必须绑定一个具体对象（角色或物品名），只影响该对象。';
+  return `你是「现实编辑器」的规则起草引擎，为玩家签发新规则提供草稿。只输出规则建议，不解释、不评价、不输出任何其他内容。
+【目标类别】${groupKey}
+${hint ? `【玩家方向】${hint}` : ''}
+【世界背景】
+- 世界模板：${world.世界模板}
+- 时代背景：${world.时代背景}
+- 核心冲突：${world.核心冲突}
+- 叙事文风：${world.叙事文风}
+- 允许黑深残：${world.允许黑深残 ? '是' : '否'}
+- 玩法模式.编辑器篡改：${world.玩法模式.编辑器篡改}
+- 主角启用：${world.主角启用 ? '是' : '否'}
+【当前场景】${scene.地点.一级区域}/${scene.地点.二级区域}/${scene.地点.三级地点}
+【当前生效规则】
+${JSON.stringify(rules, null, 2)}
+【起草要求】
+1. 产出 3 条${groupKey}草稿，每条包含「名称」和「内容」${groupKey !== '世界规则' ? '；区域规则填「生效对象」为区域名，个人规则填「生效对象」为对象名' : ''}。
+2. 规则内容必须具体、可显现：落到动作、对白、身体反应或环境细节，禁止抽象口号。
+3. 禁止出现“规则”“编辑器”“系统”等元叙述词；正文角色把它当作天然秩序。
+4. 禁止与当前生效规则明显冲突；内容符合世界模板与尺度（${world.允许黑深残 ? '允许压抑残酷但不得无故堆砌' : '禁止苦大仇深'}）。
+5. ${scopeRule}
+6. 名称 2~12 字，内容一句话以内，明确、无歧义。
+7. 只输出符合 JSON Schema 的 JSON。`;
+}
+
+async function suggestRules(groupKey: RuleGroupKey) {
+  if (aiBusy.value) {
+    return;
+  }
+  aiBusy.value = true;
+  editorError.value = '';
+  try {
+    const hint = aiHint.value.trim();
+    const schema = {
+      name: `rule_suggestions_${groupKey}`,
+      description: `为${groupKey}起草规则建议`,
+      value: {
+        type: 'object',
+        properties: {
+          规则列表: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                名称: { type: 'string' },
+                内容: { type: 'string' },
+                ...(groupKey !== '世界规则' ? { 生效对象: { type: 'string' } } : {}),
+              },
+              required: ['名称', '内容', ...(groupKey !== '世界规则' ? ['生效对象'] : [])],
+            },
+          },
+        },
+        required: ['规则列表'],
+      },
+    };
+    const result = await generateRaw({
+      user_input: hint || '按以上要求起草规则建议。',
+      should_silence: true,
+      generation_id: `human-revision-rule-suggest-${Date.now()}`,
+      ordered_prompts: [{ role: 'system', content: buildSuggestionPrompt(groupKey, hint) }, 'user_input'],
+      json_schema: schema,
+    });
+    const text = typeof result === 'string' ? result : result.content;
+    const parsed = parseJsonLoose(text) as { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> };
+    const list = Array.isArray(parsed?.规则列表) ? parsed.规则列表 : [];
+    if (!list.length) {
+      throw new Error('AI 未返回可用的规则建议');
+    }
+    let added = 0;
+    for (const item of list) {
+      const name = (item.名称 ?? '').trim();
+      const content = (item.内容 ?? '').trim();
+      if (!name || !content) {
+        continue;
+      }
+      if (groupKey === '世界规则') {
+        ruleEditorState.世界规则.push({ 对象: '', 名称: name, 内容: content, _ai: true });
+      } else {
+        ruleEditorState[groupKey].push({ 对象: (item.生效对象 ?? '').trim(), 名称: name, 内容: content, _ai: true });
+      }
+      added += 1;
+    }
+    if (!added) {
+      throw new Error('AI 返回的规则缺少名称或内容');
+    }
+    toastr.success(`已填入 ${added} 条 AI 草稿，请核对后确认`, '现实编辑器');
+  } catch (error) {
+    console.error('[人间修订中·状态栏] AI 起草失败', error);
+    toastr.error(error instanceof Error ? error.message : String(error), 'AI 起草失败');
+  } finally {
+    aiBusy.value = false;
+  }
+}
 
 function setTab(tab: TabId) {
   activeTab.value = tab;

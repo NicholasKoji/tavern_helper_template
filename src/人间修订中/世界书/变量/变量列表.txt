@@ -2,3 +2,7 @@
 <status_current_variable>
 {{format_message_variable::stat_data}}
 </status_current_variable>
+
+<status_current_rule_changes>
+{{format_message_variable::delta_data.现实编辑器.生效规则}}
+</status_current_rule_changes>
