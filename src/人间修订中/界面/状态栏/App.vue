@@ -471,8 +471,13 @@
               <h3>{{ group.title }}</h3>
               <span class="rule-editor-count">{{ ruleEditorState[group.key].length }}</span>
               <span class="rule-editor-group-actions">
-                <button class="rule-tool-button" type="button" :disabled="aiBusy" @click="suggestRules(group.key)">
-                  <WandSparkles :size="14" />{{ aiBusy ? '起草中…' : 'AI 出主意' }}
+                <button
+                  class="rule-tool-button"
+                  type="button"
+                  :disabled="aiBusy[group.key]"
+                  @click="suggestRules(group.key)"
+                >
+                  <WandSparkles :size="14" />{{ aiBusy[group.key] ? '拟稿中…' : 'AI 拟稿' }}
                 </button>
                 <button class="rule-tool-button" type="button" @click="addRuleRow(group.key)">
                   <Plus :size="14" />添加
@@ -529,7 +534,7 @@
           <p v-if="editorError" class="rule-editor-error">{{ editorError }}</p>
           <div class="rule-editor-actions">
             <button class="rule-action ghost" type="button" :disabled="busy" @click="closeRuleEditor">取消</button>
-            <button class="rule-action primary" type="button" :disabled="busy" @click="confirmRules">
+            <button class="rule-action primary" type="button" :disabled="busy || anyAiBusy" @click="confirmRules">
               {{ busy ? '写入中…' : '确认修订' }}
             </button>
           </div>
@@ -718,11 +723,16 @@ type AnnouncementItem = {
 
 const ruleEditorOpen = ref(false);
 const busy = ref(false);
-const aiBusy = ref(false);
+const aiBusy = reactive<Record<RuleGroupKey, boolean>>({
+  世界规则: false,
+  区域规则: false,
+  个人规则: false,
+});
 const aiHint = ref('');
 const editorError = ref('');
 const announcement = ref<{ items: AnnouncementItem[] } | null>(null);
 let modSeq = 0;
+const anyAiBusy = computed(() => Object.values(aiBusy).some(Boolean));
 
 const editorGroups: Array<{
   key: RuleGroupKey;
@@ -971,48 +981,100 @@ ${JSON.stringify(rules, null, 2)}
 4. 禁止与当前生效规则明显冲突；内容符合世界模板与尺度（${world.允许黑深残 ? '允许压抑残酷但不得无故堆砌' : '禁止苦大仇深'}）。
 5. ${scopeRule}
 6. 名称 2~12 字，内容一句话以内，明确、无歧义。
-7. 只输出符合 JSON Schema 的 JSON。`;
+7. 只输出 JSON，不要输出任何解释、Markdown 代码块或额外文本。格式：{"规则列表":[{"名称":"...","内容":"..."}${groupKey !== '世界规则' ? ',"生效对象":"..."' : ''}]}。`;
+}
+
+function suggestionSchema(groupKey: RuleGroupKey) {
+  const scoped = groupKey !== '世界规则';
+  const properties: Record<string, { type: string }> = { 名称: { type: 'string' }, 内容: { type: 'string' } };
+  const required = ['名称', '内容'];
+  if (scoped) {
+    properties.生效对象 = { type: 'string' };
+    required.push('生效对象');
+  }
+  return {
+    name: `rule_suggestions_${groupKey}`,
+    description: `为${groupKey}起草规则建议`,
+    value: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        规则列表: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties,
+            required,
+          },
+        },
+      },
+      required: ['规则列表'],
+    },
+  };
+}
+
+function extractGenerateText(
+  result: string | { content?: string; tool_calls?: Array<{ arguments?: string; function?: { arguments?: string } }> },
+): string {
+  if (typeof result === 'string') {
+    return result;
+  }
+  const calls = result?.tool_calls;
+  if (Array.isArray(calls) && calls.length) {
+    const args = calls[0]?.function?.arguments ?? calls[0]?.arguments ?? '';
+    if (args) {
+      return args;
+    }
+  }
+  return result?.content ?? '';
 }
 
 async function suggestRules(groupKey: RuleGroupKey) {
-  if (aiBusy.value) {
+  if (aiBusy[groupKey]) {
     return;
   }
-  aiBusy.value = true;
+  aiBusy[groupKey] = true;
   editorError.value = '';
   try {
     const hint = aiHint.value.trim();
-    const schema = {
-      name: `rule_suggestions_${groupKey}`,
-      description: `为${groupKey}起草规则建议`,
-      value: {
-        type: 'object',
-        properties: {
-          规则列表: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                名称: { type: 'string' },
-                内容: { type: 'string' },
-                ...(groupKey !== '世界规则' ? { 生效对象: { type: 'string' } } : {}),
-              },
-              required: ['名称', '内容', ...(groupKey !== '世界规则' ? ['生效对象'] : [])],
-            },
-          },
-        },
-        required: ['规则列表'],
-      },
-    };
-    const result = await generateRaw({
-      user_input: hint || '按以上要求起草规则建议。',
-      should_silence: true,
-      generation_id: `human-revision-rule-suggest-${Date.now()}`,
-      ordered_prompts: [{ role: 'system', content: buildSuggestionPrompt(groupKey, hint) }, 'user_input'],
-      json_schema: schema,
-    });
-    const text = typeof result === 'string' ? result : result.content;
-    const parsed = parseJsonLoose(text) as { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> };
+    const prompt = buildSuggestionPrompt(groupKey, hint);
+    let parsed: { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> } | null = null;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 2 && !parsed; attempt += 1) {
+      try {
+        const result = await generateRaw({
+          user_input: hint || '按以上要求起草规则建议。',
+          should_silence: true,
+          generation_id: `human-revision-rule-suggest-${groupKey}-${Date.now()}-${attempt}`,
+          ordered_prompts: [{ role: 'system', content: prompt }, 'user_input'],
+          ...(attempt === 0 ? { json_schema: suggestionSchema(groupKey) } : {}),
+        });
+        const text = extractGenerateText(result);
+        if (!text.trim()) {
+          lastError = new Error('AI 返回为空');
+          continue;
+        }
+        try {
+          parsed = parseJsonLoose(text) as { 规则列表?: Array<{ 名称?: string; 内容?: string; 生效对象?: string }> };
+        } catch (error) {
+          lastError = error;
+          console.warn(
+            `[人间修订中·状态栏] AI 拟稿第 ${attempt + 1} 次结果无法解析，将${attempt === 0 ? '改用普通格式重试' : '终止'}。`,
+            text.slice(0, 200),
+          );
+        }
+      } catch (error) {
+        lastError = error;
+        console.warn(
+          `[人间修订中·状态栏] AI 拟稿第 ${attempt + 1} 次请求失败${attempt === 0 ? '，将改用普通格式重试' : ''}。`,
+          error,
+        );
+      }
+    }
+    if (!parsed) {
+      throw new Error(lastError instanceof Error ? lastError.message : String(lastError));
+    }
     const list = Array.isArray(parsed?.规则列表) ? parsed.规则列表 : [];
     if (!list.length) {
       throw new Error('AI 未返回可用的规则建议');
@@ -1023,6 +1085,9 @@ async function suggestRules(groupKey: RuleGroupKey) {
       const content = (item.内容 ?? '').trim();
       if (!name || !content) {
         continue;
+      }
+      if (!ruleEditorOpen.value) {
+        return;
       }
       if (groupKey === '世界规则') {
         ruleEditorState.世界规则.push({ 对象: '', 名称: name, 内容: content, _ai: true });
@@ -1037,9 +1102,11 @@ async function suggestRules(groupKey: RuleGroupKey) {
     toastr.success(`已填入 ${added} 条 AI 草稿，请核对后确认`, '现实编辑器');
   } catch (error) {
     console.error('[人间修订中·状态栏] AI 起草失败', error);
-    toastr.error(error instanceof Error ? error.message : String(error), 'AI 起草失败');
+    const message = error instanceof Error ? error.message : String(error);
+    editorError.value = `AI 拟稿失败：${message}`;
+    toastr.error(message, 'AI 拟稿失败');
   } finally {
-    aiBusy.value = false;
+    aiBusy[groupKey] = false;
   }
 }
 
