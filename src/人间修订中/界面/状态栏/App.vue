@@ -477,7 +477,7 @@
                   :disabled="aiBusy[group.key]"
                   @click="suggestRules(group.key)"
                 >
-                  <WandSparkles :size="14" />{{ aiBusy[group.key] ? '拟稿中…' : 'AI 拟稿' }}
+                  <WandSparkles :size="14" />{{ aiBusy[group.key] ? '篡改中…' : '常识篡改' }}
                 </button>
                 <button class="rule-tool-button" type="button" @click="addRuleRow(group.key)">
                   <Plus :size="14" />添加
@@ -517,13 +517,14 @@
                 placeholder="规则名称"
                 :aria-label="`${group.title}规则名称`"
               />
-              <input
+              <textarea
                 v-model="row.内容"
+                v-auto-grow
                 class="rule-control"
-                type="text"
+                rows="1"
                 placeholder="规则内容"
                 :aria-label="`${group.title}规则内容`"
-              />
+              ></textarea>
               <div class="rule-editor-row-actions">
                 <span v-if="row._ai" class="rule-ai-badge">AI 草稿</span>
                 <button
@@ -587,6 +588,7 @@ import {
 } from '@lucide/vue';
 import { useLocalStorage } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import type { Directive } from 'vue';
 import themeArchiveFontUrl from '../世界配置/fonts/theme-archive.woff2?url';
 import { useDataStore } from './store';
 
@@ -603,6 +605,23 @@ const themeId = ref<'archive'>('archive');
 const THEME_STORAGE_KEY = 'zaohua-world-config-theme';
 const themeFontStyleId = 'human-revision-status-fonts';
 let injectedThemeFontStyle: HTMLStyleElement | null = null;
+
+function autosizeTextarea(element: HTMLTextAreaElement) {
+  element.style.height = 'auto';
+  const totalBorder = element.offsetHeight - element.clientHeight;
+  element.style.height = `${Math.max(element.scrollHeight + totalBorder, 32)}px`;
+}
+
+const vAutoGrow: Directive<HTMLTextAreaElement> = {
+  mounted: element => autosizeTextarea(element),
+  updated: element => autosizeTextarea(element),
+};
+
+function autosizeAllRuleTextareas() {
+  document
+    .querySelectorAll<HTMLTextAreaElement>('.rule-editor textarea.rule-control')
+    .forEach(element => autosizeTextarea(element));
+}
 
 const tabs = [
   { id: 'overview' as const, label: '总览', icon: LayoutDashboard },
@@ -706,9 +725,11 @@ onMounted(() => {
   `;
   document.head.appendChild(style);
   injectedThemeFontStyle = style;
+  window.addEventListener('resize', autosizeAllRuleTextareas);
 });
 
 onUnmounted(() => {
+  window.removeEventListener('resize', autosizeAllRuleTextareas);
   injectedThemeFontStyle?.remove();
   injectedThemeFontStyle = null;
 });
@@ -972,10 +993,33 @@ function parseJsonLoose(text: string): unknown {
   }
 }
 
+function extractRecentStoryBodies(maxLayers = 3): string[] {
+  const lastMessageId = getLastMessageId();
+  if (lastMessageId < 0) {
+    return [];
+  }
+  const assistantMessages = getChatMessages(`0-${lastMessageId}`, {
+    role: 'assistant',
+    hide_state: 'unhidden',
+  });
+  const bodies: string[] = [];
+  for (let index = assistantMessages.length - 1; index >= 0 && bodies.length < maxLayers; index -= 1) {
+    const match = assistantMessages[index].message.match(/<content>([\s\S]*?)<\/content>/i);
+    const body = match?.[1]?.trim();
+    if (body) {
+      bodies.push(body);
+    }
+  }
+  return bodies.reverse();
+}
+
 function buildWorldviewPrompt(groupKey: RuleGroupKey, hint: string): string {
   const world = data.value.世界配置;
   const scene = data.value.当前场景;
-  const rules = data.value.现实编辑器.生效规则;
+  const recentBodies = extractRecentStoryBodies();
+  const recentStory = recentBodies.length
+    ? recentBodies.map((body, index) => `第 ${index + 1} 层：\n${body}`).join('\n\n')
+    : '（暂无可用正文楼层）';
   const scopeRule =
     groupKey === '世界规则'
       ? '作用于整个世界与所有公共场景，不点名具体对象；体系应塑造整个社会的运转逻辑。'
@@ -1003,8 +1047,10 @@ ${hint ? `【玩家方向】${hint}` : '【玩家方向】未指定，请结合�
 - 玩法模式.编辑器篡改：${world.玩法模式.编辑器篡改}
 - 主角启用：${world.主角启用 ? '是' : '否'}
 【当前场景】${scene.地点.一级区域}/${scene.地点.二级区域}/${scene.地点.三级地点}
-【当前生效规则】
-${JSON.stringify(rules, null, 2)}
+【当前 MVU 变量快照】
+${JSON.stringify(data.value, null, 2)}
+【最近剧情正文（仅取 AI 回复中的 <content> 正文，按时间先后，最多三层）】
+${recentStory}
 【体系结构要求】
 一套${groupKey}体系必须按以下层次组织（每层至少覆盖一项，可合并但不得缺失逻辑环节）：
 1. 起因：打破常态的前提或危机（它制造什么问题）。
@@ -1127,14 +1173,14 @@ async function suggestRules(groupKey: RuleGroupKey) {
         } catch (error) {
           lastError = error;
           console.warn(
-            `[人间修订中·状态栏] AI 拟稿第 ${attempt + 1} 次结果无法解析，将${attempt === 0 ? '改用普通格式重试' : '终止'}。`,
+            `[人间修订中·状态栏] 常识篡改第 ${attempt + 1} 次结果无法解析，将${attempt === 0 ? '改用普通格式重试' : '终止'}。`,
             text.slice(0, 200),
           );
         }
       } catch (error) {
         lastError = error;
         console.warn(
-          `[人间修订中·状态栏] AI 拟稿第 ${attempt + 1} 次请求失败${attempt === 0 ? '，将改用普通格式重试' : ''}。`,
+          `[人间修订中·状态栏] 常识篡改第 ${attempt + 1} 次请求失败${attempt === 0 ? '，将改用普通格式重试' : ''}。`,
           error,
         );
       }
@@ -1182,8 +1228,8 @@ async function suggestRules(groupKey: RuleGroupKey) {
   } catch (error) {
     console.error('[人间修订中·状态栏] AI 起草失败', error);
     const message = error instanceof Error ? error.message : String(error);
-    editorError.value = `AI 拟稿失败：${message}`;
-    toastr.error(message, 'AI 拟稿失败');
+    editorError.value = `起草失败：${message}`;
+    toastr.error(message, '起草失败');
   } finally {
     aiBusy[groupKey] = false;
   }
