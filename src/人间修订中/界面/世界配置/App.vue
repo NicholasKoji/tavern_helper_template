@@ -411,120 +411,6 @@
                 <div class="split-questions">
                   <div class="field-label-block">
                     <span class="field-label-row"
-                      ><span>性别表达（可留空）</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.性别`"
-                        @click="requestCharacterFieldAi(characterIndex, '性别')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input v-model="character.性别" class="answer-control" type="text" placeholder="可稍后决定" />
-                  </div>
-                  <div class="field-label-block">
-                    <span class="field-label-row"
-                      ><span>年龄阶段（可留空）</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.年龄`"
-                        @click="requestCharacterFieldAi(characterIndex, '年龄')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input
-                      v-model="character.年龄"
-                      class="answer-control"
-                      type="text"
-                      inputmode="numeric"
-                      placeholder="可留空；需要写入档案时使用数字"
-                    />
-                  </div>
-                </div>
-                <div class="appearance-grid">
-                  <div class="field-label-block">
-                    <span class="field-label-row"
-                      ><span>身高</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.身高`"
-                        @click="requestCharacterFieldAi(characterIndex, '身高')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input
-                      v-model="character.身高"
-                      class="answer-control"
-                      type="text"
-                      placeholder="可留空或写体感范围"
-                    />
-                  </div>
-                  <div class="field-label-block">
-                    <span class="field-label-row"
-                      ><span>体型</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.体型`"
-                        @click="requestCharacterFieldAi(characterIndex, '体型')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input
-                      v-model="character.体型"
-                      class="answer-control"
-                      type="text"
-                      placeholder="比例、体态或生活痕迹"
-                    />
-                  </div>
-                  <div class="field-label-block">
-                    <span class="field-label-row"
-                      ><span>面容气质</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.面容气质`"
-                        @click="requestCharacterFieldAi(characterIndex, '面容气质')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input
-                      v-model="character.面容气质"
-                      class="answer-control"
-                      type="text"
-                      placeholder="脸型、五官、发型、眼神或表情痕迹"
-                    />
-                  </div>
-                  <div class="field-label-block">
-                    <span class="field-label-row"
-                      ><span>身体特征</span
-                      ><button
-                        class="field-ai-button"
-                        type="button"
-                        :disabled="aiBusyKey === `character:${characterIndex}.身体特征`"
-                        @click="requestCharacterFieldAi(characterIndex, '身体特征')"
-                      >
-                        <WandSparkles :size="12" />AI
-                      </button></span
-                    >
-                    <input
-                      v-model="character.身体特征"
-                      class="answer-control"
-                      type="text"
-                      placeholder="疤痕、手部、声音或其他可辨认细节"
-                    />
-                  </div>
-                </div>
-                <div class="split-questions">
-                  <div class="field-label-block">
-                    <span class="field-label-row"
                       ><span>身份与位置</span
                       ><button
                         class="field-ai-button"
@@ -701,6 +587,120 @@
                       class="answer-control"
                       type="text"
                       placeholder="盟友、对手、家人、见证者……"
+                    />
+                  </div>
+                </div>
+                <div class="split-questions">
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>性别表达（可留空）</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.性别`"
+                        @click="requestCharacterFieldAi(characterIndex, '性别')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input v-model="character.性别" class="answer-control" type="text" placeholder="可稍后决定" />
+                  </div>
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>年龄阶段（可留空）</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.年龄`"
+                        @click="requestCharacterFieldAi(characterIndex, '年龄')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input
+                      v-model="character.年龄"
+                      class="answer-control"
+                      type="text"
+                      inputmode="numeric"
+                      placeholder="可留空；需要写入档案时使用数字"
+                    />
+                  </div>
+                </div>
+                <div class="appearance-grid">
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>身高</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.身高`"
+                        @click="requestCharacterFieldAi(characterIndex, '身高')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input
+                      v-model="character.身高"
+                      class="answer-control"
+                      type="text"
+                      placeholder="可留空或写体感范围"
+                    />
+                  </div>
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>体型</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.体型`"
+                        @click="requestCharacterFieldAi(characterIndex, '体型')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input
+                      v-model="character.体型"
+                      class="answer-control"
+                      type="text"
+                      placeholder="比例、体态或生活痕迹"
+                    />
+                  </div>
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>面容气质</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.面容气质`"
+                        @click="requestCharacterFieldAi(characterIndex, '面容气质')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input
+                      v-model="character.面容气质"
+                      class="answer-control"
+                      type="text"
+                      placeholder="脸型、五官、发型、眼神或表情痕迹"
+                    />
+                  </div>
+                  <div class="field-label-block">
+                    <span class="field-label-row"
+                      ><span>身体特征</span
+                      ><button
+                        class="field-ai-button"
+                        type="button"
+                        :disabled="aiBusyKey === `character:${characterIndex}.身体特征`"
+                        @click="requestCharacterFieldAi(characterIndex, '身体特征')"
+                      >
+                        <WandSparkles :size="12" />AI
+                      </button></span
+                    >
+                    <input
+                      v-model="character.身体特征"
+                      class="answer-control"
+                      type="text"
+                      placeholder="疤痕、手部、声音或其他可辨认细节"
                     />
                   </div>
                 </div>
