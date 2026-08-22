@@ -1,0 +1,41 @@
+name: deploy-human-revision
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - src/人间修订中/界面/**
+      - src/人间修订中/脚本/变量结构/**
+      - scripts/human-revision-release.mjs
+      - package.json
+      - pnpm-lock.yaml
+      - .github/workflows/deploy-human-revision.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: human-revision-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      HUMAN_REVISION_PAGES_PROJECT: ${{ vars.HUMAN_REVISION_PAGES_PROJECT }}
+      HUMAN_REVISION_PAGES_BASE_URL: ${{ vars.HUMAN_REVISION_PAGES_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run human-revision:deploy

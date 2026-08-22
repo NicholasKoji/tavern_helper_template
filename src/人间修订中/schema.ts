@@ -95,6 +95,25 @@ export const Schema = z.object({
           卸载本设备: z.boolean().prefault(false),
         })
         .prefault({}),
+      开场配置: z
+        .object({
+          表现形式: z
+            .enum(['悬浮面板', '文字提示与弹窗', '绑定设备界面', '可感知的异常现象', '由 AI 结合前文整理'])
+            .prefault('由 AI 结合前文整理'),
+          可见与知晓: z.string().prefault(''),
+          可修改范围: z.array(z.enum(['世界', '区域', '个人'])).prefault(['世界', '区域', '个人']),
+          常识同步: z.enum(['立即同步', '渐进同步', '只对受影响对象同步']).prefault('立即同步'),
+          记忆保留: z
+            .enum(['只有主角保留', '所有人保留', '只有编辑器保留', '修改前后都不保留'])
+            .prefault('只有主角保留'),
+          主角受影响: z.enum(['是', '否']).prefault('是'),
+          自主执行: z
+            .enum(['A-完全随机', 'B-倾向色色', 'C-不涉及物理', 'D-完全禁止', 'E-玩家插件伪装'])
+            .prefault('D-完全禁止'),
+          限制与代价: z.string().prefault(''),
+          自然语言修改: z.string().prefault(''),
+        })
+        .prefault({}),
       生效规则: z
         .object({
           世界规则: z.record(z.string().describe('规则名'), z.string().describe('规则内容')).prefault({}),
@@ -181,7 +200,7 @@ export const Schema = z.object({
               性别: z.string().prefault('女'),
               年龄: z.coerce
                 .number()
-                .transform(value => _.clamp(value, 0, 200))
+                .transform(value => (value === -1 ? -1 : _.clamp(value, 0, 200)))
                 .prefault(18),
               身份: z.string().prefault(''),
               关系定位: z.string().prefault(''),

@@ -79,6 +79,8 @@ const config: Config = {
   entries: glob_script_files().map(parse_entry),
 };
 
+const human_revision_pages_only = process.env.HUMAN_REVISION_PAGES_ONLY === 'true';
+
 let io: Server;
 function watch_tavern_helper(compiler: webpack.Compiler) {
   if (compiler.options.watch) {
@@ -438,8 +440,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     )
       .concat(
         { apply: watch_tavern_helper },
-        { apply: schema_dump },
-        { apply: tavern_sync },
+        ...(human_revision_pages_only ? [] : [{ apply: schema_dump }, { apply: tavern_sync }]),
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,

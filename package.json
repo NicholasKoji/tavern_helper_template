@@ -6,6 +6,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" --no-error-on-unmatched-pattern",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "human-revision:stage": "node scripts/human-revision-release.mjs stage",
+    "human-revision:verify": "node scripts/human-revision-release.mjs verify",
+    "human-revision:deploy": "node scripts/human-revision-release.mjs deploy",
     "dump": "node dump_schema.ts",
     "sync": "node tavern_sync.mjs"
   },

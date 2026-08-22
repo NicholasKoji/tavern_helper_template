@@ -11,7 +11,48 @@
       <button class="rule-edit-button" type="button" @click="openRuleEditor">
         <PenLine :size="14" stroke-width="1.8" />改规则
       </button>
+      <button class="status-settings-button" type="button" aria-label="设置" @click="settingsOpen = !settingsOpen">
+        <Settings :size="17" stroke-width="1.8" />
+      </button>
     </header>
+
+    <section
+      v-if="settingsOpen"
+      class="status-settings-panel"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="status-settings-title"
+    >
+      <header class="status-settings-header">
+        <div>
+          <span class="kicker">PREFERENCES</span>
+          <h2 id="status-settings-title">设置</h2>
+        </div>
+        <button class="rule-editor-close" type="button" aria-label="关闭设置" @click="settingsOpen = false">
+          <X :size="17" />
+        </button>
+      </header>
+      <p>四个视觉预设共用同一套状态栏信息架构，只改变配色、背景纹理和标题字体。</p>
+      <div class="status-theme-options" role="radiogroup" aria-label="选择主题">
+        <button
+          v-for="theme in themeOptions"
+          :key="theme.id"
+          class="status-theme-option"
+          :class="{ active: theme.id === themeId }"
+          type="button"
+          role="radio"
+          :aria-checked="theme.id === themeId"
+          @click="setTheme(theme.id)"
+        >
+          <span class="status-theme-swatch" :data-theme-swatch="theme.id" aria-hidden="true" />
+          <span
+            ><strong>{{ theme.name }}</strong
+            ><small>{{ theme.caption }}</small></span
+          >
+          <Check v-if="theme.id === themeId" :size="14" />
+        </button>
+      </div>
+    </section>
 
     <section class="meta-strip" aria-label="当前场景">
       <div class="meta-item">
@@ -173,7 +214,7 @@
             </div>
             <div class="data-row">
               <div class="data-key">年龄</div>
-              <div class="data-val">{{ data.主角.基础信息.年龄 }}</div>
+              <div class="data-val">{{ formatAge(data.主角.基础信息.年龄) }}</div>
             </div>
             <div class="data-row">
               <div class="data-key">身份</div>
@@ -316,7 +357,7 @@
               </div>
               <div class="data-row">
                 <div class="data-key">年龄</div>
-                <div class="data-val">{{ selectedNpc.基础信息.年龄 }}</div>
+                <div class="data-val">{{ formatAge(selectedNpc.基础信息.年龄) }}</div>
               </div>
               <div class="data-row">
                 <div class="data-key">身份</div>
@@ -580,6 +621,7 @@ import {
   Plus,
   ScrollText,
   ShieldCheck,
+  Settings,
   Trash2,
   User,
   Users,
@@ -590,6 +632,10 @@ import { useLocalStorage } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import type { Directive } from 'vue';
 import themeArchiveFontUrl from '../世界配置/fonts/theme-archive.woff2?url';
+import themeAstrolabeFontUrl from '../世界配置/fonts/theme-astrolabe.woff2?url';
+import themeNeonFontUrl from '../世界配置/fonts/theme-neon.woff2?url';
+import themeTerminalFontUrl from '../世界配置/fonts/theme-terminal.woff2?url';
+import { onThemeChange, readSavedTheme, saveTheme, themeOptions, type ThemeId } from '../theme';
 import { useDataStore } from './store';
 
 type TabId = 'overview' | 'protagonist' | 'npc';
@@ -600,11 +646,17 @@ const scene = computed(() => data.value.当前场景);
 const activeTab = useLocalStorage<TabId>('human-revision:status_tab', 'overview');
 const selectedNpcName = useLocalStorage('human-revision:selected_npc', '');
 const announcer = ref('');
-const themeId = ref<'archive'>('archive');
+const themeId = ref<ThemeId>(readSavedTheme());
+const settingsOpen = ref(false);
 
-const THEME_STORAGE_KEY = 'zaohua-world-config-theme';
 const themeFontStyleId = 'human-revision-status-fonts';
 let injectedThemeFontStyle: HTMLStyleElement | null = null;
+let removeThemeListener: (() => void) | undefined;
+
+function setTheme(theme: ThemeId) {
+  themeId.value = theme;
+  saveTheme(theme);
+}
 
 function autosizeTextarea(element: HTMLTextAreaElement) {
   element.style.height = 'auto';
@@ -659,6 +711,10 @@ const ruleScopeCount = computed(() => ruleScopes.value.reduce((sum, scope) => su
 const privateStateEntries = computed(() => Object.entries(selectedNpc.value?.私密状态 ?? {}));
 const protagonistPrivateEntries = computed(() => Object.entries(data.value.主角.私密状态 ?? {}));
 
+function formatAge(value: unknown): string {
+  return Number(value) === -1 ? '待定' : String(value ?? '待定');
+}
+
 const formatDate = computed(() => {
   const date = scene.value.日期;
   if (date.年 == null && date.月 == null && date.日 == null) {
@@ -701,35 +757,26 @@ watch(
 );
 
 onMounted(() => {
-  try {
-    if (localStorage.getItem(THEME_STORAGE_KEY) !== 'archive') {
-      themeId.value = 'archive';
-    }
-  } catch (error) {
-    console.warn('[人间修订中·状态栏] 主题偏好读取失败，使用档案主题。', error);
-  }
+  removeThemeListener = onThemeChange(theme => (themeId.value = theme));
 
-  if (document.getElementById(themeFontStyleId)) {
-    return;
+  if (!document.getElementById(themeFontStyleId)) {
+    const style = document.createElement('style');
+    style.id = themeFontStyleId;
+    style.textContent = `
+      @font-face { font-family: 'Theme Archive Preview'; src: url("${themeArchiveFontUrl}") format('woff2'); font-display: swap; }
+      @font-face { font-family: 'Theme Astrolabe Preview'; src: url("${themeAstrolabeFontUrl}") format('woff2'); font-display: swap; }
+      @font-face { font-family: 'Theme Terminal Preview'; src: url("${themeTerminalFontUrl}") format('woff2'); font-display: swap; }
+      @font-face { font-family: 'Theme Neon Preview'; src: url("${themeNeonFontUrl}") format('woff2'); font-display: swap; }
+    `;
+    document.head.appendChild(style);
+    injectedThemeFontStyle = style;
   }
-  const style = document.createElement('style');
-  style.id = themeFontStyleId;
-  style.textContent = `
-    @font-face {
-      font-family: 'Theme Archive Preview';
-      src: url("${themeArchiveFontUrl}") format('woff2');
-      font-display: swap;
-      font-style: normal;
-      font-weight: 400;
-    }
-  `;
-  document.head.appendChild(style);
-  injectedThemeFontStyle = style;
   window.addEventListener('resize', autosizeAllRuleTextareas);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', autosizeAllRuleTextareas);
+  removeThemeListener?.();
   injectedThemeFontStyle?.remove();
   injectedThemeFontStyle = null;
 });
