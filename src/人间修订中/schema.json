@@ -433,11 +433,11 @@
               "type": "string"
             },
             "性别": {
-              "default": "男",
+              "default": "",
               "type": "string"
             },
             "年龄": {
-              "default": 23,
+              "default": -1,
               "type": "number"
             },
             "身份": {

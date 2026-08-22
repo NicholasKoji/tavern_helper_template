@@ -272,7 +272,7 @@
                     :disabled="Boolean(aiBusyKey)"
                     @click="requestProtagonistAi"
                   >
-                    <WandSparkles :size="15" />{{ aiBusyKey === 'protagonist' ? '整理中…' : 'AI 整理主角' }}
+                    <WandSparkles :size="15" />{{ aiBusyKey === 'protagonist' ? '生成中…' : '根据人设生成' }}
                   </button>
                 </div>
               </div>
@@ -281,10 +281,14 @@
                   <span class="identity-label">当前人设</span><strong>{{ protagonistName || '未设置当前人设' }}</strong
                   ><span class="identity-note">名称由酒馆当前人设提供，不在这里重复登记。</span>
                 </div>
+                <div class="persona-source">
+                  <span class="identity-label">人设说明</span>
+                  <p>{{ protagonistDescription || '当前人设暂无说明；AI 将结合名称与前两层已确认内容整理。' }}</p>
+                </div>
                 <div class="split-questions">
                   <div class="field-label-block">
                     <span class="field-label-row"
-                      ><span>性别表达（可留空）</span
+                      ><span>性别（可留空）</span
                       ><button
                         class="field-ai-button"
                         type="button"
@@ -302,7 +306,7 @@
                       v-model="form.主角.性别"
                       class="answer-control"
                       type="text"
-                      placeholder="由玩家决定，留空则沿用现有资料"
+                      placeholder="由玩家决定，留空表示未指定"
                     />
                   </div>
                   <div class="field-label-block">
@@ -324,7 +328,7 @@
                       class="answer-control"
                       type="text"
                       inputmode="numeric"
-                      placeholder="例如：二十多岁；需要写入档案时使用数字"
+                      placeholder="例如：二十多岁；只有明确数字才写入年龄"
                     />
                   </div>
                 </div>
@@ -627,7 +631,7 @@
                 <div class="split-questions">
                   <div class="field-label-block">
                     <span class="field-label-row"
-                      ><span>性别表达（可留空）</span
+                      ><span>性别（可留空）</span
                       ><button
                         class="field-ai-button"
                         type="button"
@@ -664,7 +668,7 @@
                       class="answer-control"
                       type="text"
                       inputmode="numeric"
-                      placeholder="可留空；需要写入档案时使用数字"
+                      placeholder="可留空；只有明确数字才写入年龄"
                     />
                   </div>
                 </div>
@@ -1053,43 +1057,35 @@
         </div>
       </main>
 
-      <aside class="context-rail" aria-label="创作共识摘要">
+      <aside class="context-rail" aria-label="已确认内容">
         <section class="context-panel">
           <header class="context-header">
             <div>
-              <span class="panel-kicker">已确认内容</span>
-              <h2>创作共识</h2>
+              <h2>已确认内容</h2>
             </div>
-            <span class="context-count">{{ completedLayerCount }} / 05</span>
+            <span class="context-count">{{ completedLayerCount }} / 5</span>
           </header>
-          <p class="context-intro">前面确认的内容会成为后续 AI 整理的边界。AI 结果始终先预览，再由你确认采用。</p>
+          <p class="context-intro">这些内容将作为后续 AI 整理的依据。</p>
           <div class="context-list">
             <button
               v-for="row in contextRows"
               :key="row.id"
               class="context-row"
+              :class="{ current: row.index === currentLayer }"
               type="button"
+              :aria-current="row.index === currentLayer ? 'step' : undefined"
               @click="goToLayer(row.index)"
             >
-              <span class="context-row-index">{{ row.order }}</span
-              ><span class="context-row-copy"
-                ><strong>{{ row.title }}</strong
-                ><small>{{ row.summary }}</small></span
-              ><Check v-if="row.complete" :size="14" class="context-complete" aria-label="已有内容" />
+              <span class="context-row-index">{{ row.order }}</span>
+              <span class="context-row-copy">
+                <strong>{{ row.title }}</strong>
+                <small>{{ row.summary }}</small>
+                <span class="context-row-status" :class="{ complete: row.complete }">{{
+                  row.complete ? '已确认' : '尚未填写'
+                }}</span>
+              </span>
             </button>
           </div>
-        </section>
-        <section class="context-panel editor-summary">
-          <header class="context-header">
-            <div>
-              <span class="panel-kicker">编辑器边界</span>
-              <h2>编辑器入口</h2>
-            </div>
-            <Cpu :size="17" />
-          </header>
-          <p v-if="form.让现实编辑器参与世界观生成">世界骨架允许纳入编辑器影响。</p>
-          <p v-else>世界骨架保持独立，编辑器将在开场后作为外来事物出现。</p>
-          <span class="summary-tag">{{ form.现实编辑器.表现形式 }}</span>
         </section>
       </aside>
     </div>
@@ -1317,6 +1313,8 @@ type AiPreview = {
   bulkAllowedKeys?: string[];
 };
 type AiPayload = { 结论?: string; 理由?: string; 可执行约束?: string[]; 可采用?: Record<string, string> };
+type PersonaSnapshot = { name?: unknown; description?: unknown };
+type PersonaReader = (scope: 'current') => PersonaSnapshot | null | undefined;
 
 const store = useDataStore();
 const { data } = storeToRefs(store);
@@ -1478,14 +1476,30 @@ const aiPreviewStale = computed(
   () => Boolean(aiPreview.value) && aiPreview.value?.contextRevision !== contextRevision.value,
 );
 
-function syncProtagonistName() {
-  protagonistName.value = typeof SillyTavern === 'undefined' ? '' : String(SillyTavern.name1 ?? '').trim();
+const protagonistDescription = ref('');
+
+function readCurrentPersona(): PersonaSnapshot {
+  const getPersona = (globalThis as typeof globalThis & { getPersona?: PersonaReader }).getPersona;
+  if (typeof getPersona !== 'function') return {};
+  try {
+    const value = getPersona('current');
+    return value && typeof value === 'object' ? value : {};
+  } catch (error) {
+    console.warn('[人间修订中·世界配置] 读取当前人设失败', error);
+    return {};
+  }
+}
+function syncProtagonistPersona() {
+  const persona = readCurrentPersona();
+  const fallbackName = typeof SillyTavern === 'undefined' ? '' : String(SillyTavern.name1 ?? '').trim();
+  protagonistName.value = trimValue(persona.name, fallbackName);
+  protagonistDescription.value = trimValue(persona.description, '');
 }
 function listenForPersonaChanges() {
   if (typeof SillyTavern === 'undefined') return;
   const eventTypes = SillyTavern.eventTypes as typeof SillyTavern.eventTypes & { PERSONA_CHANGED?: string };
   const eventType = eventTypes.PERSONA_CHANGED ?? 'persona_changed';
-  removePersonaListener = eventOn(eventType, syncProtagonistName).stop;
+  removePersonaListener = eventOn(eventType, syncProtagonistPersona).stop;
 }
 
 function trimValue(value: unknown, fallback = ''): string {
@@ -1495,8 +1509,14 @@ function trimValue(value: unknown, fallback = ''): string {
 function parseOptionalAge(value: unknown): number | undefined {
   const text = trimValue(value);
   if (!text) return undefined;
-  const age = Number(text);
+  const matches = text.match(/\d+/g) ?? [];
+  if (matches.length !== 1) return undefined;
+  const age = Number(matches[0]);
   return Number.isFinite(age) && age >= 0 && age <= 200 ? Math.round(age) : undefined;
+}
+function draftAgeFromStored(value: unknown): string {
+  const text = trimValue(value);
+  return text === '-1' ? '' : text;
 }
 function parseStoredNpcAge(value: unknown): number | undefined {
   const text = trimValue(value);
@@ -1504,12 +1524,23 @@ function parseStoredNpcAge(value: unknown): number | undefined {
   const age = Number(text);
   return Number.isFinite(age) && age >= -1 && age <= 200 ? Math.round(age) : undefined;
 }
+function isLegacyProtagonistPlaceholder(
+  world: { 创建时间?: unknown },
+  protagonist: { 基础信息?: { 性别?: unknown; 年龄?: unknown } },
+): boolean {
+  return (
+    !trimValue(world.创建时间) &&
+    trimValue(protagonist.基础信息?.性别) === '男' &&
+    Number(protagonist.基础信息?.年龄) === 23
+  );
+}
 function isEditorScope(value: unknown): value is EditorScope {
   return value === '世界' || value === '区域' || value === '个人';
 }
 function hydrateFromMvu() {
   const world = data.value.世界配置;
   const protagonist = data.value.主角;
+  const legacyProtagonistPlaceholder = isLegacyProtagonistPlaceholder(world, protagonist);
   const editorConfig = data.value.现实编辑器.开场配置;
   const npcEntries = Object.values(data.value.NPC序列 ?? {});
   const worldDescription = trimValue(world.世界观描述);
@@ -1526,13 +1557,14 @@ function hydrateFromMvu() {
   form.体验与叙事方向.叙事视角 = world.叙事视角;
   form.体验与叙事方向.文风 = world.叙事文风 === '微色情' ? '通用白描' : world.叙事文风;
   form.主角.启用 = world.主角启用;
-  form.主角.性别 = trimValue(protagonist.基础信息.性别, '');
-  form.主角.年龄 = trimValue(protagonist.基础信息.年龄, '');
+  form.主角.性别 = legacyProtagonistPlaceholder ? '' : trimValue(protagonist.基础信息.性别, '');
+  form.主角.年龄 = legacyProtagonistPlaceholder ? '' : draftAgeFromStored(protagonist.基础信息.年龄);
   form.主角.外貌.身高 = trimValue(protagonist.外貌.身高, '');
   form.主角.外貌.体型 = trimValue(protagonist.外貌.体型, '');
   form.主角.外貌.面容气质 = trimValue(protagonist.外貌.面容气质, '');
   form.主角.外貌.身体特征 = trimValue(protagonist.外貌.身体特征, '');
-  form.主角.身份与位置 = trimValue(protagonist.基础信息.身份, '');
+  const protagonistIdentity = trimValue(protagonist.基础信息.身份, '');
+  form.主角.身份与位置 = protagonistIdentity === '普通居民' ? '' : protagonistIdentity;
   form.主角.追求 = trimValue(protagonist.基础信息.目标, '');
   form.主角.性格与声音 = trimValue(protagonist.性格.底色, '');
   form.主角.补充设定 = trimValue(world.主角补充设定, '');
@@ -1605,6 +1637,34 @@ function compact(text: string, fallback: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
   return normalized ? (normalized.length > 70 ? `${normalized.slice(0, 70)}…` : normalized) : fallback;
 }
+function hasCharacterDraft(character: CharacterDraft): boolean {
+  return [
+    character.姓名,
+    character.性别,
+    character.年龄,
+    character.身高,
+    character.体型,
+    character.面容气质,
+    character.身体特征,
+    character.关系定位,
+    character.欲望与压力,
+    character.性格与声音,
+    character.当前关联,
+  ].some(value => value.trim());
+}
+function hasEditorDraft(): boolean {
+  return Boolean(
+    form.现实编辑器.可见与知晓 ||
+    form.现实编辑器.限制与代价 ||
+    form.现实编辑器.自然语言修改 ||
+    form.现实编辑器.表现形式 !== '由 AI 结合前文整理' ||
+    form.现实编辑器.可修改范围.join(',') !== '世界,区域,个人' ||
+    form.现实编辑器.常识同步 !== '立即同步' ||
+    form.现实编辑器.记忆保留 !== '只有主角保留' ||
+    form.现实编辑器.主角受影响 !== '是' ||
+    form.现实编辑器.自主执行 !== 'D-完全禁止',
+  );
+}
 function layerComplete(layer: LayerId): boolean {
   if (layer === 'experience')
     return Boolean(form.体验与叙事方向.故事体验 || form.体验与叙事方向.主角处境 || form.体验与叙事方向.冲突与成长);
@@ -1613,9 +1673,23 @@ function layerComplete(layer: LayerId): boolean {
       form.世界与故事骨架.世界规则 || form.世界与故事骨架.时代与舞台 || form.世界与故事骨架.核心矛盾与推进,
     );
   if (layer === 'characters')
-    return Boolean(!form.主角.启用 || form.主角.身份与位置 || form.主角.追求 || form.重要角色.length);
+    return Boolean(
+      !form.主角.启用 ||
+      form.主角.性别 ||
+      form.主角.年龄 ||
+      form.主角.外貌.身高 ||
+      form.主角.外貌.体型 ||
+      form.主角.外貌.面容气质 ||
+      form.主角.外貌.身体特征 ||
+      form.主角.身份与位置 ||
+      form.主角.追求 ||
+      form.主角.处境与压力 ||
+      form.主角.性格与声音 ||
+      form.主角.补充设定 ||
+      form.重要角色.some(hasCharacterDraft),
+    );
   if (layer === 'grounding') return Boolean(form.世界落地与开场准备.起始地点 || form.世界落地与开场准备.当前矛盾与开场);
-  return Boolean(form.现实编辑器.可见与知晓 || form.现实编辑器.限制与代价 || form.现实编辑器.自然语言修改);
+  return hasEditorDraft();
 }
 const completedLayerCount = computed(() => layers.filter(layer => layerComplete(layer.id)).length);
 const contextRows = computed(() => [
@@ -1624,7 +1698,12 @@ const contextRows = computed(() => [
     index: 0,
     order: '01',
     title: '体验与叙事方向',
-    summary: compact(form.体验与叙事方向.故事体验, '等待一句想体验的故事'),
+    summary: compact(
+      [form.体验与叙事方向.故事体验, form.体验与叙事方向.主角处境, form.体验与叙事方向.冲突与成长]
+        .filter(Boolean)
+        .join(' · '),
+      '尚未填写',
+    ),
     complete: layerComplete('experience'),
   },
   {
@@ -1632,7 +1711,17 @@ const contextRows = computed(() => [
     index: 1,
     order: '02',
     title: '世界与故事骨架',
-    summary: compact(form.世界与故事骨架.核心矛盾与推进, '等待世界骨架'),
+    summary: compact(
+      [
+        form.世界与故事骨架.世界规则,
+        form.世界与故事骨架.时代与舞台,
+        form.世界与故事骨架.社会后果,
+        form.世界与故事骨架.核心矛盾与推进,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      '尚未填写',
+    ),
     complete: layerComplete('world'),
   },
   {
@@ -1640,11 +1729,17 @@ const contextRows = computed(() => [
     index: 2,
     order: '03',
     title: '主角与重要角色',
-    summary: form.重要角色.length
-      ? `${form.重要角色.length} 个角色草稿`
-      : form.主角.启用
-        ? '主角待展开'
-        : '主角不进入故事',
+    summary: compact(
+      [
+        form.主角.身份与位置,
+        form.主角.追求,
+        form.主角.处境与压力,
+        ...form.重要角色.filter(hasCharacterDraft).map(character => character.姓名 || character.关系定位),
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      '尚未填写',
+    ),
     complete: layerComplete('characters'),
   },
   {
@@ -1652,7 +1747,18 @@ const contextRows = computed(() => [
     index: 3,
     order: '04',
     title: '世界落地与开场准备',
-    summary: compact(form.世界落地与开场准备.起始地点, '等待起始地点'),
+    summary: compact(
+      [
+        form.世界落地与开场准备.起始地点,
+        form.世界落地与开场准备.日常秩序,
+        form.世界落地与开场准备.组织势力,
+        form.世界落地与开场准备.必要规则,
+        form.世界落地与开场准备.当前矛盾与开场,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      '尚未填写',
+    ),
     complete: layerComplete('grounding'),
   },
   {
@@ -1660,7 +1766,19 @@ const contextRows = computed(() => [
     index: 4,
     order: '05',
     title: '现实编辑器',
-    summary: form.现实编辑器.表现形式,
+    summary: compact(
+      [
+        form.现实编辑器.可见与知晓,
+        form.现实编辑器.可修改范围.join('、') !== '世界、区域、个人' ? form.现实编辑器.可修改范围.join('、') : '',
+        form.现实编辑器.常识同步 !== '立即同步' ? form.现实编辑器.常识同步 : '',
+        form.现实编辑器.记忆保留 !== '只有主角保留' ? form.现实编辑器.记忆保留 : '',
+        form.现实编辑器.限制与代价,
+        form.现实编辑器.自然语言修改,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      '尚未填写',
+    ),
     complete: layerComplete('editor'),
   },
 ]);
@@ -2084,6 +2202,25 @@ function filledSnapshot(value: unknown): unknown {
   }
   return value;
 }
+function protagonistPromptContext(): Record<string, unknown> {
+  return {
+    当前人设: {
+      名称: protagonistName.value,
+      完整说明: protagonistDescription.value,
+    },
+    前两层已确认内容: {
+      体验与叙事方向: filledSnapshot(form.体验与叙事方向),
+      世界与故事骨架: filledSnapshot(form.世界与故事骨架),
+    },
+    当前第三层已填写内容:
+      filledSnapshot({
+        主角: form.主角,
+        重要角色: form.重要角色.map(character =>
+          Object.fromEntries(Object.entries(character).filter(([key]) => key !== 'localId')),
+        ),
+      }) ?? {},
+  };
+}
 function bulkLayerContext(layer: LayerId): Record<string, unknown> {
   const roleDrafts = form.重要角色.map(character =>
     Object.fromEntries(Object.entries(character).filter(([key]) => key !== 'localId')),
@@ -2247,6 +2384,9 @@ function buildCompositePrompt(
 ): string {
   return `【任务】\n你是创作访谈整理引擎。请把“${title}”整理成一个能够直接进入文字 RPG 的设计结果。\n问题：${question}\n${worldGenerationBoundary(layer)}\n\n【已确认上下文】\n${JSON.stringify(contextSnapshot(layer === 'editor'), null, 2)}\n\n【当前草稿】\n${JSON.stringify(current, null, 2)}\n\n【必须覆盖的字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n空白字段请基于上下文补全，已有字段请整理为具体的行动、关系、限制或叙事约束。不要写百科资料，不要加入本次开场不会直接使用的信息。只输出 JSON：结论、理由、可执行约束、可采用。可采用对象的键只能使用上面列出的字段名。`;
 }
+function buildProtagonistPrompt(fields: string[]): string {
+  return `【任务】\n根据酒馆当前人设与已确认访谈内容，生成一份可直接用于文字 RPG 的完整主角档案整理结果。结果先供玩家预览，不直接覆盖表单。\n\n【当前人设】\n${JSON.stringify(protagonistPromptContext().当前人设, null, 2)}\n\n【前两层上下文与当前第三层草稿】\n${JSON.stringify(protagonistPromptContext(), null, 2)}\n\n【必须覆盖的主角字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n【信息优先级】\n1. 玩家在当前页面手写的明确内容最高；这些非空字段不得被改写、扩写或替换。\n2. 人设说明中的明确事实其次；不得把没有依据的推测写成事实。\n3. 第一、二层已确认内容用于推断能影响当前 RP 的身份、追求、处境与声音。\n4. 没有依据的字段保持空白，不为了完整而编造。\n\n【年龄规则】\n年龄字段可以返回“二十多岁”“青年”等自然语言阶段；只有明确的单一数字才可在签发时写入数值年龄。非数字阶段必须原样保留在年龄阶段或补充设定中，不能静默丢失。\n\n【输出约束】\n- 只返回上面列出的字段名，不返回姓名字段；姓名使用当前酒馆人设名称，不新增重复输入。\n- 可采用对象的键只能是这些字段名；空字段可以省略，但有依据时应给出完整档案建议。\n- 每个值都应是能执行的角色设定，不要只堆形容词；外貌四项分别写面容气质、身高、体型、身体特征。\n- 只输出 JSON：结论、理由、可执行约束、可采用。`;
+}
 function buildBulkPrompt(layer: LayerId) {
   const pendingDescriptors = bulkPendingDescriptors(layer).map(descriptor => ({
     id: descriptor.id,
@@ -2309,7 +2449,7 @@ async function requestCharacterFieldAi(index: number, field: CharacterField) {
 async function requestProtagonistAi() {
   if (aiBusyKey.value) return;
   aiBusyKey.value = 'protagonist';
-  setStatus('正在整理主角的处境、追求与声音…', 'working');
+  setStatus('正在根据当前人设生成主角档案…', 'working');
   const revision = contextRevision.value;
   const fields = [
     '性别',
@@ -2326,13 +2466,13 @@ async function requestProtagonistAi() {
   ];
   try {
     const payload = await requestJson(
-      buildCompositePrompt('主角', 'characters', protagonistDescriptor.question, form.主角, fields),
-      '请给出主角的可预览整理结果。',
+      buildProtagonistPrompt(fields),
+      '请根据当前人设生成主角档案的可预览整理结果。',
       `human-revision-protagonist-${Date.now()}`,
     );
     aiPreview.value = {
       target: 'protagonist',
-      title: '主角 · AI 结果预览',
+      title: '主角档案 · AI 结果预览',
       layer: 'characters',
       summary: payload.结论 || '已整理出一份可直接行动的主角设计。',
       rationale: payload.理由 || '',
@@ -2447,6 +2587,11 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
     ].forEach(field => {
       const value = values[field]?.trim();
       if (!value) return;
+      const currentValue =
+        field === '身高' || field === '体型' || field === '面容气质' || field === '身体特征'
+          ? form.主角.外貌[field as keyof AppearanceDraft]
+          : (form.主角 as unknown as Record<string, string>)[field];
+      if (currentValue?.trim()) return;
       if (field === '身高' || field === '体型' || field === '面容气质' || field === '身体特征')
         form.主角.外貌[field as keyof AppearanceDraft] = value;
       else (form.主角 as unknown as Record<string, string>)[field] = value;
@@ -2639,7 +2784,26 @@ function applyConfigurationToMvu() {
     生效规则: data.value.现实编辑器.生效规则,
   };
   const oldProtagonist = data.value.主角;
-  const protagonistAge = parseOptionalAge(form.主角.年龄);
+  const legacyProtagonistPlaceholder = isLegacyProtagonistPlaceholder(existingWorld, oldProtagonist);
+  const protagonistGender = trimValue(form.主角.性别);
+  const protagonistAgeText = trimValue(form.主角.年龄);
+  const protagonistAge = parseOptionalAge(protagonistAgeText);
+  const protagonistAgeStage =
+    protagonistAgeText && protagonistAge === undefined ? `年龄阶段：${protagonistAgeText}` : '';
+  const protagonistSupplement = [
+    form.体验与叙事方向.主角处境,
+    form.主角.处境与压力,
+    form.主角.性格与声音,
+    form.主角.补充设定,
+    protagonistAgeStage,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  if (protagonistAgeStage && !data.value.世界配置.主角补充设定.includes(protagonistAgeStage)) {
+    data.value.世界配置.主角补充设定 = [data.value.世界配置.主角补充设定, protagonistAgeStage]
+      .filter(Boolean)
+      .join('\n');
+  }
   const protagonistBasics: Record<string, unknown> = {
     ...oldProtagonist.基础信息,
     姓名: oldProtagonist.基础信息.姓名 || '',
@@ -2647,8 +2811,10 @@ function applyConfigurationToMvu() {
     目标: textOrDefault(form.主角.追求, oldProtagonist.基础信息.目标),
     与编辑器关系: form.让现实编辑器参与世界观生成 ? oldProtagonist.基础信息.与编辑器关系 : '开场后才以外来事物出现',
   };
-  if (form.主角.性别.trim()) protagonistBasics.性别 = form.主角.性别.trim();
+  if (protagonistGender) protagonistBasics.性别 = protagonistGender;
+  else if (legacyProtagonistPlaceholder) protagonistBasics.性别 = '';
   if (protagonistAge !== undefined) protagonistBasics.年龄 = protagonistAge;
+  else if (protagonistAgeText || legacyProtagonistPlaceholder) protagonistBasics.年龄 = -1;
   data.value.主角 = form.主角.启用
     ? {
         ...oldProtagonist,
@@ -2661,7 +2827,7 @@ function applyConfigurationToMvu() {
           身体特征: textOrDefault(form.主角.外貌.身体特征, oldProtagonist.外貌.身体特征),
         },
         性格: { ...oldProtagonist.性格, 底色: textOrDefault(form.主角.性格与声音, oldProtagonist.性格.底色) },
-        补充设定: textOrDefault(form.主角.补充设定, oldProtagonist.补充设定),
+        补充设定: textOrDefault(protagonistSupplement, oldProtagonist.补充设定),
       }
     : {
         ...oldProtagonist,
@@ -2780,7 +2946,7 @@ const QuestionHeading = defineComponent({
 
 onMounted(() => {
   hydrateFromMvu();
-  syncProtagonistName();
+  syncProtagonistPersona();
   listenForPersonaChanges();
   removeThemeListener = onThemeChange(theme => (activeTheme.value = theme));
   if (!document.getElementById('human-revision-interview-fonts')) {
@@ -2948,10 +3114,10 @@ onUnmounted(() => {
 :deep(.question-copy p),
 .section-heading-row p,
 .bulk-assist p,
-.editor-summary p,
 .disabled-note,
 .field-note,
-.identity-note {
+.identity-note,
+.persona-source p {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
@@ -3476,6 +3642,18 @@ select.answer-control {
   margin-left: auto;
   font-size: 11px;
 }
+.persona-source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  margin: 8px 0 18px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.persona-source p {
+  min-width: 0;
+}
 .field-label-block {
   display: grid;
   gap: 7px;
@@ -3647,7 +3825,7 @@ select.answer-control {
 }
 .context-row {
   display: grid;
-  grid-template-columns: 25px minmax(0, 1fr) 15px;
+  grid-template-columns: 25px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   padding: 12px 0;
@@ -3655,8 +3833,17 @@ select.answer-control {
   border-bottom: 1px solid var(--line);
   background: transparent;
   text-align: left;
+  cursor: pointer;
 }
-.context-row:hover {
+.context-row:hover,
+.context-row.current {
+  background: var(--accent-soft);
+}
+.context-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.context-row:active {
   background: var(--surface-soft);
 }
 .context-row-index {
@@ -3677,29 +3864,23 @@ select.answer-control {
   white-space: nowrap;
 }
 .context-row-copy small {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--faint);
   font-size: 11px;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
-.context-complete {
+.context-row-status {
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.context-row-status.complete {
   color: var(--success);
-}
-.editor-summary {
-  color: var(--muted);
-}
-.editor-summary p {
-  font-size: 12px;
-}
-.summary-tag {
-  display: inline-block;
-  margin-top: 12px;
-  padding: 4px 7px;
-  border: 1px solid var(--line);
-  color: var(--accent);
-  font-size: 11px;
 }
 .ai-preview-panel,
 .opening-preview-panel {
@@ -3844,7 +4025,7 @@ select.answer-control {
   }
   .context-rail {
     position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 700px) {

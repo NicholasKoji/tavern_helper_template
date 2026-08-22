@@ -139,11 +139,11 @@ export const Schema = z.object({
       基础信息: z
         .object({
           姓名: z.string().prefault(''),
-          性别: z.string().prefault('男'),
+          性别: z.string().prefault(''),
           年龄: z.coerce
             .number()
-            .transform(value => _.clamp(value, 0, 200))
-            .prefault(23),
+            .transform(value => _.clamp(value, -1, 200))
+            .prefault(-1),
           身份: z.string().prefault('普通居民'),
           目标: z.string().prefault(''),
           与编辑器关系: z.string().prefault('刚捡到'),
