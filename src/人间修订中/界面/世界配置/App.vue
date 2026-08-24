@@ -1,5 +1,5 @@
 <template>
-  <main class="dossier-app-shell" :data-theme="activeTheme" data-world-config="human-revision-opening-v2">
+  <main class="dossier-app-shell" :data-theme="activeTheme" data-world-config="human-revision-opening-v3">
     <!-- 顶部卷宗台头 -->
     <HeaderBar
       v-model="form.让现实编辑器参与世界观生成"
@@ -148,7 +148,7 @@ import AiAssistModal from './components/AiAssistModal.vue';
 import ConfirmedDrawer from './components/ConfirmedDrawer.vue';
 import ActionFooter from './components/ActionFooter.vue';
 
-const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v2';
+const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v3';
 const OPENING_READBACK_CHECKS = 8;
 
 type LayerId = 'experience' | 'world' | 'characters' | 'grounding' | 'editor';

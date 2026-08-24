@@ -13,19 +13,19 @@ const assets = [
   {
     source: 'dist/人间修订中/界面/世界配置/index.html',
     target: 'human-revision/world-config/index.html',
-    marker: 'human-revision-opening-v2',
+    marker: 'human-revision-opening-v3',
     contentType: 'text/html; charset=UTF-8',
   },
   {
     source: 'dist/人间修订中/界面/状态栏/index.html',
     target: 'human-revision/status/index.html',
-    marker: 'human-revision-status-v1',
+    marker: 'human-revision-status-v2',
     contentType: 'text/html; charset=UTF-8',
   },
   {
     source: 'dist/人间修订中/脚本/变量结构/index.js',
     target: 'human-revision/schema/index.js',
-    marker: '开场配置',
+    marker: 'registerMvuSchema',
     contentType: 'application/javascript; charset=UTF-8',
   },
 ];

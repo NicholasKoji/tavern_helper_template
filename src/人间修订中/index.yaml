@@ -336,7 +336,7 @@
           'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
           'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
         ];
-        const world_config_revision = '[data-world-config="human-revision-opening-v2"]';
+        const world_config_revision = '[data-world-config="human-revision-opening-v3"]';
         const load_world_config = index => {
           if (index >= world_config_urls.length) {
             $('body').text('世界配置界面加载失败，请稍后重试');

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - codex/zaohua-nongren
     paths:
       - src/人间修订中/界面/**
       - src/人间修订中/脚本/变量结构/**
