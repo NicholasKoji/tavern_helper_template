@@ -28,6 +28,7 @@ export default [
       ...eslintPluginBetterTailwindcss.configs['recommended-error'].rules,
       'better-tailwindcss/enforce-consistent-line-wrapping': ['off', { preferSingleLine: true, printWidth: 120 }],
       'better-tailwindcss/no-unregistered-classes': ['off', { ignore: ['fa-*'] }],
+      'better-tailwindcss/no-unknown-classes': 'off',
     },
     settings: {
       'better-tailwindcss': {
@@ -71,11 +72,20 @@ export default [
       'pinia/require-setup-store-properties-export': 'off',
       'prefer-const': 'warn',
       'vue/multi-word-component-names': 'off',
+      'vue/no-mutating-props': 'off',
       yoda: 'error',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   eslintConfigPrettier,
-  globalIgnores(['dist/**', 'node_modules/**', 'eslint.config.mjs', 'postcss.config.js', 'webpack.config.ts']),
+  globalIgnores([
+    'dist/**',
+    'node_modules/**',
+    '.codex/**',
+    '.agents/**',
+    'eslint.config.mjs',
+    'postcss.config.js',
+    'webpack.config.ts',
+  ]),
 ];

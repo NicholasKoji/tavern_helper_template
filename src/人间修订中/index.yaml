@@ -282,7 +282,7 @@
           'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
           'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
         ];
-        const status_bar_revision = '[data-status-bar="human-revision-status-v1"]';
+        const status_bar_revision = '[data-status-bar="human-revision-status-v2"]';
         const load_status_bar = index => {
           if (index >= status_bar_urls.length) {
             $('body').text('状态栏加载失败，请稍后重试');
