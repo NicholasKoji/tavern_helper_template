@@ -184,11 +184,15 @@ const isFocused = ref(false);
 
 .card-body {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .dossier-textarea,
 .dossier-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
@@ -197,6 +201,9 @@ const isFocused = ref(false);
   font-size: 13.5px;
   line-height: 1.55;
   transition: all 0.18s ease;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
   resize: vertical;
 }
 
@@ -220,13 +227,11 @@ const isFocused = ref(false);
   gap: 8px;
   margin-top: 10px;
   padding-top: 8px;
+  padding-bottom: 2px;
   border-top: 1px dashed var(--border-hairline);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.card-presets::-webkit-scrollbar {
-  display: none;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .preset-label {
@@ -238,11 +243,38 @@ const isFocused = ref(false);
 
 .preset-chips {
   display: flex;
+  align-items: center;
   gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  flex: 1;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.preset-chips::-webkit-scrollbar {
+  height: 3px;
+}
+
+.preset-chips::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.preset-chips::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.preset-chips::-webkit-scrollbar-thumb:hover {
+  background: var(--brass-border);
 }
 
 .preset-chip {
-  padding: 2px 8px;
+  flex-shrink: 0;
+  padding: 3px 9px;
   background: var(--paper-subtle);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
@@ -250,6 +282,7 @@ const isFocused = ref(false);
   color: var(--ink-body);
   white-space: nowrap;
   transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .preset-chip:hover {

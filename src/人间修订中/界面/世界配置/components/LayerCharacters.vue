@@ -55,7 +55,14 @@
           </div>
           <div class="form-item">
             <label class="form-label">年龄阶段</label>
-            <input v-model="form.主角.年龄" type="text" class="dossier-input" placeholder="可留空，如：24 / 青年" />
+            <input
+              :value="form.主角.年龄"
+              type="text"
+              inputmode="numeric"
+              class="dossier-input"
+              placeholder="可留空或正整数，如：24"
+              @input="onProtagonistAgeInput"
+            />
           </div>
           <div class="form-item flex-2">
             <label class="form-label">身份与社会位置</label>
@@ -220,7 +227,14 @@
             </div>
             <div class="form-item">
               <label class="form-label">年龄</label>
-              <input v-model="character.年龄" type="text" class="dossier-input" placeholder="如：31" />
+              <input
+                :value="character.年龄"
+                type="text"
+                inputmode="numeric"
+                class="dossier-input"
+                placeholder="可留空或正整数，如：31"
+                @input="onCharacterAgeInput(character, $event)"
+              />
             </div>
           </div>
 
@@ -340,6 +354,27 @@ const hasProtagonistAppearance = computed(() =>
 
 function hasCharacterAppearance(c: any): boolean {
   return Boolean(c.身高 || c.体型 || c.面容气质 || c.身体特征);
+}
+
+function sanitizePositiveInteger(val: string): string {
+  const digits = val.replace(/\D/g, '');
+  if (!digits) return '';
+  const num = parseInt(digits, 10);
+  return num > 0 ? String(num) : '';
+}
+
+function onProtagonistAgeInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const sanitized = sanitizePositiveInteger(target.value);
+  target.value = sanitized;
+  props.form.主角.年龄 = sanitized;
+}
+
+function onCharacterAgeInput(character: any, e: Event) {
+  const target = e.target as HTMLInputElement;
+  const sanitized = sanitizePositiveInteger(target.value);
+  target.value = sanitized;
+  character.年龄 = sanitized;
 }
 </script>
 

@@ -76,7 +76,7 @@
             <button
               class="action-btn primary"
               type="button"
-              :disabled="isStale"
+              :disabled="isAnyAiBusy || !hasValues"
               @click="$emit('apply')"
             >
               <Check :size="14" stroke-width="2.2" />

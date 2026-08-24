@@ -1138,7 +1138,7 @@ async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: revision,
+      contextRevision: contextRevision.value,
     };
     setStatus('AI 结果已放入预览，确认后才会写入回答。', 'success');
   } catch (error) {
@@ -1158,7 +1158,6 @@ async function requestProtagonistAi() {
   if (aiBusyKey.value) return;
   aiBusyKey.value = 'protagonist';
   setStatus('正在根据当前人设生成主角档案…', 'working');
-  const revision = contextRevision.value;
   const fields = [
     '性别',
     '年龄',
@@ -1186,7 +1185,7 @@ async function requestProtagonistAi() {
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: revision,
+      contextRevision: contextRevision.value,
     };
     setStatus('主角整理结果已进入预览。', 'success');
   } catch (error) {
@@ -1202,7 +1201,6 @@ async function requestCharacterAi(index: number) {
   const descriptor = characterDescriptor(index);
   aiBusyKey.value = descriptor.id;
   setStatus(`正在整理“${descriptor.title}”…`, 'working');
-  const revision = contextRevision.value;
   const fields = characterFieldNames;
   try {
     const payload = await requestJson(
@@ -1218,7 +1216,7 @@ async function requestCharacterAi(index: number) {
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: revision,
+      contextRevision: contextRevision.value,
     };
     setStatus('角色整理结果已进入预览。', 'success');
   } catch (error) {
@@ -1235,7 +1233,6 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
   const allowedKeys = allowedDescriptors.map(descriptor => descriptor.id);
   aiBusyKey.value = 'bulk';
   setStatus('正在补全本层空白项…', 'working');
-  const revision = contextRevision.value;
   try {
     const payload = await requestJson(
       buildBulkPrompt(requestLayer),
@@ -1250,7 +1247,7 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: revision,
+      contextRevision: contextRevision.value,
       bulkAllowedKeys: allowedKeys,
     };
     setStatus('本层补全结果已进入预览，确认后才会写入空白回答。', 'success');
@@ -1285,8 +1282,14 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
       '性格与声音',
       '补充设定',
     ].forEach(field => {
-      const value = values[field]?.trim();
+      let value = values[field]?.trim();
       if (!value) return;
+      if (field === '年龄') {
+        const digits = value.replace(/\D/g, '');
+        const num = parseInt(digits, 10);
+        value = num > 0 ? String(num) : '';
+        if (!value) return;
+      }
       const currentValue =
         field === '身高' || field === '体型' || field === '面容气质' || field === '身体特征'
           ? form.主角.外貌[field as keyof AppearanceDraft]
@@ -1303,14 +1306,21 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
   const character = form.重要角色[Number(match[1])];
   if (!character) return;
   characterFieldNames.forEach(field => {
-    const value = values[field]?.trim();
-    if (value) (character as unknown as Record<string, string>)[field] = value;
+    let value = values[field]?.trim();
+    if (!value) return;
+    if (field === '年龄') {
+      const digits = value.replace(/\D/g, '');
+      const num = parseInt(digits, 10);
+      value = num > 0 ? String(num) : '';
+      if (!value) return;
+    }
+    (character as unknown as Record<string, string>)[field] = value;
   });
 }
 
 function applyAiPreview() {
   const preview = aiPreview.value;
-  if (!preview || aiPreviewStale.value) return;
+  if (!preview) return;
   const values = preview.values;
   if (preview.target === 'bulk') {
     const allowedKeys = new Set(preview.bulkAllowedKeys ?? []);
@@ -1318,7 +1328,13 @@ function applyAiPreview() {
       if (!allowedKeys.has(key)) return;
       const descriptor = resolveAiDescriptor(key);
       if (descriptor?.layer !== preview.layer || descriptor.read().trim() || !value.trim()) return;
-      descriptor.write(value.trim());
+      let text = value.trim();
+      if (key === 'characters.protagonist.age' || key.endsWith('.年龄')) {
+        const digits = text.replace(/\D/g, '');
+        const num = parseInt(digits, 10);
+        text = num > 0 ? String(num) : '';
+      }
+      descriptor.write(text);
     });
   } else if (preview.target === 'protagonist' || preview.target.startsWith('character:')) {
     if (preview.target.includes('.')) {
@@ -1530,10 +1546,13 @@ onUnmounted(() => {
 .dossier-app-shell {
   position: relative;
   width: min(980px, 100%);
+  max-width: 100%;
   margin: 0 auto;
   padding: 8px 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .dossier-workspace {
@@ -1541,10 +1560,13 @@ onUnmounted(() => {
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 16px;
   align-items: start;
+  min-width: 0;
+  width: 100%;
 }
 
 .dossier-form-column {
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }

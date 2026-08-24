@@ -354,7 +354,7 @@ function selectTheme(theme: ThemeId) {
   background: #c29b38;
 }
 .theme-swatch[data-theme-swatch='terminal'] {
-  background: #d64045;
+  background: #00d2ff;
 }
 .theme-swatch[data-theme-swatch='neon'] {
   background: #ff3399;

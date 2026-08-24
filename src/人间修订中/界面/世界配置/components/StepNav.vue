@@ -58,33 +58,51 @@ defineEmits<{
   padding: 8px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
 }
 
 .step-wizard-nav::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+
+.step-wizard-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.step-wizard-nav::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-pill);
 }
 
 .step-track {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
-  min-width: 580px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .step-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   text-align: left;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--ink-muted);
+  min-width: 0;
 }
 
 .step-item:hover:not(:disabled) {
@@ -112,8 +130,8 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-sm);
   background: var(--paper-base);
   border: 1px solid var(--border-subtle);
@@ -142,10 +160,11 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 
 .step-kicker {
-  font-size: 10px;
+  font-size: 9.5px;
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
   color: var(--ink-muted);
@@ -153,7 +172,7 @@ defineEmits<{
 }
 
 .step-title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -161,17 +180,19 @@ defineEmits<{
   line-height: 1.4;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 680px) {
   .step-wizard-nav {
     padding: 6px;
   }
   .step-track {
     display: flex;
-    min-width: max-content;
+    width: max-content;
+    padding-bottom: 2px;
   }
   .step-item {
     padding: 6px 10px;
     gap: 8px;
+    flex-shrink: 0;
   }
 }
 </style>

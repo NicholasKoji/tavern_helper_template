@@ -435,8 +435,8 @@ function selectTheme(theme: ThemeId) {
   box-shadow: 0 0 0 2px #262c3e;
 }
 .theme-swatch[data-theme-swatch='terminal'] {
-  background: #d64045;
-  box-shadow: 0 0 0 2px #f1ede2;
+  background: #00d2ff;
+  box-shadow: 0 0 0 2px #181d28;
 }
 .theme-swatch[data-theme-swatch='neon'] {
   background: #ff3399;
