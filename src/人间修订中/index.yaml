@@ -288,7 +288,7 @@
             $('body').text('状态栏加载失败，请稍后重试');
             return;
           }
-          const url = `${status_bar_urls[index]}?t=${Date.now()}`;
+          const url = encodeURI(`${status_bar_urls[index]}?t=${Date.now()}`);
           $('body').load(url, (_response, status) => {
             if (status === 'error') {
               load_status_bar(index + 1);
@@ -342,7 +342,7 @@
             $('body').text('世界配置界面加载失败，请稍后重试');
             return;
           }
-          const url = `${world_config_urls[index]}?t=${Date.now()}`;
+          const url = encodeURI(`${world_config_urls[index]}?t=${Date.now()}`);
           $('body').load(url, (_response, status) => {
             if (status === 'error') {
               load_world_config(index + 1);
