@@ -30,6 +30,9 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
 
 button {

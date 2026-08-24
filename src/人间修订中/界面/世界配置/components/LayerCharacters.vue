@@ -383,6 +383,10 @@ function onCharacterAgeInput(character: any, e: Event) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .layer-banner {
@@ -390,6 +394,9 @@ function onCharacterAgeInput(character: any, e: Event) {
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   padding: 16px 20px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .banner-badge {
@@ -426,6 +433,10 @@ function onCharacterAgeInput(character: any, e: Event) {
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition: all 0.2s ease;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .character-dossier-card:hover {
@@ -552,12 +563,18 @@ function onCharacterAgeInput(character: any, e: Event) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .field-row-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .field-row-3 .flex-2 {
@@ -566,14 +583,20 @@ function onCharacterAgeInput(character: any, e: Event) {
 
 .field-row-2 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-label {
@@ -584,6 +607,9 @@ function onCharacterAgeInput(character: any, e: Event) {
 
 .dossier-input {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
@@ -612,6 +638,9 @@ function onCharacterAgeInput(character: any, e: Event) {
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
   padding: 8px 12px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .appearance-summary {
@@ -638,11 +667,14 @@ function onCharacterAgeInput(character: any, e: Event) {
 
 .appearance-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px dashed var(--border-hairline);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* NPC Section Header */

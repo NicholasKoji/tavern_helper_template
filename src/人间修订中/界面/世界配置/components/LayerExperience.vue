@@ -111,6 +111,10 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .layer-banner {
@@ -118,6 +122,9 @@ defineEmits<{
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   padding: 16px 20px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .banner-badge {
@@ -150,12 +157,18 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .grid-2-col {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .choice-card {
@@ -164,6 +177,9 @@ defineEmits<{
   border-radius: var(--radius-lg);
   padding: 16px 18px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .choice-head {

@@ -78,6 +78,10 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .layer-banner {
@@ -85,6 +89,9 @@ defineEmits<{
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   padding: 16px 20px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .banner-badge {
@@ -117,5 +124,8 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 </style>

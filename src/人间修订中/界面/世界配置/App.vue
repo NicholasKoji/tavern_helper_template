@@ -508,11 +508,13 @@ function setTheme(theme: ThemeId) {
 }
 
 function scrollToTop() {
-  requestAnimationFrame(() => document.querySelector('.dossier-app-shell')?.scrollIntoView({ block: 'start' }));
+  // 保持安全滚动，不强制移动宿主酒馆窗口顶部，避免 #top-settings-holder 顶栏被推离视口
 }
 
 function scrollToSigning() {
-  requestAnimationFrame(() => document.querySelector('.signing-section')?.scrollIntoView({ behavior: 'smooth' }));
+  requestAnimationFrame(() =>
+    document.querySelector('.signing-section')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+  );
 }
 
 function goToLayer(index: number) {
@@ -1594,7 +1596,7 @@ onUnmounted(() => {
 
 @media (max-width: 900px) {
   .dossier-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .dossier-summary-column {
     position: static;

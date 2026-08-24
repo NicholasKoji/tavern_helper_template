@@ -108,6 +108,10 @@ const isFocused = ref(false);
   padding: 16px 18px;
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .question-card:hover {
@@ -125,10 +129,14 @@ const isFocused = ref(false);
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 10px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-title-group {
   flex: 1;
+  min-width: 0;
 }
 
 .card-title {
@@ -138,6 +146,7 @@ const isFocused = ref(false);
   font-weight: 600;
   color: var(--ink-heading);
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .card-hint {
@@ -145,6 +154,7 @@ const isFocused = ref(false);
   font-size: 12px;
   color: var(--ink-muted);
   line-height: 1.45;
+  word-break: break-word;
 }
 
 .ai-assist-btn {
@@ -186,12 +196,16 @@ const isFocused = ref(false);
   position: relative;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .dossier-textarea,
 .dossier-input {
+  display: block;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
@@ -200,7 +214,7 @@ const isFocused = ref(false);
   color: var(--ink-body);
   font-size: 13.5px;
   line-height: 1.55;
-  transition: all 0.18s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
   word-break: break-word;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
