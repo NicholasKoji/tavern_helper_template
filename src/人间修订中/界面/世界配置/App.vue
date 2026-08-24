@@ -1,6 +1,11 @@
 <!-- eslint-disable better-tailwindcss/no-unknown-classes -->
 <template>
-  <div class="interview-shell" :data-theme="activeTheme" data-world-config="human-revision-opening-v2">
+  <div
+    class="interview-shell"
+    :data-theme="activeTheme"
+    data-world-config="human-revision-opening-v2"
+    :data-human-revision-build="HUMAN_REVISION_BUILD_MARKER"
+  >
     <header class="masthead">
       <div class="masthead-copy">
         <span class="eyebrow">创作访谈 · 开场配置</span>
@@ -1237,6 +1242,21 @@ import themeNeonFontUrl from './fonts/theme-neon.woff2?url';
 import themeTerminalFontUrl from './fonts/theme-terminal.woff2?url';
 import { onThemeChange, readSavedTheme, saveTheme, themeOptions, type ThemeId } from '../theme';
 import { useDataStore } from './store';
+import {
+  appendOpeningUpdateVariable,
+  buildOpeningUpdateVariable,
+  normalizeOpeningMvuData,
+  type OpeningFormSnapshot,
+} from './opening';
+import {
+  commitCurrentChatLore,
+  rollbackChatLoreMutation,
+  verifyChatLoreMutation,
+  type ChatLoreMutation,
+} from './chat-lore';
+
+const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v2';
+const OPENING_READBACK_CHECKS = 8;
 
 type LayerId = 'experience' | 'world' | 'characters' | 'grounding' | 'editor';
 type StatusType = '' | 'working' | 'success' | 'error';
@@ -1506,83 +1526,35 @@ function trimValue(value: unknown, fallback = ''): string {
   const text = String(value ?? '').trim();
   return text === '待生成' || text === '待记录' || text === '暂无补充设定' ? fallback : text;
 }
-function parseOptionalAge(value: unknown): number | undefined {
-  const text = trimValue(value);
-  if (!text) return undefined;
-  const matches = text.match(/\d+/g) ?? [];
-  if (matches.length !== 1) return undefined;
-  const age = Number(matches[0]);
-  return Number.isFinite(age) && age >= 0 && age <= 200 ? Math.round(age) : undefined;
-}
 function draftAgeFromStored(value: unknown): string {
   const text = trimValue(value);
   return text === '-1' ? '' : text;
 }
-function parseStoredNpcAge(value: unknown): number | undefined {
-  const text = trimValue(value);
-  if (!text) return undefined;
-  const age = Number(text);
-  return Number.isFinite(age) && age >= -1 && age <= 200 ? Math.round(age) : undefined;
-}
-function isLegacyProtagonistPlaceholder(
-  world: { 创建时间?: unknown },
-  protagonist: { 基础信息?: { 性别?: unknown; 年龄?: unknown } },
-): boolean {
-  return (
-    !trimValue(world.创建时间) &&
-    trimValue(protagonist.基础信息?.性别) === '男' &&
-    Number(protagonist.基础信息?.年龄) === 23
-  );
-}
-function isEditorScope(value: unknown): value is EditorScope {
-  return value === '世界' || value === '区域' || value === '个人';
-}
 function hydrateFromMvu() {
-  const world = data.value.世界配置;
+  const scene = data.value.当前场景;
   const protagonist = data.value.主角;
-  const legacyProtagonistPlaceholder = isLegacyProtagonistPlaceholder(world, protagonist);
-  const editorConfig = data.value.现实编辑器.开场配置;
+  const editor = data.value.现实编辑器;
   const npcEntries = Object.values(data.value.NPC序列 ?? {});
-  const worldDescription = trimValue(world.世界观描述);
-  const worldStage = trimValue(world.时代背景);
-  const worldSocial = trimValue(world.文明与势力);
-  const worldRules = trimValue(world.历史与事件);
-  const conflict = trimValue(world.核心冲突);
-  if (worldDescription && !worldDescription.includes('玩家刚捡到现实编辑器'))
-    form.世界与故事骨架.世界规则 = worldDescription;
-  if (worldStage && worldStage !== '现代都市') form.世界与故事骨架.时代与舞台 = worldStage;
-  if (worldSocial && worldSocial !== '普通现代社会，势力简单') form.世界与故事骨架.社会后果 = worldSocial;
-  if (worldRules && worldRules !== '无特殊历史事件') form.世界落地与开场准备.必要规则 = worldRules;
-  if (conflict && conflict !== '暂无明确主线，先由日常荒诞展开') form.世界与故事骨架.核心矛盾与推进 = conflict;
-  form.体验与叙事方向.叙事视角 = world.叙事视角;
-  form.体验与叙事方向.文风 = world.叙事文风 === '微色情' ? '通用白描' : world.叙事文风;
-  form.主角.启用 = world.主角启用;
-  form.主角.性别 = legacyProtagonistPlaceholder ? '' : trimValue(protagonist.基础信息.性别, '');
-  form.主角.年龄 = legacyProtagonistPlaceholder ? '' : draftAgeFromStored(protagonist.基础信息.年龄);
+  const location = [scene.地点.一级区域, scene.地点.二级区域, scene.地点.三级地点]
+    .map(value => trimValue(value))
+    .filter(value => value && value !== '待生成');
+  if (location.length) form.世界落地与开场准备.起始地点 = location.join(' / ');
+  const sceneSummary = trimValue(scene.摘要);
+  if (sceneSummary && sceneSummary !== '等待玩家完成开场签发') {
+    form.世界落地与开场准备.当前矛盾与开场 = sceneSummary;
+  }
+  form.主角.启用 = protagonist.启用;
+  form.主角.性别 = trimValue(protagonist.基础信息.性别, '');
+  form.主角.年龄 = draftAgeFromStored(protagonist.基础信息.年龄);
   form.主角.外貌.身高 = trimValue(protagonist.外貌.身高, '');
   form.主角.外貌.体型 = trimValue(protagonist.外貌.体型, '');
   form.主角.外貌.面容气质 = trimValue(protagonist.外貌.面容气质, '');
   form.主角.外貌.身体特征 = trimValue(protagonist.外貌.身体特征, '');
-  const protagonistIdentity = trimValue(protagonist.基础信息.身份, '');
-  form.主角.身份与位置 = protagonistIdentity === '普通居民' ? '' : protagonistIdentity;
+  form.主角.身份与位置 = trimValue(protagonist.基础信息.身份, '');
   form.主角.追求 = trimValue(protagonist.基础信息.目标, '');
   form.主角.性格与声音 = trimValue(protagonist.性格.底色, '');
-  form.主角.补充设定 = trimValue(world.主角补充设定, '');
-  form.现实编辑器.主角受影响 = world.玩法模式.受控;
-  form.现实编辑器.自主执行 = world.玩法模式.编辑器篡改;
-  if (editorConfig) {
-    form.现实编辑器.表现形式 = trimValue(editorConfig.表现形式, form.现实编辑器.表现形式);
-    form.现实编辑器.可见与知晓 = trimValue(editorConfig.可见与知晓, '');
-    form.现实编辑器.可修改范围 = Array.isArray(editorConfig.可修改范围)
-      ? editorConfig.可修改范围.filter(isEditorScope)
-      : [...form.现实编辑器.可修改范围];
-    form.现实编辑器.常识同步 = editorConfig.常识同步;
-    form.现实编辑器.记忆保留 = editorConfig.记忆保留;
-    form.现实编辑器.主角受影响 = editorConfig.主角受影响;
-    form.现实编辑器.自主执行 = editorConfig.自主执行;
-    form.现实编辑器.限制与代价 = trimValue(editorConfig.限制与代价, '');
-    form.现实编辑器.自然语言修改 = trimValue(editorConfig.自然语言修改, '');
-  }
+  form.主角.补充设定 = trimValue(protagonist.补充设定, '');
+  if (editor.是否显现) form.现实编辑器.可修改范围 = [...form.现实编辑器.可修改范围];
   if (npcEntries.length) {
     form.重要角色 = npcEntries.map((npc, index) => ({
       localId: `stored-role-${index}-${npc.基础信息.姓名}`,
@@ -1604,6 +1576,32 @@ function hydrateFromMvu() {
 function setStatus(message: string, type: StatusType = '') {
   status.value = message;
   statusType.value = type;
+}
+
+function openingMessages() {
+  return getChatMessages('0-{{lastMessageId}}');
+}
+
+function findCreatedOpeningMessage(message: string, dataToMatch: Record<string, any>, beforeMessageIds: Set<number>) {
+  return openingMessages().find(
+    candidate =>
+      !beforeMessageIds.has(candidate.message_id) &&
+      candidate.message === message &&
+      (Object.keys(dataToMatch).length === 0 || _.isEqual(candidate.data, dataToMatch)),
+  );
+}
+
+async function waitForCreatedOpeningMessage(
+  message: string,
+  dataToMatch: Record<string, any>,
+  beforeMessageIds: Set<number>,
+) {
+  for (let attempt = 0; attempt < OPENING_READBACK_CHECKS; attempt += 1) {
+    const candidate = findCreatedOpeningMessage(message, dataToMatch, beforeMessageIds);
+    if (candidate) return candidate;
+    await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+  }
+  throw new Error('createChatMessages 后未能回读包含 UpdateVariable 与 MVU 数据的新消息');
 }
 function setTheme(theme: ThemeId) {
   activeTheme.value = theme;
@@ -2649,193 +2647,22 @@ async function regenerateAiPreview() {
     return requestCharacterFieldAi(Number(fieldMatch[1]), fieldMatch[2] as CharacterField);
   return requestAi(target);
 }
-function textOrDefault(value: string, fallback: string): string {
-  return value.trim() || fallback;
-}
-function editorSafeExisting(value: string, fallback: string): string {
-  const normalized = trimValue(value);
-  if (!form.让现实编辑器参与世界观生成 && /(现实编辑器|玩家刚捡到|编辑器)/.test(normalized)) return fallback;
-  return normalized || fallback;
-}
-function buildMvuCharacters(): Record<string, Record<string, unknown>> {
-  const unspecifiedNpcAge = -1;
-  const result: Record<string, Record<string, unknown>> = {};
-  const existingCharacters = data.value.NPC序列 ?? {};
-  form.重要角色.forEach(character => {
-    const name = character.姓名.trim();
-    if (!name) return;
-    const existing = existingCharacters[name];
-    const existingBasic = existing?.基础信息 ?? {};
-    const existingAppearance = existing?.外貌 ?? {};
-    const basicInfo: Record<string, unknown> = {
-      ...existingBasic,
-      姓名: name,
-      身份: textOrDefault(character.关系定位, existingBasic.身份 ?? '待展开'),
-      关系定位: textOrDefault(character.当前关联, existingBasic.关系定位 ?? '待展开'),
-    };
-    const existingGender = existing ? trimValue(existingBasic.性别, '') : '';
-    const existingAge = existing ? parseStoredNpcAge(existingBasic.年龄) : undefined;
-    const gender = character.性别.trim() || existingGender || '未指定';
-    const age = parseOptionalAge(character.年龄) ?? existingAge ?? unspecifiedNpcAge;
-    basicInfo.性别 = gender;
-    basicInfo.年龄 = age;
-    result[name] = {
-      ...existing,
-      基础信息: basicInfo,
-      外貌: {
-        ...existingAppearance,
-        身高: textOrDefault(character.身高, existingAppearance.身高 ?? ''),
-        罩杯: existingAppearance.罩杯 ?? '不适用',
-        体型: textOrDefault(character.体型, existingAppearance.体型 ?? ''),
-        面容气质: textOrDefault(character.面容气质, existingAppearance.面容气质 ?? ''),
-        身体特征: textOrDefault(character.身体特征, existingAppearance.身体特征 ?? ''),
-      },
-      性格: { ...(existing?.性格 ?? {}), 底色: textOrDefault(character.性格与声音, existing?.性格?.底色 ?? '') },
-      当前状态: textOrDefault(character.欲望与压力, existing?.当前状态 ?? ''),
-      穿着: existing?.穿着 ?? {
-        上装: '待记录',
-        下装: '待记录',
-        内衣: '待记录',
-        袜子: '待记录',
-        鞋子: '待记录',
-        配饰: '无',
-      },
-      当前想法: textOrDefault(character.欲望与压力, existing?.当前想法 ?? ''),
-      私密状态: existing?.私密状态 ?? {},
-    };
-  });
-  return result;
-}
-function applyConfigurationToMvu() {
-  const existingWorld = data.value.世界配置;
-  const worldDescription = [
-    form.世界与故事骨架.世界规则,
-    form.世界与故事骨架.时代与舞台,
-    form.世界与故事骨架.社会后果,
-    form.世界落地与开场准备.必要规则,
-  ]
-    .filter(Boolean)
-    .join('\n');
-  const conflict = [form.世界与故事骨架.核心矛盾与推进, form.世界落地与开场准备.当前矛盾与开场]
-    .filter(Boolean)
-    .join('\n');
-  const worldDescriptionFallback = editorSafeExisting(existingWorld.世界观描述, '世界骨架待由创作访谈落地');
-  const mainGoalFallback = editorSafeExisting(existingWorld.剧情方向.主线目标, '从当前矛盾中作出第一项选择');
-  const autonomy = form.现实编辑器.自主执行 as
-    'A-完全随机' | 'B-倾向色色' | 'C-不涉及物理' | 'D-完全禁止' | 'E-玩家插件伪装';
-  const scope = new Set(form.现实编辑器.可修改范围);
-  data.value.世界配置 = {
-    ...existingWorld,
-    世界模板: textOrDefault(form.世界与故事骨架.时代与舞台, existingWorld.世界模板),
-    世界观描述: textOrDefault(worldDescription, worldDescriptionFallback),
-    时代背景: textOrDefault(form.世界与故事骨架.时代与舞台, existingWorld.时代背景),
-    文明与势力: textOrDefault(
-      [form.世界与故事骨架.社会后果, form.世界落地与开场准备.组织势力].filter(Boolean).join('\n'),
-      existingWorld.文明与势力,
-    ),
-    地理与气候: textOrDefault(form.世界落地与开场准备.起始地点, existingWorld.地理与气候),
-    历史与事件: textOrDefault(form.世界落地与开场准备.必要规则, existingWorld.历史与事件),
-    核心冲突: textOrDefault(conflict, existingWorld.核心冲突),
-    主角启用: form.主角.启用,
-    叙事视角: form.体验与叙事方向.叙事视角 as
-      '第二人称' | '第三人称上帝' | '第三人称限定' | '第一人称玩家' | '第一人称角色',
-    叙事文风: form.体验与叙事方向.文风 as '细腻写实' | '通用白描' | '轻小说' | '古风' | '西幻' | '漫画分镜' | '微色情',
-    视角角色: '',
-    玩法模式: {
-      ...existingWorld.玩法模式,
-      认知:
-        form.现实编辑器.可见与知晓.includes('主角') || form.现实编辑器.可见与知晓.includes('玩家')
-          ? '是'
-          : existingWorld.玩法模式.认知,
-      使用: scope.size > 0 ? '是' : '否',
-      受控: form.现实编辑器.主角受影响 as '是' | '否',
-      编辑器篡改: autonomy,
+function buildOpeningSnapshot(): OpeningFormSnapshot {
+  return {
+    让现实编辑器参与世界观生成: form.让现实编辑器参与世界观生成,
+    体验与叙事方向: { ...form.体验与叙事方向 },
+    世界与故事骨架: { ...form.世界与故事骨架 },
+    主角: {
+      ...form.主角,
+      外貌: { ...form.主角.外貌 },
     },
-    主角补充设定: textOrDefault(
-      [form.体验与叙事方向.主角处境, form.主角.处境与压力, form.主角.性格与声音, form.主角.补充设定]
-        .filter(Boolean)
-        .join('\n'),
-      existingWorld.主角补充设定,
-    ),
-    剧情方向: {
-      ...existingWorld.剧情方向,
-      开局场景: textOrDefault(form.世界落地与开场准备.起始地点, existingWorld.剧情方向.开局场景),
-      主线目标: textOrDefault(form.世界与故事骨架.核心矛盾与推进, mainGoalFallback),
-      暧昧开局: false,
-    },
-    创建时间: new Date().toLocaleString('zh-CN', { hour12: false }),
-  };
-  data.value.现实编辑器 = {
-    ...data.value.现实编辑器,
-    状态: '正常',
-    权限: { ...data.value.现实编辑器.权限, 修改世界规则: true, 修改自身权限: false, 卸载本设备: false },
-    开场配置: {
-      表现形式: form.现实编辑器.表现形式 as
-        '悬浮面板' | '文字提示与弹窗' | '绑定设备界面' | '可感知的异常现象' | '由 AI 结合前文整理',
-      可见与知晓: form.现实编辑器.可见与知晓,
+    重要角色: form.重要角色.map(({ localId: _localId, ...character }) => ({ ...character })),
+    世界落地与开场准备: { ...form.世界落地与开场准备 },
+    现实编辑器: {
+      ...form.现实编辑器,
       可修改范围: [...form.现实编辑器.可修改范围],
-      常识同步: form.现实编辑器.常识同步 as '立即同步' | '渐进同步' | '只对受影响对象同步',
-      记忆保留: form.现实编辑器.记忆保留 as '只有主角保留' | '所有人保留' | '只有编辑器保留' | '修改前后都不保留',
-      主角受影响: form.现实编辑器.主角受影响 as '是' | '否',
-      自主执行: autonomy,
-      限制与代价: form.现实编辑器.限制与代价,
-      自然语言修改: form.现实编辑器.自然语言修改,
     },
-    生效规则: data.value.现实编辑器.生效规则,
   };
-  const oldProtagonist = data.value.主角;
-  const legacyProtagonistPlaceholder = isLegacyProtagonistPlaceholder(existingWorld, oldProtagonist);
-  const protagonistGender = trimValue(form.主角.性别);
-  const protagonistAgeText = trimValue(form.主角.年龄);
-  const protagonistAge = parseOptionalAge(protagonistAgeText);
-  const protagonistAgeStage =
-    protagonistAgeText && protagonistAge === undefined ? `年龄阶段：${protagonistAgeText}` : '';
-  const protagonistSupplement = [
-    form.体验与叙事方向.主角处境,
-    form.主角.处境与压力,
-    form.主角.性格与声音,
-    form.主角.补充设定,
-    protagonistAgeStage,
-  ]
-    .filter(Boolean)
-    .join('\n');
-  if (protagonistAgeStage && !data.value.世界配置.主角补充设定.includes(protagonistAgeStage)) {
-    data.value.世界配置.主角补充设定 = [data.value.世界配置.主角补充设定, protagonistAgeStage]
-      .filter(Boolean)
-      .join('\n');
-  }
-  const protagonistBasics: Record<string, unknown> = {
-    ...oldProtagonist.基础信息,
-    姓名: oldProtagonist.基础信息.姓名 || '',
-    身份: textOrDefault(form.主角.身份与位置, oldProtagonist.基础信息.身份),
-    目标: textOrDefault(form.主角.追求, oldProtagonist.基础信息.目标),
-    与编辑器关系: form.让现实编辑器参与世界观生成 ? oldProtagonist.基础信息.与编辑器关系 : '开场后才以外来事物出现',
-  };
-  if (protagonistGender) protagonistBasics.性别 = protagonistGender;
-  else if (legacyProtagonistPlaceholder) protagonistBasics.性别 = '';
-  if (protagonistAge !== undefined) protagonistBasics.年龄 = protagonistAge;
-  else if (protagonistAgeText || legacyProtagonistPlaceholder) protagonistBasics.年龄 = -1;
-  data.value.主角 = form.主角.启用
-    ? {
-        ...oldProtagonist,
-        基础信息: protagonistBasics,
-        外貌: {
-          ...oldProtagonist.外貌,
-          身高: textOrDefault(form.主角.外貌.身高, oldProtagonist.外貌.身高),
-          体型: textOrDefault(form.主角.外貌.体型, oldProtagonist.外貌.体型),
-          面容气质: textOrDefault(form.主角.外貌.面容气质, oldProtagonist.外貌.面容气质),
-          身体特征: textOrDefault(form.主角.外貌.身体特征, oldProtagonist.外貌.身体特征),
-        },
-        性格: { ...oldProtagonist.性格, 底色: textOrDefault(form.主角.性格与声音, oldProtagonist.性格.底色) },
-        补充设定: textOrDefault(protagonistSupplement, oldProtagonist.补充设定),
-      }
-    : {
-        ...oldProtagonist,
-        基础信息: { ...protagonistBasics, 姓名: '', 身份: '', 目标: '' },
-        性格: { ...oldProtagonist.性格, 底色: '' },
-        补充设定: '',
-      };
-  data.value.NPC序列 = buildMvuCharacters();
 }
 function buildOpeningConfig() {
   return {
@@ -2868,6 +2695,7 @@ async function requestOpening(prompt: string, userInput: string): Promise<string
   });
   const text = extractGenerateText(result)
     .replace(/<thinking>[\s\S]*?<\/thinking>/gis, '')
+    .replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '')
     .trim();
   if (!text) throw new Error('AI 没有返回开场正文');
   return text.replace(/<StatusPlaceHolderImpl\s*\/>/gi, '').trim();
@@ -2900,17 +2728,80 @@ async function confirmOpening() {
   if (!openingPreview.value || openingPreviewStale.value || starting.value) return;
   starting.value = true;
   setStatus('正在签发配置并创建开场楼层…', 'working');
+  const snapshot = buildOpeningSnapshot();
+  const oldData = normalizeOpeningMvuData(Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() }));
+  const beforeMessages = openingMessages();
+  const beforeMessageIds = new Set(beforeMessages.map(item => item.message_id));
+  const updateVariable = buildOpeningUpdateVariable(snapshot, { protagonistName: protagonistName.value });
+  const message = appendOpeningUpdateVariable(openingPreview.value, updateVariable);
+  let mutation: ChatLoreMutation | undefined;
+  let createdMessageId: number | undefined;
   try {
-    applyConfigurationToMvu();
-    const oldData = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
-    const message = `${openingPreview.value.trim()}\n<StatusPlaceHolderImpl/>`;
+    mutation = await commitCurrentChatLore(snapshot);
+    const expectedChatLore = await verifyChatLoreMutation(mutation);
+    console.info('[人间修订中·世界配置] Chat Lore 后置条件已确认', {
+      buildMarker: HUMAN_REVISION_BUILD_MARKER,
+      worldbookName: mutation.worldbookName,
+      binding: expectedChatLore.binding,
+      managedEntryCount: expectedChatLore.managedEntries.length,
+    });
     const parsed = await Mvu.parseMessage(message, oldData);
-    await createChatMessages([{ role: 'assistant', message, data: parsed ?? oldData }], { refresh: 'none' });
-    await setChatMessages([{ message_id: getLastMessageId() }], { refresh: 'affected' });
+    if (!parsed || !parsed.stat_data) throw new Error('Mvu.parseMessage 未返回可持久化的 stat_data');
+    console.info('[人间修订中·世界配置] MVU parseMessage 已返回', {
+      buildMarker: HUMAN_REVISION_BUILD_MARKER,
+      roots: Object.keys(parsed.stat_data),
+      updateVariablePresent: message.includes('<UpdateVariable>'),
+    });
+    await createChatMessages([{ role: 'assistant', message, data: parsed }], { refresh: 'none' });
+    const createdMessage = await waitForCreatedOpeningMessage(message, parsed, beforeMessageIds);
+    createdMessageId = createdMessage.message_id;
+    if (!createdMessage.message.includes('<UpdateVariable>')) {
+      throw new Error('新消息回读成功但正文缺少可审计的 <UpdateVariable>');
+    }
+    if (!_.isEqual(createdMessage.data, parsed)) {
+      throw new Error('新消息回读成功但 MVU 数据与 parseMessage 返回值不一致');
+    }
+    await SillyTavern.saveChat();
+    const persistedMessage = await waitForCreatedOpeningMessage(message, parsed, beforeMessageIds);
+    console.info('[人间修订中·世界配置] 新消息写后回读已确认', {
+      buildMarker: HUMAN_REVISION_BUILD_MARKER,
+      messageId: persistedMessage.message_id,
+      updateVariablePresent: persistedMessage.message.includes('<UpdateVariable>'),
+      statDataRoots: Object.keys(persistedMessage.data?.stat_data ?? {}),
+    });
     setStatus('开场已签发，往下翻阅新楼层即可开始游玩。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] 开场签发失败', error);
-    setStatus(`签发失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+    if (createdMessageId === undefined) {
+      const candidate = findCreatedOpeningMessage(message, {}, beforeMessageIds);
+      if (candidate) createdMessageId = candidate.message_id;
+    }
+    const rollbackErrors: string[] = [];
+    if (createdMessageId !== undefined) {
+      try {
+        await deleteChatMessages([createdMessageId], { refresh: 'none' });
+        await SillyTavern.saveChat();
+        if (openingMessages().some(candidate => candidate.message_id === createdMessageId)) {
+          throw new Error(`删除后仍能回读消息楼层：${createdMessageId}`);
+        }
+      } catch (rollbackError) {
+        rollbackErrors.push(
+          `消息回滚失败：${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+        );
+      }
+    }
+    if (mutation) {
+      try {
+        await rollbackChatLoreMutation(mutation);
+      } catch (rollbackError) {
+        rollbackErrors.push(
+          `Chat Lore 回滚失败：${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+        );
+      }
+    }
+    const detail = error instanceof Error ? error.message : String(error);
+    const rollbackDetail = rollbackErrors.length ? `；${rollbackErrors.join('；')}` : '；已回滚已写入状态';
+    setStatus(`签发失败：${detail}${rollbackDetail}`, 'error');
   } finally {
     starting.value = false;
   }

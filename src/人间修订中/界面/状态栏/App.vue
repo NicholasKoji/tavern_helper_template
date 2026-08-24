@@ -7,7 +7,7 @@
         <h1 class="title">人间修订中</h1>
       </div>
       <span class="editor-badge">{{ data.现实编辑器.状态 }}</span>
-      <span class="version">{{ data.现实编辑器.版本 }}</span>
+      <span class="version">{{ data.现实编辑器.是否显现 ? '已显现' : '未显现' }}</span>
       <button class="rule-edit-button" type="button" @click="openRuleEditor">
         <PenLine :size="14" stroke-width="1.8" />改规则
       </button>
@@ -108,24 +108,24 @@
           </header>
           <div class="data-list">
             <div class="data-row">
-              <div class="data-key">世界模板</div>
-              <div class="data-val">{{ data.世界配置.世界模板 }}</div>
+              <div class="data-key">当前地点</div>
+              <div class="data-val">{{ formatLocation }}</div>
             </div>
             <div class="data-row">
-              <div class="data-key">时代背景</div>
-              <div class="data-val">{{ data.世界配置.时代背景 }}</div>
+              <div class="data-key">当前摘要</div>
+              <div class="data-val">{{ data.当前场景.摘要 }}</div>
             </div>
             <div class="data-row">
-              <div class="data-key">主线目标</div>
-              <div class="data-val">{{ data.世界配置.剧情方向.主线目标 }}</div>
+              <div class="data-key">主角状态</div>
+              <div class="data-val">{{ data.主角.启用 ? '已启用' : '未启用' }}</div>
             </div>
             <div class="data-row">
-              <div class="data-key">叙事视角</div>
-              <div class="data-val">{{ data.世界配置.叙事视角 }}</div>
+              <div class="data-key">编辑器显现</div>
+              <div class="data-val">{{ data.现实编辑器.是否显现 ? '已显现' : '未显现' }}</div>
             </div>
             <div class="data-row">
-              <div class="data-key">叙事文风</div>
-              <div class="data-val">{{ data.世界配置.叙事文风 }}</div>
+              <div class="data-key">最近反馈</div>
+              <div class="data-val">{{ data.现实编辑器.最近反馈 || '暂无' }}</div>
             </div>
           </div>
         </article>
@@ -137,16 +137,12 @@
           </header>
           <div class="data-list">
             <div class="data-row">
-              <div class="data-key">版本</div>
-              <div class="data-val">{{ data.现实编辑器.版本 }}</div>
+              <div class="data-key">显现</div>
+              <div class="data-val">{{ data.现实编辑器.是否显现 ? '已显现' : '未显现' }}</div>
             </div>
             <div class="data-row">
-              <div class="data-key">权限</div>
-              <div class="data-val perms">
-                <span class="perm ok">改规则 ✓</span>
-                <span class="perm no">改权限 ✗</span>
-                <span class="perm no">卸载 ✗</span>
-              </div>
+              <div class="data-key">最近反馈</div>
+              <div class="data-val">{{ data.现实编辑器.最近反馈 || '暂无' }}</div>
             </div>
           </div>
           <div v-if="ruleScopeCount > 0" class="rules">
@@ -157,7 +153,7 @@
               </summary>
               <template v-if="scope.key === '世界规则'">
                 <ul>
-                  <li v-for="(content, name) in data.现实编辑器.生效规则.世界规则" :key="name">
+                  <li v-for="(content, name) in data.生效规则.世界规则" :key="name">
                     <b>{{ name }}</b
                     >：{{ content }}
                   </li>
@@ -681,11 +677,11 @@ const tabs = [
   { id: 'npc' as const, label: 'NPC', icon: Users },
 ];
 
-const protagonistEnabled = computed(() => data.value.世界配置.主角启用);
+const protagonistEnabled = computed(() => data.value.主角.启用);
 const npcEntries = computed(() => Object.entries(data.value.NPC序列 ?? {}));
 const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列[selectedNpcName.value] : undefined));
 const ruleScopes = computed(() => {
-  const rules = data.value.现实编辑器.生效规则;
+  const rules = data.value.生效规则;
   return [
     {
       key: '世界规则' as const,
@@ -849,7 +845,7 @@ function openRuleEditor() {
   aiDraft.世界规则 = { 主题: '', 说明: '', 对象: '' };
   aiDraft.区域规则 = { 主题: '', 说明: '', 对象: '' };
   aiDraft.个人规则 = { 主题: '', 说明: '', 对象: '' };
-  const rules = data.value.现实编辑器.生效规则;
+  const rules = data.value.生效规则;
   ruleEditorState.世界规则 = Object.entries(rules.世界规则 ?? {}).map(([名称, 内容]) => ({ 对象: '', 名称, 内容 }));
   ruleEditorState.区域规则 = toScopedDrafts(rules.区域规则 ?? {});
   ruleEditorState.个人规则 = toScopedDrafts(rules.个人规则 ?? {});
@@ -879,7 +875,7 @@ function assertSafePathSegment(value: string, label: string, errors: string[]) {
 }
 
 function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: AnnouncementItem[] } {
-  const rules = data.value.现实编辑器.生效规则;
+  const rules = data.value.生效规则;
   const current = {
     世界规则: rules.世界规则 ?? {},
     区域规则: rules.区域规则 ?? {},
@@ -903,7 +899,7 @@ function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: Announcem
     }
     worldNames.add(name);
     const content = row.内容.trim() || '已生效';
-    const path = `/现实编辑器/生效规则/世界规则/${name}`;
+    const path = `/生效规则/世界规则/${name}`;
     if (current.世界规则[name] === undefined) {
       ops.push({ op: 'insert', path, value: content });
       items.push({ 编号: '', 类型: '新增', 名称: name, 内容: content, 范围: '整个世界' });
@@ -914,7 +910,7 @@ function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: Announcem
   }
   for (const name of Object.keys(current.世界规则)) {
     if (!worldNames.has(name)) {
-      ops.push({ op: 'remove', path: `/现实编辑器/生效规则/世界规则/${name}` });
+      ops.push({ op: 'remove', path: `/生效规则/世界规则/${name}` });
       items.push({ 编号: '', 类型: '废止', 名称: name, 内容: '', 范围: '整个世界' });
     }
   }
@@ -942,7 +938,7 @@ function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: Announcem
       }
       seenKeys.add(mapKey);
       const content = row.内容.trim() || '已生效';
-      const path = `/现实编辑器/生效规则/${groupKey}/${target}/${name}`;
+      const path = `/生效规则/${groupKey}/${target}/${name}`;
       const scopeText = groupKey === '区域规则' ? `指定区域（${target}）` : `指定对象（${target}）`;
       const oldContent = current[groupKey][target]?.[name];
       if (oldContent === undefined) {
@@ -956,7 +952,7 @@ function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: Announcem
     for (const [target, ruleMap] of Object.entries(current[groupKey] ?? {})) {
       for (const name of Object.keys(ruleMap)) {
         if (!seenKeys.has(`${target}\u0000${name}`)) {
-          ops.push({ op: 'remove', path: `/现实编辑器/生效规则/${groupKey}/${target}/${name}` });
+          ops.push({ op: 'remove', path: `/生效规则/${groupKey}/${target}/${name}` });
           items.push({
             编号: '',
             类型: '废止',
@@ -971,6 +967,7 @@ function buildRuleDiff(): { error?: string; ops: RulePatchOp[]; items: Announcem
 
   handleScoped('区域规则');
   handleScoped('个人规则');
+  ops.push({ op: 'replace', path: '/现实编辑器/最近反馈', value: '规则修订已签发。' });
 
   if (errors.length) {
     return { error: errors.join('；') };
@@ -999,7 +996,6 @@ async function confirmRules() {
     const oldData = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
     const newData = await Mvu.parseMessage(patchMessage, oldData);
     await Mvu.replaceMvuData(newData, { type: 'message', message_id: getCurrentMessageId() });
-    data.value.现实编辑器.生效规则 = newData.stat_data.现实编辑器.生效规则;
 
     const now = new Date();
     const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1061,8 +1057,9 @@ function extractRecentStoryBodies(maxLayers = 3): string[] {
 }
 
 function buildWorldviewPrompt(groupKey: RuleGroupKey, hint: string): string {
-  const world = data.value.世界配置;
   const scene = data.value.当前场景;
+  const protagonist = data.value.主角;
+  const editor = data.value.现实编辑器;
   const recentBodies = extractRecentStoryBodies();
   const recentStory = recentBodies.length
     ? recentBodies.map((body, index) => `第 ${index + 1} 层：\n${body}`).join('\n\n')
@@ -1083,17 +1080,17 @@ function buildWorldviewPrompt(groupKey: RuleGroupKey, hint: string): string {
         : '{"主题":"...","说明":"...","对象名":"...","规则列表":[{"名称":"...","内容":"..."}]}';
   return `你是「现实编辑器」的规则世界观起草引擎。玩家会通过状态栏把整套规则写入世界，并在下一轮剧情中立即显化。你的任务不是列点子，而是生成一套逻辑自洽、互相咬合、能产生叙事摩擦的规则体系。
 【目标类别】${groupKey}
-${hint ? `【玩家方向】${hint}` : '【玩家方向】未指定，请结合世界配置自由发挥一个有吸引力的主题。'}
+${hint ? `【玩家方向】${hint}` : '【玩家方向】未指定，请结合当前聊天 Chat Lore 中的固定世界设定自由发挥一个有吸引力的主题。'}
 
-【世界背景】
-- 世界模板：${world.世界模板}
-- 时代背景：${world.时代背景}
-- 核心冲突：${world.核心冲突}
-- 叙事文风：${world.叙事文风}
-- 允许黑深残：${world.允许黑深残 ? '是' : '否'}
-- 玩法模式.编辑器篡改：${world.玩法模式.编辑器篡改}
-- 主角启用：${world.主角启用 ? '是' : '否'}
-【当前场景】${scene.地点.一级区域}/${scene.地点.二级区域}/${scene.地点.三级地点}
+【固定设定来源】
+世界、叙事与现实编辑器的固定机制以当前聊天 Chat Lore 为准；下列 MVU 只提供动态状态，不重复制造固定设定。
+【动态状态】
+- 当前地点：${scene.地点.一级区域}/${scene.地点.二级区域}/${scene.地点.三级地点}
+- 当前摘要：${scene.摘要}
+- 主角启用：${protagonist.启用 ? '是' : '否'}
+- 主角身份：${protagonist.基础信息.身份 || '未记录'}
+- 现实编辑器显现：${editor.是否显现 ? '是' : '否'}
+- 现实编辑器最近反馈：${editor.最近反馈 || '暂无'}
 【当前 MVU 变量快照】
 ${JSON.stringify(data.value, null, 2)}
 【最近剧情正文（仅取 AI 回复中的 <content> 正文，按时间先后，最多三层）】
@@ -1114,7 +1111,7 @@ ${recentStory}
 ${scopeRule}
 
 【尺度与文风】
-- 内容尺度服从世界配置：${world.允许黑深残 ? '允许黑深残走向，可涉及压抑、残酷、制度性压迫，但不得无故堆砌' : '禁止苦大仇深'}；成人向内容按既有文风自然融入，不回避，但必须服务于体系逻辑与叙事。
+- 内容尺度服从当前聊天 Chat Lore 的固定设定与既有文风；不得凭空增加未签发的固定权限或限制。
 - 规则内容必须具体、可显现：落到动作、对白、身体反应、环境细节或社会惯例，禁止抽象口号。
 - 禁止出现“规则”“编辑器”“系统”等元叙述词；正文角色把它当作天然秩序。
 
