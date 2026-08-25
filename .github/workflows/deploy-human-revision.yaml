@@ -1,17 +1,13 @@
-name: deploy-human-revision
+name: publish-human-revision
 
 on:
   push:
     branches:
-      - main
-      - master
       - codex/zaohua-nongren
     paths:
-      - src/人间修订中/界面/**
-      - src/人间修订中/脚本/变量结构/**
-      - scripts/human-revision-release.mjs
-      - package.json
-      - pnpm-lock.yaml
+      - dist/人间修订中/界面/世界配置/index.html
+      - dist/人间修订中/界面/状态栏/index.html
+      - dist/人间修订中/脚本/变量结构/index.js
       - .github/workflows/deploy-human-revision.yaml
   workflow_dispatch:
 
@@ -19,24 +15,37 @@ permissions:
   contents: read
 
 concurrency:
-  group: human-revision-pages
+  group: human-revision-publish
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  purge-jsdelivr:
     runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      HUMAN_REVISION_PAGES_PROJECT: ${{ vars.HUMAN_REVISION_PAGES_PROJECT }}
-      HUMAN_REVISION_PAGES_BASE_URL: ${{ vars.HUMAN_REVISION_PAGES_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run human-revision:deploy
+      - name: Purge human-revision files from jsDelivr
+        shell: bash
+        env:
+          WORLD_PURGE_URL: https://purge.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/%E4%BA%BA%E9%97%B4%E4%BF%AE%E8%AE%A2%E4%B8%AD/%E7%95%8C%E9%9D%A2/%E4%B8%96%E7%95%8C%E9%85%8D%E7%BD%AE/index.html
+          STATUS_PURGE_URL: https://purge.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/%E4%BA%BA%E9%97%B4%E4%BF%AE%E8%AE%A2%E4%B8%AD/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html
+          SCHEMA_PURGE_URL: https://purge.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/%E4%BA%BA%E9%97%B4%E4%BF%AE%E8%AE%A2%E4%B8%AD/%E8%84%9A%E6%9C%AC/%E5%8F%98%E9%87%8F%E7%BB%93%E6%9E%84/index.js
+        run: |
+          set -euo pipefail
+          purge() {
+            local response
+            response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 "$1")"
+            echo "$response" | jq -e '.status == "finished" and ([.paths[].throttled] | all(. == false))' >/dev/null
+          }
+          purge "$WORLD_PURGE_URL"
+          purge "$STATUS_PURGE_URL"
+          purge "$SCHEMA_PURGE_URL"
+
+      - name: Verify canonical jsDelivr revisions
+        shell: bash
+        env:
+          WORLD_URL: https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/%E4%BA%BA%E9%97%B4%E4%BF%AE%E8%AE%A2%E4%B8%AD/%E7%95%8C%E9%9D%A2/%E4%B8%96%E7%95%8C%E9%85%8D%E7%BD%AE/index.html
+          STATUS_URL: https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/%E4%BA%BA%E9%97%B4%E4%BF%AE%E8%AE%A2%E4%B8%AD/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html
+        run: |
+          set -euo pipefail
+          sleep 3
+          curl --fail --silent --show-error --retry 2 "$WORLD_URL" | grep -Fq 'human-revision-opening-v3'
+          curl --fail --silent --show-error --retry 2 "$STATUS_URL" | grep -Fq 'human-revision-status-v2'

@@ -275,31 +275,32 @@
           }
         };
         const human_revision_pages_url = get_human_revision_pages_url();
+        const status_bar_revision = 'human-revision-status-v2';
         const status_bar_urls = [
           ...(human_revision_pages_url ? [`${human_revision_pages_url}/human-revision/status/index.html`] : []),
+          'https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
           'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
         ];
-        const status_bar_revision = '[data-status-bar="human-revision-status-v2"]';
-        const load_status_bar = index => {
-          if (index >= status_bar_urls.length) {
-            $('body').text('状态栏加载失败，请稍后重试');
-            return;
-          }
-          const url = encodeURI(`${status_bar_urls[index]}?t=${Date.now()}`);
-          $('body').load(url, (_response, status) => {
-            if (status === 'error') {
-              load_status_bar(index + 1);
+        const load_status_bar = async () => {
+          for (const source of status_bar_urls) {
+            try {
+              const separator = source.includes('?') ? '&' : '?';
+              const url = encodeURI(`${source}${separator}revision=${status_bar_revision}`);
+              const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'text/html' } });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const html = await response.text();
+              if (!html.includes(status_bar_revision)) throw new Error('revision mismatch');
+              document.open();
+              document.write(html);
+              document.close();
               return;
+            } catch (error) {
+              console.warn('[人间修订中] 状态栏前端加载回退', source, error);
             }
-            setTimeout(() => {
-              if (!document.querySelector(status_bar_revision)) load_status_bar(index + 1);
-            }, 1500);
-          });
+          }
+          document.body.textContent = '状态栏加载失败，请稍后重试';
         };
-        load_status_bar(0);
+        void load_status_bar();
         </script>
         </body>
         ```
@@ -329,31 +330,32 @@
           }
         };
         const human_revision_pages_url = get_human_revision_pages_url();
+        const world_config_revision = 'human-revision-opening-v3';
         const world_config_urls = [
           ...(human_revision_pages_url ? [`${human_revision_pages_url}/human-revision/world-config/index.html`] : []),
+          'https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
           'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
-          'https://fastly.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
-          'https://gcore.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
-          'https://testingcf.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
         ];
-        const world_config_revision = '[data-world-config="human-revision-opening-v3"]';
-        const load_world_config = index => {
-          if (index >= world_config_urls.length) {
-            $('body').text('世界配置界面加载失败，请稍后重试');
-            return;
-          }
-          const url = encodeURI(`${world_config_urls[index]}?t=${Date.now()}`);
-          $('body').load(url, (_response, status) => {
-            if (status === 'error') {
-              load_world_config(index + 1);
+        const load_world_config = async () => {
+          for (const source of world_config_urls) {
+            try {
+              const separator = source.includes('?') ? '&' : '?';
+              const url = encodeURI(`${source}${separator}revision=${world_config_revision}`);
+              const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'text/html' } });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const html = await response.text();
+              if (!html.includes(world_config_revision)) throw new Error('revision mismatch');
+              document.open();
+              document.write(html);
+              document.close();
               return;
+            } catch (error) {
+              console.warn('[人间修订中] 世界配置前端加载回退', source, error);
             }
-            setTimeout(() => {
-              if (!document.querySelector(world_config_revision)) load_world_config(index + 1);
-            }, 1500);
-          });
+          }
+          document.body.textContent = '世界配置界面加载失败，请稍后重试';
         };
-        load_world_config(0);
+        void load_world_config();
         </script>
         </body>
         ```
