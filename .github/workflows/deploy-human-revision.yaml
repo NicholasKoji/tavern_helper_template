@@ -47,5 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           sleep 3
-          curl --fail --silent --show-error --retry 2 "$WORLD_URL" | grep -Fq 'human-revision-opening-v3'
-          curl --fail --silent --show-error --retry 2 "$STATUS_URL" | grep -Fq 'human-revision-status-v2'
+          curl --fail --silent --show-error --retry 2 "$WORLD_URL" --output "$RUNNER_TEMP/human-revision-world.html"
+          curl --fail --silent --show-error --retry 2 "$STATUS_URL" --output "$RUNNER_TEMP/human-revision-status.html"
+          grep -Fq 'human-revision-opening-v3' "$RUNNER_TEMP/human-revision-world.html"
+          grep -Fq 'human-revision-status-v2' "$RUNNER_TEMP/human-revision-status.html"

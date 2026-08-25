@@ -281,6 +281,21 @@
           'https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
           'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/zaohua-nongren/dist/人间修订中/界面/状态栏/index.html',
         ];
+        const mount_remote_html = html => {
+          const parsed = new DOMParser().parseFromString(html, 'text/html');
+          for (const node of parsed.head.querySelectorAll('style, link[rel="stylesheet"]')) {
+            document.head.appendChild(document.importNode(node, true));
+          }
+          const scripts = [...parsed.querySelectorAll('script')];
+          for (const script of scripts) script.remove();
+          document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
+          for (const source of scripts) {
+            const script = document.createElement('script');
+            for (const { name, value } of [...source.attributes]) script.setAttribute(name, value);
+            script.textContent = source.textContent;
+            document.body.appendChild(script);
+          }
+        };
         const load_status_bar = async () => {
           for (const source of status_bar_urls) {
             try {
@@ -290,9 +305,7 @@
               if (!response.ok) throw new Error(`HTTP ${response.status}`);
               const html = await response.text();
               if (!html.includes(status_bar_revision)) throw new Error('revision mismatch');
-              document.open();
-              document.write(html);
-              document.close();
+              mount_remote_html(html);
               return;
             } catch (error) {
               console.warn('[人间修订中] 状态栏前端加载回退', source, error);
@@ -336,6 +349,21 @@
           'https://cdn.jsdelivr.net/gh/NicholasKoji/tavern_helper_template@codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
           'https://raw.githubusercontent.com/NicholasKoji/tavern_helper_template/codex/zaohua-nongren/dist/人间修订中/界面/世界配置/index.html',
         ];
+        const mount_remote_html = html => {
+          const parsed = new DOMParser().parseFromString(html, 'text/html');
+          for (const node of parsed.head.querySelectorAll('style, link[rel="stylesheet"]')) {
+            document.head.appendChild(document.importNode(node, true));
+          }
+          const scripts = [...parsed.querySelectorAll('script')];
+          for (const script of scripts) script.remove();
+          document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
+          for (const source of scripts) {
+            const script = document.createElement('script');
+            for (const { name, value } of [...source.attributes]) script.setAttribute(name, value);
+            script.textContent = source.textContent;
+            document.body.appendChild(script);
+          }
+        };
         const load_world_config = async () => {
           for (const source of world_config_urls) {
             try {
@@ -345,9 +373,7 @@
               if (!response.ok) throw new Error(`HTTP ${response.status}`);
               const html = await response.text();
               if (!html.includes(world_config_revision)) throw new Error('revision mismatch');
-              document.open();
-              document.write(html);
-              document.close();
+              mount_remote_html(html);
               return;
             } catch (error) {
               console.warn('[人间修订中] 世界配置前端加载回退', source, error);
