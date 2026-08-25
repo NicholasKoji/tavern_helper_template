@@ -209,18 +209,6 @@
                 openingGenerating ? '正在生成第一幕…' : openingPreview ? '重新生成' : '生成唯一开场预览'
               }}</span>
             </button>
-            <div class="plan-save-actions">
-              <span v-if="hasCurrentPlan" class="plan-source-label" :title="`当前内容源自：${currentPlanName}`">
-                源自：{{ currentPlanName }}
-              </span>
-              <button class="plan-save-btn" type="button" @click="$emit('saveNewPlan')">保存为新方案</button>
-              <button v-if="hasCurrentPlan" class="plan-save-btn" type="button" @click="$emit('updateCurrentPlan')">
-                更新当前方案
-              </button>
-              <button v-if="hasCurrentPlan" class="plan-save-btn secondary" type="button" @click="$emit('saveAsPlan')">
-                另存为
-              </button>
-            </div>
           </div>
         </header>
 
@@ -301,8 +289,6 @@ const props = defineProps<{
   openingPreview: string;
   openingPreviewStale: boolean;
   starting: boolean;
-  currentPlanName: string;
-  hasCurrentPlan: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -310,9 +296,6 @@ const emit = defineEmits<{
   (e: 'generateOpening'): void;
   (e: 'generateOpeningWithNote', note: string): void;
   (e: 'confirmOpening'): void;
-  (e: 'saveNewPlan'): void;
-  (e: 'updateCurrentPlan'): void;
-  (e: 'saveAsPlan'): void;
 }>();
 
 const localRevisionNote = ref('');
@@ -557,53 +540,6 @@ function toggleScope(scopeVal: string) {
   min-width: 0;
 }
 
-.plan-save-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-.plan-source-label {
-  max-width: 190px;
-  overflow: hidden;
-  color: var(--ink-muted);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.plan-save-btn {
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill);
-  color: var(--ink-muted);
-  font-size: 10.5px;
-  font-weight: 600;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease;
-}
-
-.plan-save-btn:hover {
-  background: var(--brass-soft);
-  border-color: var(--brass-border);
-  color: var(--brass);
-}
-
-.plan-save-btn.secondary {
-  color: var(--cinnabar);
-}
-
-.plan-save-btn.secondary:hover {
-  background: var(--cinnabar-soft);
-  border-color: var(--cinnabar);
-  color: var(--cinnabar);
-}
-
 .signing-kicker {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -802,9 +738,6 @@ function toggleScope(scopeVal: string) {
   }
   .signing-head-actions {
     align-items: flex-start;
-  }
-  .plan-save-actions {
-    justify-content: flex-start;
   }
 }
 </style>

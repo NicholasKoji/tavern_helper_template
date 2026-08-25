@@ -48,9 +48,16 @@
             </ul>
           </div>
 
+          <div v-if="aiPreview.kind === 'private-status'" class="private-status-preview-note">
+            <CircleAlert :size="14" />
+            <span>动态部位只会在点击“采用此建议”后创建；已有非空文字不会被覆盖，采用后仍可编辑文字。</span>
+          </div>
+
           <!-- 建议内容明细 -->
           <div v-if="hasValues" class="values-box">
-            <h4 class="section-label">拟写入的字段内容</h4>
+            <h4 class="section-label">
+              {{ aiPreview.kind === 'private-status' ? '拟创建或补充的动态部位' : '拟写入的字段内容' }}
+            </h4>
             <div class="values-grid">
               <div v-for="(val, key) in aiPreview.values" :key="key" class="value-item">
                 <span class="value-key">{{ formatKey(key) }}</span>
@@ -61,12 +68,7 @@
         </div>
 
         <footer class="modal-footer">
-          <button
-            class="action-btn secondary"
-            type="button"
-            :disabled="isAnyAiBusy"
-            @click="$emit('regenerate')"
-          >
+          <button class="action-btn secondary" type="button" :disabled="isAnyAiBusy" @click="$emit('regenerate')">
             <RefreshCw :size="13" />
             <span>重新整理</span>
           </button>
@@ -248,6 +250,19 @@ onMounted(() => {
   font-size: 12.5px;
   color: var(--ink-body);
   line-height: 1.5;
+}
+
+.private-status-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--brass-soft);
+  border: 1px solid var(--brass-border);
+  border-radius: var(--radius-md);
+  color: var(--brass);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .values-grid {

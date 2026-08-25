@@ -119,7 +119,7 @@ export const Schema = z.object({
               好感度: z.coerce
                 .number()
                 .transform(value => _.clamp(value, 0, 100))
-                .prefault(50),
+                .prefault(0),
             })
             .prefault({}),
           外貌: z

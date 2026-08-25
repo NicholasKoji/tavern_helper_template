@@ -269,7 +269,7 @@
                 "type": "string"
               },
               "好感度": {
-                "default": 50,
+                "default": 0,
                 "type": "number"
               }
             }

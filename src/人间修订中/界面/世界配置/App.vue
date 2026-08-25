@@ -55,6 +55,8 @@
             :protagonist-name="protagonistName"
             @assist-protagonist="requestProtagonistAi"
             @assist-character="requestCharacterAi"
+            @assist-private-status="requestPrivateStatusAi"
+            @clear-private-status="clearPrivateStatus"
             @add-character="addCharacter"
             @remove-character="removeCharacter"
           />
@@ -79,15 +81,10 @@
             :opening-preview="openingPreview"
             :opening-preview-stale="openingPreviewStale"
             :starting="starting"
-            :current-plan-name="currentPlanName"
-            :has-current-plan="hasCurrentPlan"
             @assist="requestAi"
             @generate-opening="generateOpeningDraft('')"
             @generate-opening-with-note="generateOpeningDraft"
             @confirm-opening="confirmOpening"
-            @save-new-plan="saveNewOpeningPlan"
-            @update-current-plan="updateCurrentOpeningPlan"
-            @save-as-plan="saveAsOpeningPlan"
           />
         </transition>
 
@@ -98,10 +95,14 @@
           :is-ai-busy="aiBusyKey"
           :status-message="status"
           :status-type="statusType"
+          :current-plan-name="currentPlanName"
+          :has-current-plan="hasCurrentPlan"
           @previous="goPreviousLayer"
           @next="goNextLayer"
           @complete-remaining="completeRemaining()"
-          @scroll-to-signing="scrollToSigning"
+          @save-new-plan="saveNewOpeningPlan"
+          @update-current-plan="updateCurrentOpeningPlan"
+          @save-as-plan="saveAsOpeningPlan"
         />
       </section>
 
@@ -142,8 +143,12 @@ import { useDataStore } from './store';
 import {
   appendOpeningUpdateVariable,
   buildOpeningUpdateVariable,
+  isOpeningDateComplete,
   normalizeOpeningMvuData,
+  type ClothingSnapshot,
+  type OpeningDateSnapshot,
   type OpeningFormSnapshot,
+  type PrivateStatusSnapshot,
 } from './opening';
 import {
   commitCurrentChatLore,
@@ -153,6 +158,7 @@ import {
 } from './chat-lore';
 import {
   OPENING_PLAN_STORAGE_KEY,
+  LEGACY_OPENING_PLAN_STORAGE_KEY,
   cloneOpeningPlanWithNewId,
   createOpeningPlan,
   findOpeningPlanById,
@@ -187,6 +193,8 @@ type LayerId = 'experience' | 'world' | 'characters' | 'grounding' | 'editor';
 type StatusType = '' | 'working' | 'success' | 'error';
 type EditorScope = '世界' | '区域' | '个人';
 type AppearanceDraft = { 身高: string; 体型: string; 面容气质: string; 身体特征: string };
+type ClothingDraft = ClothingSnapshot;
+type PrivateStatusDraft = PrivateStatusSnapshot;
 
 type CharacterDraft = {
   localId: string;
@@ -197,14 +205,19 @@ type CharacterDraft = {
   体型: string;
   面容气质: string;
   身体特征: string;
+  身份: string;
   关系定位: string;
-  欲望与压力: string;
+  好感度: number;
+  罩杯: string;
+  性格主色: string;
   性格与声音: string;
-  当前关联: string;
+  穿着: ClothingDraft;
+  私密状态: PrivateStatusDraft;
 };
 
 type StoryForm = {
   让现实编辑器参与世界观生成: boolean;
+  故事起始日期: OpeningDateSnapshot;
   体验与叙事方向: { 故事体验: string; 主角处境: string; 冲突与成长: string; 叙事视角: string; 文风: string };
   世界与故事骨架: { 世界规则: string; 时代与舞台: string; 社会后果: string; 核心矛盾与推进: string };
   主角: {
@@ -214,9 +227,11 @@ type StoryForm = {
     外貌: AppearanceDraft;
     身份与位置: string;
     追求: string;
-    处境与压力: string;
+    性格主色: string;
     性格与声音: string;
     补充设定: string;
+    穿着: ClothingDraft;
+    私密状态: PrivateStatusDraft;
   };
   重要角色: CharacterDraft[];
   世界落地与开场准备: {
@@ -259,9 +274,17 @@ type AiPreview = {
   values: Record<string, string>;
   contextRevision: number;
   bulkAllowedKeys?: string[];
+  kind?: 'fields' | 'private-status';
+  privateStatusValues?: PrivateStatusDraft;
 };
 
 type AiPayload = { 结论?: string; 理由?: string; 可执行约束?: string[]; 可采用?: Record<string, string> };
+type PrivateStatusAiPayload = {
+  结论?: string;
+  理由?: string;
+  可执行约束?: string[];
+  可采用?: { 私密状态?: Record<string, { 外观描述?: string; 当前状态?: string }> };
+};
 type PersonaSnapshot = { name?: unknown; description?: unknown };
 type PersonaReader = (scope: 'current') => PersonaSnapshot | null | undefined;
 
@@ -353,6 +376,14 @@ const editorScopes: Array<{ value: EditorScope; label: string; description: stri
   { value: '个人', label: '指定个人', description: '角色或单一对象' },
 ];
 
+function createClothing(): ClothingDraft {
+  return { 上装: '', 下装: '', 内衣: '', 袜子: '', 鞋子: '', 配饰: '无' };
+}
+
+function createPrivateStatus(): PrivateStatusDraft {
+  return {};
+}
+
 function createCharacter(): CharacterDraft {
   return {
     localId: `role-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -363,16 +394,21 @@ function createCharacter(): CharacterDraft {
     体型: '',
     面容气质: '',
     身体特征: '',
+    身份: '',
     关系定位: '',
-    欲望与压力: '',
+    好感度: 0,
+    罩杯: '不适用',
+    性格主色: '',
     性格与声音: '',
-    当前关联: '',
+    穿着: createClothing(),
+    私密状态: createPrivateStatus(),
   };
 }
 
 function createDefaultForm(): StoryForm {
   return {
     让现实编辑器参与世界观生成: false,
+    故事起始日期: { 年: '', 月: '', 日: '' },
     体验与叙事方向: { 故事体验: '', 主角处境: '', 冲突与成长: '', 叙事视角: '第三人称限定', 文风: '通用白描' },
     世界与故事骨架: { 世界规则: '', 时代与舞台: '', 社会后果: '', 核心矛盾与推进: '' },
     主角: {
@@ -382,9 +418,11 @@ function createDefaultForm(): StoryForm {
       外貌: { 身高: '', 体型: '', 面容气质: '', 身体特征: '' },
       身份与位置: '',
       追求: '',
-      处境与压力: '',
+      性格主色: '',
       性格与声音: '',
       补充设定: '',
+      穿着: createClothing(),
+      私密状态: createPrivateStatus(),
     },
     重要角色: [],
     世界落地与开场准备: { 起始地点: '', 日常秩序: '', 组织势力: '', 必要规则: '', 当前矛盾与开场: '' },
@@ -472,6 +510,38 @@ function draftAgeFromStored(value: unknown): string {
   return text === '-1' ? '' : text;
 }
 
+function draftDatePartFromStored(value: unknown): string {
+  const text = trimValue(value);
+  return /^\d+$/.test(text) ? text : '';
+}
+
+function hydrateClothing(value: Partial<ClothingDraft> | null | undefined): ClothingDraft {
+  return {
+    上装: trimValue(value?.上装, ''),
+    下装: trimValue(value?.下装, ''),
+    内衣: trimValue(value?.内衣, ''),
+    袜子: trimValue(value?.袜子, ''),
+    鞋子: trimValue(value?.鞋子, ''),
+    配饰: trimValue(value?.配饰, '') || '无',
+  };
+}
+
+function hydratePrivateStatus(value: unknown): PrivateStatusDraft {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([part, detail]) => {
+        if (!part.trim() || !detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
+        const item = detail as Record<string, unknown>;
+        return [
+          part.trim(),
+          { 外观描述: trimValue(item.外观描述, ''), 当前状态: trimValue(item.当前状态, '') },
+        ] as const;
+      })
+      .filter((entry): entry is readonly [string, { 外观描述: string; 当前状态: string }] => entry !== null),
+  );
+}
+
 function hydrateFromMvu() {
   const scene = data.value.当前场景;
   const protagonist = data.value.主角;
@@ -481,6 +551,9 @@ function hydrateFromMvu() {
     .map(value => trimValue(value))
     .filter(value => value && value !== '待生成');
   if (location.length) form.世界落地与开场准备.起始地点 = location.join(' / ');
+  form.故事起始日期.年 = draftDatePartFromStored(scene.日期.年);
+  form.故事起始日期.月 = draftDatePartFromStored(scene.日期.月);
+  form.故事起始日期.日 = draftDatePartFromStored(scene.日期.日);
   const sceneSummary = trimValue(scene.摘要);
   if (sceneSummary && sceneSummary !== '等待玩家完成开场签发') {
     form.世界落地与开场准备.当前矛盾与开场 = sceneSummary;
@@ -494,8 +567,11 @@ function hydrateFromMvu() {
   form.主角.外貌.身体特征 = trimValue(protagonist.外貌.身体特征, '');
   form.主角.身份与位置 = trimValue(protagonist.基础信息.身份, '');
   form.主角.追求 = trimValue(protagonist.基础信息.目标, '');
+  form.主角.性格主色 = trimValue(protagonist.性格.主色调, '');
   form.主角.性格与声音 = trimValue(protagonist.性格.底色, '');
   form.主角.补充设定 = trimValue(protagonist.补充设定, '');
+  form.主角.穿着 = hydrateClothing(protagonist.穿着);
+  form.主角.私密状态 = hydratePrivateStatus(protagonist.私密状态);
   if (editor.是否显现) form.现实编辑器.可修改范围 = [...form.现实编辑器.可修改范围];
   if (npcEntries.length) {
     form.重要角色 = npcEntries.map((npc, index) => ({
@@ -507,10 +583,14 @@ function hydrateFromMvu() {
       体型: trimValue(npc.外貌.体型),
       面容气质: trimValue(npc.外貌.面容气质),
       身体特征: trimValue(npc.外貌.身体特征),
+      身份: trimValue(npc.基础信息.身份),
       关系定位: trimValue(npc.基础信息.关系定位),
-      欲望与压力: trimValue(npc.当前想法),
+      好感度: Math.min(100, Math.max(0, Number(npc.基础信息.好感度) || 0)),
+      罩杯: trimValue(npc.外貌.罩杯, '不适用') || '不适用',
+      性格主色: trimValue(npc.性格.主色调),
       性格与声音: trimValue(npc.性格.底色),
-      当前关联: trimValue(npc.当前状态),
+      穿着: hydrateClothing(npc.穿着),
+      私密状态: hydratePrivateStatus(npc.私密状态),
     }));
   }
   hydrated.value = true;
@@ -524,6 +604,7 @@ function setStatus(message: string, type: StatusType = '') {
 function hasOpeningDraft(): boolean {
   return Boolean(
     form.让现实编辑器参与世界观生成 ||
+    Object.values(form.故事起始日期).some(value => value.trim()) ||
     Object.values(form.体验与叙事方向).some(value => value.trim()) ||
     Object.values(form.世界与故事骨架).some(value => value.trim()) ||
     form.主角.启用 !== true ||
@@ -532,9 +613,11 @@ function hasOpeningDraft(): boolean {
     Object.values(form.主角.外貌).some(value => value.trim()) ||
     form.主角.身份与位置 ||
     form.主角.追求 ||
-    form.主角.处境与压力 ||
+    form.主角.性格主色 ||
     form.主角.性格与声音 ||
     form.主角.补充设定 ||
+    Object.values(form.主角.穿着).some(value => value.trim() && value.trim() !== '无') ||
+    Object.keys(form.主角.私密状态).length > 0 ||
     form.重要角色.some(hasCharacterDraft) ||
     Object.values(form.世界落地与开场准备).some(value => value.trim()) ||
     hasEditorDraft(),
@@ -543,11 +626,14 @@ function hasOpeningDraft(): boolean {
 
 function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
   form.让现实编辑器参与世界观生成 = snapshot.让现实编辑器参与世界观生成;
+  Object.assign(form.故事起始日期, snapshot.故事起始日期);
   Object.assign(form.体验与叙事方向, snapshot.体验与叙事方向);
   Object.assign(form.世界与故事骨架, snapshot.世界与故事骨架);
   Object.assign(form.主角, {
     ...snapshot.主角,
     外貌: { ...snapshot.主角.外貌 },
+    穿着: { ...snapshot.主角.穿着 },
+    私密状态: hydratePrivateStatus(snapshot.主角.私密状态),
   });
   form.重要角色.splice(
     0,
@@ -555,6 +641,8 @@ function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
     ...snapshot.重要角色.map(character => ({
       localId: createCharacter().localId,
       ...character,
+      穿着: { ...character.穿着 },
+      私密状态: hydratePrivateStatus(character.私密状态),
     })),
   );
   Object.assign(form.世界落地与开场准备, snapshot.世界落地与开场准备);
@@ -739,7 +827,7 @@ function refreshOpeningPlans() {
 }
 
 function onOpeningPlanStorageChange(event: StorageEvent) {
-  if (event.key === OPENING_PLAN_STORAGE_KEY) refreshOpeningPlans();
+  if (event.key === OPENING_PLAN_STORAGE_KEY || event.key === LEGACY_OPENING_PLAN_STORAGE_KEY) refreshOpeningPlans();
 }
 
 function openingMessages() {
@@ -777,12 +865,6 @@ function scrollToTop() {
   // 保持安全滚动，不强制移动宿主酒馆窗口顶部，避免 #top-settings-holder 顶栏被推离视口
 }
 
-function scrollToSigning() {
-  requestAnimationFrame(() =>
-    document.querySelector('.signing-section')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
-  );
-}
-
 function goToLayer(index: number) {
   if (index < 0 || index >= layers.length || index > maxVisitedLayer.value) return;
   currentLayer.value = index;
@@ -809,14 +891,27 @@ function removeCharacter(index: number) {
   form.重要角色.splice(index, 1);
 }
 
+function clearPrivateStatus(target: string) {
+  const info = privateStatusTargetInfo(target);
+  if (!info) return;
+  Object.keys(info.status).forEach(part => delete info.status[part]);
+  setStatus(`已清空“${info.label}”的私密状态。`, 'success');
+}
+
 function compact(text: string, fallback: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
   return normalized ? (normalized.length > 70 ? `${normalized.slice(0, 70)}…` : normalized) : fallback;
 }
 
+function formatOpeningDate(date: OpeningDateSnapshot): string {
+  const { 年, 月, 日 } = date;
+  return 年 && 月 && 日 ? `${年}-${月}-${日}` : '';
+}
+
 function buildOpeningPlanSummary(): string {
   return compact(
     [
+      formatOpeningDate(form.故事起始日期),
       form.体验与叙事方向.故事体验,
       form.世界与故事骨架.时代与舞台,
       form.主角.身份与位置,
@@ -830,19 +925,24 @@ function buildOpeningPlanSummary(): string {
 }
 
 function hasCharacterDraft(character: CharacterDraft): boolean {
-  return [
-    character.姓名,
-    character.性别,
-    character.年龄,
-    character.身高,
-    character.体型,
-    character.面容气质,
-    character.身体特征,
-    character.关系定位,
-    character.欲望与压力,
-    character.性格与声音,
-    character.当前关联,
-  ].some(value => value.trim());
+  return (
+    [
+      character.姓名,
+      character.性别,
+      character.年龄,
+      character.身高,
+      character.体型,
+      character.面容气质,
+      character.身体特征,
+      character.身份,
+      character.关系定位,
+      character.性格主色,
+      character.性格与声音,
+      ...Object.values(character.穿着),
+    ].some(value => value.trim() && value.trim() !== '无') ||
+    character.好感度 !== 0 ||
+    Object.keys(character.私密状态).length > 0
+  );
 }
 
 function hasEditorDraft(): boolean {
@@ -861,7 +961,12 @@ function hasEditorDraft(): boolean {
 
 function layerComplete(layer: LayerId): boolean {
   if (layer === 'experience')
-    return Boolean(form.体验与叙事方向.故事体验 || form.体验与叙事方向.主角处境 || form.体验与叙事方向.冲突与成长);
+    return Boolean(
+      isOpeningDateComplete(form.故事起始日期) ||
+      form.体验与叙事方向.故事体验 ||
+      form.体验与叙事方向.主角处境 ||
+      form.体验与叙事方向.冲突与成长,
+    );
   if (layer === 'world')
     return Boolean(
       form.世界与故事骨架.世界规则 || form.世界与故事骨架.时代与舞台 || form.世界与故事骨架.核心矛盾与推进,
@@ -877,7 +982,7 @@ function layerComplete(layer: LayerId): boolean {
       form.主角.外貌.身体特征 ||
       form.主角.身份与位置 ||
       form.主角.追求 ||
-      form.主角.处境与压力 ||
+      form.主角.性格主色 ||
       form.主角.性格与声音 ||
       form.主角.补充设定 ||
       form.重要角色.some(hasCharacterDraft),
@@ -895,7 +1000,12 @@ const contextRows = computed(() => [
     order: '01',
     title: '体验与叙事方向',
     summary: compact(
-      [form.体验与叙事方向.故事体验, form.体验与叙事方向.主角处境, form.体验与叙事方向.冲突与成长]
+      [
+        formatOpeningDate(form.故事起始日期),
+        form.体验与叙事方向.故事体验,
+        form.体验与叙事方向.主角处境,
+        form.体验与叙事方向.冲突与成长,
+      ]
         .filter(Boolean)
         .join(' · '),
       '尚未填写',
@@ -929,7 +1039,7 @@ const contextRows = computed(() => [
       [
         form.主角.身份与位置,
         form.主角.追求,
-        form.主角.处境与压力,
+        form.主角.性格主色,
         ...form.重要角色.filter(hasCharacterDraft).map(character => character.姓名 || character.关系定位),
       ]
         .filter(Boolean)
@@ -985,6 +1095,7 @@ function markContextChange() {
 }
 
 watch(() => ({ ...form.体验与叙事方向 }), markContextChange, { deep: true });
+watch(() => ({ ...form.故事起始日期 }), markContextChange, { deep: true });
 watch(() => ({ ...form.世界与故事骨架, 参与: form.让现实编辑器参与世界观生成 }), markContextChange, { deep: true });
 watch(() => ({ 主角: form.主角, 角色: form.重要角色.map(c => ({ ...c })) }), markContextChange, { deep: true });
 watch(() => ({ ...form.世界落地与开场准备 }), markContextChange, { deep: true });
@@ -1122,10 +1233,18 @@ type CharacterField =
   | '体型'
   | '面容气质'
   | '身体特征'
+  | '身份'
   | '关系定位'
-  | '欲望与压力'
+  | '好感度'
+  | '罩杯'
+  | '性格主色'
   | '性格与声音'
-  | '当前关联';
+  | '上装'
+  | '下装'
+  | '内衣'
+  | '袜子'
+  | '鞋子'
+  | '配饰';
 const characterFieldNames: CharacterField[] = [
   '姓名',
   '性别',
@@ -1134,10 +1253,18 @@ const characterFieldNames: CharacterField[] = [
   '体型',
   '面容气质',
   '身体特征',
+  '身份',
   '关系定位',
-  '欲望与压力',
+  '好感度',
+  '罩杯',
+  '性格主色',
   '性格与声音',
-  '当前关联',
+  '上装',
+  '下装',
+  '内衣',
+  '袜子',
+  '鞋子',
+  '配饰',
 ];
 
 function characterDescriptor(index: number): AiFieldDescriptor {
@@ -1146,12 +1273,38 @@ function characterDescriptor(index: number): AiFieldDescriptor {
     id: `character:${index}`,
     title: character?.姓名.trim() || `角色 ${index + 1}`,
     layer: 'characters',
-    question: '请让这个角色拥有清晰的关系位置、可选的年龄与外貌、欲望、压力、声音和当前关联。',
+    question: '请让这个角色拥有清晰的身份、关系定位、外貌、性格和可直接影响当前 RP 的资料。',
     read: () => JSON.stringify(character ?? {}),
     write: value => {
       if (character) character.性格与声音 = value;
     },
   };
+}
+
+const clothingFieldNames = new Set<CharacterField>(['上装', '下装', '内衣', '袜子', '鞋子', '配饰']);
+
+function readCharacterField(character: CharacterDraft | undefined, field: CharacterField): string {
+  if (!character) return '';
+  if (clothingFieldNames.has(field)) return character.穿着[field as keyof ClothingDraft];
+  return String((character as unknown as Record<string, unknown>)[field] ?? '');
+}
+
+function writeCharacterField(character: CharacterDraft | undefined, field: CharacterField, value: string): void {
+  if (!character) return;
+  if (clothingFieldNames.has(field)) {
+    character.穿着[field as keyof ClothingDraft] = value;
+    return;
+  }
+  if (field === '好感度') {
+    const number = Number(value.replace(/[^\d.-]/g, ''));
+    character.好感度 = Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number))) : 0;
+    return;
+  }
+  if (field === '罩杯') {
+    character.罩杯 = ['不适用', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(value) ? value : '不适用';
+    return;
+  }
+  (character as unknown as Record<string, string>)[field] = value;
 }
 
 function characterFieldDescriptor(index: number, field: CharacterField): AiFieldDescriptor {
@@ -1161,15 +1314,85 @@ function characterFieldDescriptor(index: number, field: CharacterField): AiField
     title: `${character?.姓名.trim() || `角色 ${index + 1}`} · ${field}`,
     layer: 'characters',
     question: `请整理第 ${index + 1} 个重要角色的${field}，让它能直接影响当前 RP。`,
-    read: () => character?.[field] ?? '',
+    read: () => readCharacterField(character, field),
     write: value => {
-      if (character) character[field] = value;
+      writeCharacterField(character, field, value);
     },
+  };
+}
+
+type ProtagonistField =
+  | '性别'
+  | '年龄'
+  | '身高'
+  | '体型'
+  | '面容气质'
+  | '身体特征'
+  | '身份与位置'
+  | '追求'
+  | '性格主色'
+  | '性格与声音'
+  | '补充设定'
+  | '上装'
+  | '下装'
+  | '内衣'
+  | '袜子'
+  | '鞋子'
+  | '配饰';
+const protagonistFieldNames: ProtagonistField[] = [
+  '性别',
+  '年龄',
+  '身高',
+  '体型',
+  '面容气质',
+  '身体特征',
+  '身份与位置',
+  '追求',
+  '性格主色',
+  '性格与声音',
+  '补充设定',
+  '上装',
+  '下装',
+  '内衣',
+  '袜子',
+  '鞋子',
+  '配饰',
+];
+
+function readProtagonistField(field: ProtagonistField): string {
+  if (['身高', '体型', '面容气质', '身体特征'].includes(field)) return form.主角.外貌[field as keyof AppearanceDraft];
+  if (['上装', '下装', '内衣', '袜子', '鞋子', '配饰'].includes(field)) {
+    return form.主角.穿着[field as keyof ClothingDraft];
+  }
+  return String((form.主角 as unknown as Record<string, unknown>)[field] ?? '');
+}
+
+function writeProtagonistField(field: ProtagonistField, value: string): void {
+  if (['身高', '体型', '面容气质', '身体特征'].includes(field)) {
+    form.主角.外貌[field as keyof AppearanceDraft] = value;
+    return;
+  }
+  if (['上装', '下装', '内衣', '袜子', '鞋子', '配饰'].includes(field)) {
+    form.主角.穿着[field as keyof ClothingDraft] = value;
+    return;
+  }
+  (form.主角 as unknown as Record<string, string>)[field] = value;
+}
+
+function protagonistFieldDescriptor(field: ProtagonistField): AiFieldDescriptor {
+  return {
+    id: `characters.protagonist.${field}`,
+    title: `主角 · ${field}`,
+    layer: 'characters',
+    question: `请整理主角的${field}，保留玩家已填写内容并使其能直接影响当前 RP。`,
+    read: () => readProtagonistField(field),
+    write: value => writeProtagonistField(field, value),
   };
 }
 
 function contextSnapshot(includeEditor: boolean): Record<string, unknown> {
   const snapshot: Record<string, unknown> = {
+    故事起始日期: form.故事起始日期,
     体验与叙事方向: form.体验与叙事方向,
     世界与故事骨架: form.世界与故事骨架,
     主角与重要角色: { 主角: form.主角, 重要角色: form.重要角色 },
@@ -1207,6 +1430,7 @@ function protagonistPromptContext(): Record<string, unknown> {
     },
     前两层已确认内容: {
       体验与叙事方向: filledSnapshot(form.体验与叙事方向),
+      故事起始日期: filledSnapshot(form.故事起始日期),
       世界与故事骨架: filledSnapshot(form.世界与故事骨架),
     },
     当前第三层已填写内容:
@@ -1224,7 +1448,7 @@ function bulkLayerContext(layer: LayerId): Record<string, unknown> {
     Object.fromEntries(Object.entries(character).filter(([key]) => key !== 'localId')),
   );
   const sections: Record<LayerId, unknown> = {
-    experience: form.体验与叙事方向,
+    experience: { 故事起始日期: form.故事起始日期, ...form.体验与叙事方向 },
     world: form.世界与故事骨架,
     characters: { 主角: form.主角, 重要角色: roleDrafts },
     grounding: form.世界落地与开场准备,
@@ -1252,17 +1476,20 @@ function bulkLayerContext(layer: LayerId): Record<string, unknown> {
 function bulkDescriptorsForLayer(layer: LayerId): AiFieldDescriptor[] {
   const staticDescriptors = Object.values(aiFieldMap).filter(descriptor => descriptor.layer === layer);
   if (layer !== 'characters') return staticDescriptors;
-  const protagonistDescriptors = form.主角.启用
-    ? staticDescriptors
-    : staticDescriptors.filter(descriptor => !descriptor.id.startsWith('characters.protagonist.'));
+  const protagonistDescriptors = form.主角.启用 ? protagonistFieldNames.map(protagonistFieldDescriptor) : [];
   const characterDescriptors = form.重要角色.flatMap((_, index) =>
     characterFieldNames.map(field => characterFieldDescriptor(index, field)),
   );
-  return [...protagonistDescriptors, ...characterDescriptors];
+  return [...staticDescriptors, ...protagonistDescriptors, ...characterDescriptors];
 }
 
 function bulkPendingDescriptors(layer: LayerId): AiFieldDescriptor[] {
-  return bulkDescriptorsForLayer(layer).filter(descriptor => !descriptor.read().trim());
+  return bulkDescriptorsForLayer(layer).filter(descriptor => isAiFieldBlank(descriptor));
+}
+
+function isAiFieldBlank(descriptor: AiFieldDescriptor): boolean {
+  const value = descriptor.read().trim();
+  return !value || value === '无' || value === '不适用' || value === '0';
 }
 
 function buildAuthorizationLayer(): string {
@@ -1318,7 +1545,46 @@ function parseJsonLoose(text: string): unknown {
   }
 }
 
-async function requestJson(prompt: string, userInput: string, generationId: string): Promise<AiPayload> {
+function privateStatusSuggestionSchema() {
+  return {
+    name: 'human_revision_private_status_suggestion',
+    description: '动态私密状态 AI 预览结果',
+    strict: true,
+    value: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        结论: { type: 'string' },
+        理由: { type: 'string' },
+        可执行约束: { type: 'array', items: { type: 'string' } },
+        可采用: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            私密状态: {
+              type: 'object',
+              additionalProperties: {
+                type: 'object',
+                additionalProperties: false,
+                properties: { 外观描述: { type: 'string' }, 当前状态: { type: 'string' } },
+                required: ['外观描述', '当前状态'],
+              },
+            },
+          },
+          required: ['私密状态'],
+        },
+      },
+      required: ['结论', '理由', '可执行约束', '可采用'],
+    },
+  };
+}
+
+async function requestStructuredJson(
+  prompt: string,
+  userInput: string,
+  generationId: string,
+  schema: () => Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -1333,27 +1599,13 @@ async function requestJson(prompt: string, userInput: string, generationId: stri
           { role: 'assistant', content: '<|no-trans|>我已进入私人虚构创作状态，会先给出可预览的整理结果。' },
           'user_input',
         ],
-        ...(attempt === 0 ? { json_schema: suggestionSchema() } : {}),
+        ...(attempt === 0 ? { json_schema: schema() } : {}),
       });
       const text = extractGenerateText(result);
       if (!text.trim()) throw new Error('AI 返回为空');
-      const parsed = parseJsonLoose(text) as AiPayload;
+      const parsed = parseJsonLoose(text) as Record<string, unknown>;
       if (!parsed || typeof parsed !== 'object') throw new Error('AI 返回结构无效');
-      return {
-        结论: String(parsed.结论 ?? '').trim(),
-        理由: String(parsed.理由 ?? '').trim(),
-        可执行约束: Array.isArray(parsed.可执行约束)
-          ? parsed.可执行约束.map(item => String(item).trim()).filter(Boolean)
-          : [],
-        可采用:
-          parsed.可采用 && typeof parsed.可采用 === 'object'
-            ? Object.fromEntries(
-                Object.entries(parsed.可采用)
-                  .map(([key, value]) => [key, String(value).trim()])
-                  .filter(([, value]) => value),
-              )
-            : {},
-      };
+      return parsed;
     } catch (error) {
       lastError = error;
       console.warn(
@@ -1363,6 +1615,25 @@ async function requestJson(prompt: string, userInput: string, generationId: stri
     }
   }
   throw new Error(lastError instanceof Error ? lastError.message : String(lastError));
+}
+
+async function requestJson(prompt: string, userInput: string, generationId: string): Promise<AiPayload> {
+  const parsed = (await requestStructuredJson(prompt, userInput, generationId, suggestionSchema)) as AiPayload;
+  return {
+    结论: String(parsed.结论 ?? '').trim(),
+    理由: String(parsed.理由 ?? '').trim(),
+    可执行约束: Array.isArray(parsed.可执行约束)
+      ? parsed.可执行约束.map(item => String(item).trim()).filter(Boolean)
+      : [],
+    可采用:
+      parsed.可采用 && typeof parsed.可采用 === 'object'
+        ? Object.fromEntries(
+            Object.entries(parsed.可采用)
+              .map(([key, value]) => [key, String(value).trim()])
+              .filter(([, value]) => value),
+          )
+        : {},
+  };
 }
 
 function buildFieldPrompt(descriptor: AiFieldDescriptor, currentValue: string): string {
@@ -1383,7 +1654,7 @@ function buildCompositePrompt(
 }
 
 function buildProtagonistPrompt(fields: string[]): string {
-  return `【任务】\n根据酒馆当前人设与已确认访谈内容，生成一份可直接用于文字 RPG 的完整主角档案整理结果。结果先供玩家预览，不直接覆盖表单。\n\n【当前人设】\n${JSON.stringify(protagonistPromptContext().当前人设, null, 2)}\n\n【前两层上下文与当前第三层草稿】\n${JSON.stringify(protagonistPromptContext(), null, 2)}\n\n【必须覆盖的主角字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n【信息优先级】\n1. 玩家在当前页面手写的明确内容最高；这些非空字段不得被改写、扩写或替换。\n2. 人设说明中的明确事实其次；不得把没有依据的推测写成事实。\n3. 第一、二层已确认内容用于推断能影响当前 RP 的身份、追求、处境与声音。\n4. 没有依据的字段保持空白，不为了完整而编造。\n\n【输出约束】\n- 只返回上面列出的字段名，不返回姓名字段；姓名使用当前酒馆人设名称，不新增重复输入。\n- 可采用对象的键只能是这些字段名；空字段可以省略，但有依据时应给出完整档案建议。\n- 每个值都应是能执行的角色设定，不要只堆形容词；外貌四项分别写面容气质、身高、体型、身体特征。\n- 只输出 JSON：结论、理由、可执行约束、可采用。`;
+  return `【任务】\n根据酒馆当前人设与已确认访谈内容，生成一份可直接用于文字 RPG 的完整主角档案整理结果。结果先供玩家预览，不直接覆盖表单。\n\n【当前人设】\n${JSON.stringify(protagonistPromptContext().当前人设, null, 2)}\n\n【前两层上下文与当前第三层草稿】\n${JSON.stringify(protagonistPromptContext(), null, 2)}\n\n【必须覆盖的主角字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n【信息优先级】\n1. 玩家在当前页面手写的明确内容最高；这些非空字段不得被改写、扩写或替换。\n2. 人设说明中的明确事实其次；不得把没有依据的推测写成事实。\n3. 第一、二层已确认内容用于推断能影响当前 RP 的身份、追求、处境与声音；故事起始日期只读取玩家填写值，不得自行生成。\n4. 没有依据的字段保持空白，不为了完整而编造。\n\n【输出约束】\n- 只返回上面列出的字段名，不返回姓名字段；姓名使用当前酒馆人设名称，不新增重复输入。\n- 可采用对象的键只能是这些字段名；空字段可以省略，但有依据时应给出完整档案建议。\n- 每个值都应是能执行的角色设定，不要只堆形容词；外貌四项分别写面容气质、身高、体型、身体特征。穿着字段分别填写上装、下装、内衣、袜子、鞋子、配饰。\n- 不要返回私密状态；私密状态只能通过专用按钮单独生成。\n- 只输出 JSON：结论、理由、可执行约束、可采用。`;
 }
 
 function buildBulkPrompt(layer: LayerId) {
@@ -1450,9 +1721,15 @@ async function requestProtagonistAi() {
     '身体特征',
     '身份与位置',
     '追求',
-    '处境与压力',
+    '性格主色',
     '性格与声音',
     '补充设定',
+    '上装',
+    '下装',
+    '内衣',
+    '袜子',
+    '鞋子',
+    '配饰',
   ];
   try {
     const payload = await requestJson(
@@ -1510,6 +1787,111 @@ async function requestCharacterAi(index: number) {
   }
 }
 
+function privateStatusTargetInfo(
+  target: string,
+):
+  | { owner: 'protagonist'; label: string; status: PrivateStatusDraft }
+  | { owner: 'character'; index: number; label: string; status: PrivateStatusDraft }
+  | null {
+  if (target === 'protagonist.private-status') {
+    return { owner: 'protagonist', label: protagonistName.value || '主角', status: form.主角.私密状态 };
+  }
+  const match = target.match(/^character:(\d+)\.private-status$/);
+  if (!match) return null;
+  const index = Number(match[1]);
+  const character = form.重要角色[index];
+  if (!character) return null;
+  return { owner: 'character', index, label: character.姓名.trim(), status: character.私密状态 };
+}
+
+function normalizePrivateStatusAiValue(value: unknown): PrivateStatusDraft {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([part, detail]) => {
+        if (!part.trim() || !detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
+        const item = detail as Record<string, unknown>;
+        const normalized = {
+          外观描述: String(item.外观描述 ?? '').trim(),
+          当前状态: String(item.当前状态 ?? '').trim(),
+        };
+        return normalized.外观描述 || normalized.当前状态 ? ([part.trim(), normalized] as const) : null;
+      })
+      .filter((entry): entry is readonly [string, { 外观描述: string; 当前状态: string }] => entry !== null),
+  );
+}
+
+function privateStatusPreviewValues(status: PrivateStatusDraft): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(status).flatMap(([part, detail]) => [
+      [`${part} · 外观描述`, detail.外观描述],
+      [`${part} · 当前状态`, detail.当前状态],
+    ]),
+  );
+}
+
+async function requestPrivateStatusAi(target: string) {
+  if (aiBusyKey.value) return;
+  const info = privateStatusTargetInfo(target);
+  if (!info) return;
+  if (info.owner === 'character' && !info.label) {
+    setStatus('请先填写 NPC 姓名，再生成该 NPC 的私密状态。', 'error');
+    return;
+  }
+  if (info.owner === 'protagonist' && !form.主角.启用) {
+    setStatus('主角已关闭，不能为关闭中的主角生成私密状态。', 'error');
+    return;
+  }
+  aiBusyKey.value = target;
+  setStatus(`正在为“${info.label}”生成私密状态预览…`, 'working');
+  const revision = contextRevision.value;
+  const currentStatus = filledSnapshot(info.status) ?? {};
+  const prompt = `【任务】
+请为“${info.label}”生成一份可供玩家预览的动态私密状态。只返回结构化 JSON，不要直接写入表单。
+
+【已确认上下文】
+${JSON.stringify(contextSnapshot(false), null, 2)}
+
+【当前已有私密状态】
+${JSON.stringify(currentStatus, null, 2)}
+
+【输出要求】
+- 可采用对象必须只有一个“私密状态”键；其值是动态部位名到“外观描述”“当前状态”的对象。
+- 不预设固定部位，也不要返回空部位；部位名必须是当前角色设定下有叙事依据的动态键。
+- 已有部位只用于参考，玩家采用时已有非空字段不会被覆盖。
+- 不要返回穿着、外貌、当前状态或其他字段；结果必须先预览再采用。
+- 只输出 JSON：结论、理由、可执行约束、可采用。`;
+  try {
+    const parsed = (await requestStructuredJson(
+      prompt,
+      `请只生成“${info.label}”的私密状态结构化预览。`,
+      `human-revision-private-status-${target}-${Date.now()}`,
+      privateStatusSuggestionSchema,
+    )) as PrivateStatusAiPayload;
+    const privateStatus = normalizePrivateStatusAiValue(parsed.可采用?.私密状态);
+    aiPreview.value = {
+      target,
+      title: `${info.label} · 私密状态 AI 预览`,
+      layer: 'characters',
+      kind: 'private-status',
+      summary: String(parsed.结论 ?? '').trim() || '已生成一组动态私密状态，采用前仍可检查。',
+      rationale: String(parsed.理由 ?? '').trim(),
+      constraints: Array.isArray(parsed.可执行约束)
+        ? parsed.可执行约束.map(item => String(item).trim()).filter(Boolean)
+        : [],
+      values: privateStatusPreviewValues(privateStatus),
+      privateStatusValues: privateStatus,
+      contextRevision: revision,
+    };
+    setStatus('私密状态已进入预览，确认采用后才会写入；已有非空字段保持不变。', 'success');
+  } catch (error) {
+    console.error('[人间修订中·世界配置] AI 私密状态生成失败', error);
+    setStatus(`AI 私密状态生成失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+  } finally {
+    aiBusyKey.value = '';
+  }
+}
+
 async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.id) {
   if (aiBusyKey.value) return;
   const allowedDescriptors = bulkPendingDescriptors(requestLayer);
@@ -1545,6 +1927,10 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
 function resolveAiDescriptor(target: string): AiFieldDescriptor | undefined {
   const descriptor = aiFieldMap[target];
   if (descriptor) return descriptor;
+  const protagonistMatch = target.match(/^characters\.protagonist\.(.+)$/);
+  if (protagonistMatch && protagonistFieldNames.includes(protagonistMatch[1] as ProtagonistField)) {
+    return protagonistFieldDescriptor(protagonistMatch[1] as ProtagonistField);
+  }
   const match = target.match(/^character:(\d+)\.(.+)$/);
   if (!match || !characterFieldNames.includes(match[2] as CharacterField)) return undefined;
   return characterFieldDescriptor(Number(match[1]), match[2] as CharacterField);
@@ -1561,9 +1947,15 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
       '身体特征',
       '身份与位置',
       '追求',
-      '处境与压力',
+      '性格主色',
       '性格与声音',
       '补充设定',
+      '上装',
+      '下装',
+      '内衣',
+      '袜子',
+      '鞋子',
+      '配饰',
     ].forEach(field => {
       let value = values[field]?.trim();
       if (!value) return;
@@ -1573,13 +1965,16 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
         value = num > 0 ? String(num) : '';
         if (!value) return;
       }
-      const currentValue =
-        field === '身高' || field === '体型' || field === '面容气质' || field === '身体特征'
-          ? form.主角.外貌[field as keyof AppearanceDraft]
+      const appearanceFieldNames = ['身高', '体型', '面容气质', '身体特征'];
+      const clothingFieldNamesForProtagonist = ['上装', '下装', '内衣', '袜子', '鞋子', '配饰'];
+      const currentValue = appearanceFieldNames.includes(field)
+        ? form.主角.外貌[field as keyof AppearanceDraft]
+        : clothingFieldNamesForProtagonist.includes(field)
+          ? form.主角.穿着[field as keyof ClothingDraft]
           : (form.主角 as unknown as Record<string, string>)[field];
-      if (currentValue?.trim()) return;
-      if (field === '身高' || field === '体型' || field === '面容气质' || field === '身体特征')
-        form.主角.外貌[field as keyof AppearanceDraft] = value;
+      if (currentValue?.trim() && !['无', '不适用', '0'].includes(currentValue.trim())) return;
+      if (appearanceFieldNames.includes(field)) form.主角.外貌[field as keyof AppearanceDraft] = value;
+      else if (clothingFieldNamesForProtagonist.includes(field)) form.主角.穿着[field as keyof ClothingDraft] = value;
       else (form.主角 as unknown as Record<string, string>)[field] = value;
     });
     return;
@@ -1597,7 +1992,24 @@ function applyCompositeValues(target: string, values: Record<string, string>) {
       value = num > 0 ? String(num) : '';
       if (!value) return;
     }
-    (character as unknown as Record<string, string>)[field] = value;
+    if (!isAiFieldBlank(characterFieldDescriptor(Number(match[1]), field))) return;
+    writeCharacterField(character, field, value);
+  });
+}
+
+function applyPrivateStatusPreview(preview: AiPreview): void {
+  const info = privateStatusTargetInfo(preview.target);
+  const generated = preview.privateStatusValues ?? {};
+  if (!info) return;
+  const targetStatus = info.status;
+  Object.entries(generated).forEach(([part, detail]) => {
+    const existing = targetStatus[part];
+    if (!existing) {
+      targetStatus[part] = { 外观描述: detail.外观描述, 当前状态: detail.当前状态 };
+      return;
+    }
+    if (!existing.外观描述.trim() && detail.外观描述.trim()) existing.外观描述 = detail.外观描述;
+    if (!existing.当前状态.trim() && detail.当前状态.trim()) existing.当前状态 = detail.当前状态;
   });
 }
 
@@ -1610,7 +2022,7 @@ function applyAiPreview() {
     Object.entries(values).forEach(([key, value]) => {
       if (!allowedKeys.has(key)) return;
       const descriptor = resolveAiDescriptor(key);
-      if (descriptor?.layer !== preview.layer || descriptor.read().trim() || !value.trim()) return;
+      if (descriptor?.layer !== preview.layer || !isAiFieldBlank(descriptor) || !value.trim()) return;
       let text = value.trim();
       if (key === 'characters.protagonist.age' || key.endsWith('.年龄')) {
         const digits = text.replace(/\D/g, '');
@@ -1619,6 +2031,8 @@ function applyAiPreview() {
       }
       descriptor.write(text);
     });
+  } else if (preview.kind === 'private-status') {
+    applyPrivateStatusPreview(preview);
   } else if (preview.target === 'protagonist' || preview.target.startsWith('character:')) {
     if (preview.target.includes('.')) {
       const descriptor = resolveAiDescriptor(preview.target);
@@ -1643,6 +2057,7 @@ async function regenerateAiPreview() {
   const { target, layer } = preview;
   closeAiPreview();
   if (target === 'bulk') return completeRemaining(layer);
+  if (preview.kind === 'private-status') return requestPrivateStatusAi(target);
   if (target === 'protagonist') return requestProtagonistAi();
   const match = target.match(/^character:(\d+)$/);
   if (match) return requestCharacterAi(Number(match[1]));
@@ -1652,13 +2067,20 @@ async function regenerateAiPreview() {
 function buildOpeningSnapshot(): OpeningFormSnapshot {
   return {
     让现实编辑器参与世界观生成: form.让现实编辑器参与世界观生成,
+    故事起始日期: { ...form.故事起始日期 },
     体验与叙事方向: { ...form.体验与叙事方向 },
     世界与故事骨架: { ...form.世界与故事骨架 },
     主角: {
       ...form.主角,
       外貌: { ...form.主角.外貌 },
+      穿着: { ...form.主角.穿着 },
+      私密状态: hydratePrivateStatus(form.主角.私密状态),
     },
-    重要角色: form.重要角色.map(({ localId: _localId, ...character }) => ({ ...character })),
+    重要角色: form.重要角色.map(({ localId: _localId, ...character }) => ({
+      ...character,
+      穿着: { ...character.穿着 },
+      私密状态: hydratePrivateStatus(character.私密状态),
+    })),
     世界落地与开场准备: { ...form.世界落地与开场准备 },
     现实编辑器: {
       ...form.现实编辑器,
@@ -1669,6 +2091,7 @@ function buildOpeningSnapshot(): OpeningFormSnapshot {
 
 function buildOpeningConfig() {
   return {
+    故事起始日期: form.故事起始日期,
     体验与叙事方向: form.体验与叙事方向,
     世界与故事骨架: form.世界与故事骨架,
     主角与重要角色: { 主角: form.主角, 重要角色: form.重要角色 },
@@ -1682,7 +2105,7 @@ function buildOpeningPrompt() {
   const editorEntry = form.让现实编辑器参与世界观生成
     ? '编辑器参与世界观生成已开启，可以将它与前文自然连接。'
     : '编辑器参与世界观生成关闭。世界骨架此前没有提及或暗示它；现在必须把它作为突然出现的外来事物引入，不得把它改写成世界原生制度。';
-  return `【本次任务】\n你是第一幕叙事引擎。请根据以下创作访谈生成唯一的一份正式开场，供玩家直接开始 RP。\n\n【创作授权】\n${buildAuthorizationLayer()}\n\n【已确认配置】\n${JSON.stringify(buildOpeningConfig(), null, 2)}\n\n【世界与编辑器边界】\n${editorEntry}\n\n【叙事执行】\n- 先从具体的时间、地点、动作或正在发生的变化切入，不写欢迎词，不写配置说明。\n- 让世界规则通过人物的行动、对话、制度和环境显现，不把设定列成清单。\n- 主角启用时，不替玩家决定主角的关键行动、台词或心理；把选择停在可接续的位置。主角关闭时，玩家留在故事外，现实编辑器不作为正文人物。\n- 主线只使用已登记的主角和重要角色。没有登记重要角色时，允许必要的无名或低权重场景人物短暂出现、行动或说出承接场景的台词，但不得为其新增抢占主线的核心身份、长线关系或主线目标；环境、物件、制度和编辑器界面仍可承担主要开场信息。\n- 现实编辑器以配置的形式出现，可以有提示、面板、文字、设备或异常反馈，但不作为会说话的人格角色。\n- 结尾停在一个未完成动作、清晰选择或正在扩大的现场变化上，让玩家能立刻回应。\n- 全文只生成这一份开场，不列出候选，不输出备选事件，不解释你的写作过程。\n\n【输出格式】\n- 只输出正文和最后一行 <StatusPlaceHolderImpl/>。\n- 不输出 JSON、配置复述、标题、思考过程或作者说明。\n- 正文长度约 900~1500 字，具体服从文风与玩家已确认的体验。`;
+  return `【本次任务】\n你是第一幕叙事引擎。请根据以下创作访谈生成唯一的一份正式开场，供玩家直接开始 RP。\n\n【创作授权】\n${buildAuthorizationLayer()}\n\n【已确认配置】\n${JSON.stringify(buildOpeningConfig(), null, 2)}\n\n【世界与编辑器边界】\n${editorEntry}\n\n【叙事执行】\n- 先从已填写的故事起始日期、具体地点、动作或正在发生的变化切入，不写欢迎词，不写配置说明。日期必须原样遵循玩家填写值，不得使用现实当前日期或自行改写。\n- 让世界规则通过人物的行动、对话、制度和环境显现，不把设定列成清单。\n- 主角启用时，不替玩家决定主角的关键行动、台词或心理；把选择停在可接续的位置。主角关闭时，玩家留在故事外，现实编辑器不作为正文人物。\n- 主线只使用已登记的主角和重要角色。没有登记重要角色时，允许必要的无名或低权重场景人物短暂出现、行动或说出承接场景的台词，但不得为其新增抢占主线的核心身份、长线关系或主线目标；环境、物件、制度和编辑器界面仍可承担主要开场信息。\n- 现实编辑器以配置的形式出现，可以有提示、面板、文字、设备或异常反馈，但不作为会说话的人格角色。\n- 结尾停在一个未完成动作、清晰选择或正在扩大的现场变化上，让玩家能立刻回应。\n- 全文只生成这一份开场，不列出候选，不输出备选事件，不解释你的写作过程。\n\n【输出格式】\n- 只输出正文和最后一行 <StatusPlaceHolderImpl/>。\n- 不输出 JSON、配置复述、标题、思考过程或作者说明。\n- 正文长度约 900~1500 字，具体服从文风与玩家已确认的体验。`;
 }
 
 async function requestOpening(prompt: string, userInput: string): Promise<string> {
@@ -1726,6 +2149,12 @@ async function generateOpeningDraft(note = '') {
 
 async function confirmOpening() {
   if (!openingPreview.value || openingPreviewStale.value || starting.value) return;
+  if (!isOpeningDateComplete(form.故事起始日期)) {
+    currentLayer.value = 0;
+    scrollToTop();
+    setStatus('故事起始日期尚未完整有效，请返回第一层填写 1–9999 年、1–12 月、1–31 日后再签发。', 'error');
+    return;
+  }
   starting.value = true;
   setStatus('正在签发配置并创建开场楼层…', 'working');
   const snapshot = buildOpeningSnapshot();

@@ -1,5 +1,28 @@
 export type EditorScope = '世界' | '区域' | '个人';
 
+export type OpeningDateSnapshot = {
+  年: string;
+  月: string;
+  日: string;
+};
+
+export type ClothingSnapshot = {
+  上装: string;
+  下装: string;
+  内衣: string;
+  袜子: string;
+  鞋子: string;
+  配饰: string;
+};
+
+export type PrivateStatusSnapshot = Record<
+  string,
+  {
+    外观描述: string;
+    当前状态: string;
+  }
+>;
+
 export type OpeningCharacterSnapshot = {
   姓名: string;
   性别: string;
@@ -8,14 +31,19 @@ export type OpeningCharacterSnapshot = {
   体型: string;
   面容气质: string;
   身体特征: string;
+  身份: string;
   关系定位: string;
-  欲望与压力: string;
+  好感度: number;
+  罩杯: string;
+  性格主色: string;
   性格与声音: string;
-  当前关联: string;
+  穿着: ClothingSnapshot;
+  私密状态: PrivateStatusSnapshot;
 };
 
 export type OpeningFormSnapshot = {
   让现实编辑器参与世界观生成: boolean;
+  故事起始日期: OpeningDateSnapshot;
   体验与叙事方向: {
     故事体验: string;
     主角处境: string;
@@ -41,9 +69,11 @@ export type OpeningFormSnapshot = {
     };
     身份与位置: string;
     追求: string;
-    处境与压力: string;
+    性格主色: string;
     性格与声音: string;
     补充设定: string;
+    穿着: ClothingSnapshot;
+    私密状态: PrivateStatusSnapshot;
   };
   重要角色: OpeningCharacterSnapshot[];
   世界落地与开场准备: {
@@ -186,6 +216,18 @@ function parseAge(value: string): number {
   return age >= 0 && age <= 200 ? age : -1;
 }
 
+export function parseOpeningDate(value: OpeningDateSnapshot): { 年: number; 月: number; 日: number } | null {
+  const parts = [value.年, value.月, value.日].map(part => optionalText(part));
+  if (parts.some(part => !/^\d+$/.test(part))) return null;
+  const [年, 月, 日] = parts.map(Number);
+  if (年 < 1 || 年 > 9999 || 月 < 1 || 月 > 12 || 日 < 1 || 日 > 31) return null;
+  return { 年, 月, 日 };
+}
+
+export function isOpeningDateComplete(value: OpeningDateSnapshot): boolean {
+  return parseOpeningDate(value) !== null;
+}
+
 function splitLocation(value: string): { 一级区域: string; 二级区域: string; 三级地点: string } {
   const parts = optionalText(value)
     .split(/\s*(?:\/|／|>|＞|｜|·)\s*/)
@@ -198,8 +240,37 @@ function splitLocation(value: string): { 一级区域: string; 二级区域: str
   return { 一级区域: '待生成', 二级区域: '待生成', 三级地点: parts[0] ?? '待生成' };
 }
 
-function emptyClothing() {
+function emptyClothing(): ClothingSnapshot {
   return { 上装: '', 下装: '', 内衣: '', 袜子: '', 鞋子: '', 配饰: '无' };
+}
+
+function normalizeClothing(value: Partial<ClothingSnapshot> | null | undefined): ClothingSnapshot {
+  return {
+    上装: optionalText(value?.上装),
+    下装: optionalText(value?.下装),
+    内衣: optionalText(value?.内衣),
+    袜子: optionalText(value?.袜子),
+    鞋子: optionalText(value?.鞋子),
+    配饰: optionalText(value?.配饰) || '无',
+  };
+}
+
+function normalizePrivateStatus(value: unknown): PrivateStatusSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([part, detail]) => {
+        if (!part.trim() || !detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
+        const item = detail as Record<string, unknown>;
+        return [part.trim(), { 外观描述: optionalText(item.外观描述), 当前状态: optionalText(item.当前状态) }] as const;
+      })
+      .filter((entry): entry is readonly [string, { 外观描述: string; 当前状态: string }] => entry !== null),
+  );
+}
+
+function parseFavorability(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number))) : 0;
 }
 
 function buildProtagonistState(snapshot: OpeningFormSnapshot, options: OpeningPatchOptions): Record<string, unknown> {
@@ -217,7 +288,6 @@ function buildProtagonistState(snapshot: OpeningFormSnapshot, options: OpeningPa
     };
   }
   const age = parseAge(protagonist.年龄);
-  const ageStage = age === -1 && optionalText(protagonist.年龄) ? `年龄阶段：${optionalText(protagonist.年龄)}` : '';
   return {
     启用: true,
     基础信息: {
@@ -225,7 +295,7 @@ function buildProtagonistState(snapshot: OpeningFormSnapshot, options: OpeningPa
       性别: optionalText(protagonist.性别),
       年龄: age,
       身份: optionalText(protagonist.身份与位置),
-      目标: optionalText(protagonist.追求) || optionalText(snapshot.体验与叙事方向.主角处境),
+      目标: optionalText(protagonist.追求),
       与编辑器关系: '按本会话现实编辑器设定进入',
     },
     外貌: {
@@ -234,18 +304,13 @@ function buildProtagonistState(snapshot: OpeningFormSnapshot, options: OpeningPa
       面容气质: optionalText(protagonist.外貌.面容气质),
       身体特征: optionalText(protagonist.外貌.身体特征),
     },
-    性格: { 底色: optionalText(protagonist.性格与声音), 主色调: '' },
-    补充设定: [
-      optionalText(snapshot.体验与叙事方向.主角处境),
-      optionalText(protagonist.处境与压力),
-      optionalText(protagonist.补充设定),
-      ageStage,
-    ]
+    性格: { 底色: optionalText(protagonist.性格与声音), 主色调: optionalText(protagonist.性格主色) },
+    补充设定: [optionalText(snapshot.体验与叙事方向.主角处境), optionalText(protagonist.补充设定)]
       .filter(Boolean)
       .join('\n'),
-    当前状态: optionalText(protagonist.处境与压力) || optionalText(snapshot.体验与叙事方向.主角处境),
-    穿着: emptyClothing(),
-    私密状态: {},
+    当前状态: '',
+    穿着: normalizeClothing(protagonist.穿着),
+    私密状态: normalizePrivateStatus(protagonist.私密状态),
   };
 }
 
@@ -256,22 +321,22 @@ function buildNpcState(character: OpeningCharacterSnapshot): Record<string, unkn
       姓名: optionalText(character.姓名),
       性别: optionalText(character.性别),
       年龄: age,
-      身份: optionalText(character.关系定位),
-      关系定位: optionalText(character.当前关联) || optionalText(character.关系定位),
-      好感度: 50,
+      身份: optionalText(character.身份),
+      关系定位: optionalText(character.关系定位),
+      好感度: parseFavorability(character.好感度),
     },
     外貌: {
       身高: optionalText(character.身高),
-      罩杯: '不适用',
+      罩杯: optionalText(character.罩杯) || '不适用',
       体型: optionalText(character.体型),
       面容气质: optionalText(character.面容气质),
       身体特征: optionalText(character.身体特征),
     },
-    性格: { 底色: optionalText(character.性格与声音), 主色调: '' },
-    当前状态: optionalText(character.当前关联),
-    穿着: emptyClothing(),
-    当前想法: optionalText(character.欲望与压力),
-    私密状态: {},
+    性格: { 底色: optionalText(character.性格与声音), 主色调: optionalText(character.性格主色) },
+    当前状态: '',
+    穿着: normalizeClothing(character.穿着),
+    当前想法: '',
+    私密状态: normalizePrivateStatus(character.私密状态),
   };
 }
 
@@ -283,7 +348,7 @@ export function buildOpeningState(
   return {
     当前场景: {
       地点: splitLocation(grounding.起始地点),
-      日期: { 年: null, 月: null, 日: null },
+      日期: parseOpeningDate(snapshot.故事起始日期) ?? { 年: null, 月: null, 日: null },
       时间: { 时: null, 分: null },
       摘要: optionalText(grounding.当前矛盾与开场) || optionalText(snapshot.体验与叙事方向.故事体验),
     },

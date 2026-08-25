@@ -3,7 +3,7 @@
     <div class="layer-banner">
       <div class="banner-badge">03 · 角色与关系</div>
       <h2 class="banner-title">主角与重要登场人物</h2>
-      <p class="banner-desc">为核心人物赋予明确的欲望、处境与声音，让场面因人物的碰撞而生动起来。</p>
+      <p class="banner-desc">为核心人物赋予明确的身份、性格与关系位置，让场面因人物的碰撞而生动起来。</p>
     </div>
 
     <!-- 主角档案卡 -->
@@ -12,9 +12,7 @@
         <div class="head-left">
           <span class="head-seal">主角</span>
           <div class="head-title-wrap">
-            <h3 class="head-name">
-              {{ protagonistName || '当前酒馆玩家角色' }}
-            </h3>
+            <h3 class="head-name">{{ protagonistName || '当前酒馆玩家角色' }}</h3>
             <span class="head-role-tag">{{ form.主角.身份与位置 || '身份未指定' }}</span>
           </div>
         </div>
@@ -41,13 +39,10 @@
 
       <div v-if="!form.主角.启用" class="disabled-notice">
         <CircleAlert :size="15" />
-        <span
-          >已关闭主角角色：玩家将留在故事外作为现实编辑器的观察者与操作者，AI 不会在正文中为你生成主角人物。</span
-        >
+        <span>已关闭主角角色：签发时写入空主角骨架，忽略当前主角表单内容。</span>
       </div>
 
       <div v-else class="card-form-grid">
-        <!-- 基础信息行 -->
         <div class="field-row-3">
           <div class="form-item">
             <label class="form-label">性别表达</label>
@@ -64,7 +59,7 @@
               @input="onProtagonistAgeInput"
             />
           </div>
-          <div class="form-item flex-2">
+          <div class="form-item">
             <label class="form-label">身份与社会位置</label>
             <input
               v-model="form.主角.身份与位置"
@@ -82,16 +77,16 @@
               v-model="form.主角.追求"
               type="text"
               class="dossier-input"
-              placeholder="例如：查明失踪姐姐的下落并解除店铺封锁"
+              placeholder="留空则签发为空，不从第一层主角处境后备填入"
             />
           </div>
           <div class="form-item">
-            <label class="form-label">当前处境与主要压力</label>
+            <label class="form-label">性格主色</label>
             <input
-              v-model="form.主角.处境与压力"
+              v-model="form.主角.性格主色"
               type="text"
               class="dossier-input"
-              placeholder="例如：三天内付不起租金店铺就会被强制收归市政"
+              placeholder="例如：压力下会迅速转为尖锐、控制欲强"
             />
           </div>
         </div>
@@ -155,6 +150,33 @@
             </div>
           </div>
         </details>
+
+        <details class="appearance-panel" :open="hasClothing(form.主角.穿着)">
+          <summary class="appearance-summary">
+            <span class="summary-title">
+              <Shirt :size="14" />
+              <span>穿着（点击展开/折叠）</span>
+            </span>
+            <span class="summary-status">{{ hasClothing(form.主角.穿着) ? '已填写细节' : '配饰默认无' }}</span>
+          </summary>
+          <div class="appearance-grid clothing-grid">
+            <ClothingField v-model="form.主角.穿着.上装" label="上装" placeholder="如：浅色衬衫" />
+            <ClothingField v-model="form.主角.穿着.下装" label="下装" placeholder="如：深色长裤" />
+            <ClothingField v-model="form.主角.穿着.内衣" label="内衣" placeholder="可留空" />
+            <ClothingField v-model="form.主角.穿着.袜子" label="袜子" placeholder="可留空" />
+            <ClothingField v-model="form.主角.穿着.鞋子" label="鞋子" placeholder="如：旧皮靴" />
+            <ClothingField v-model="form.主角.穿着.配饰" label="配饰" placeholder="无" />
+          </div>
+        </details>
+
+        <PrivateStatusPanel
+          title="私密状态"
+          :status="form.主角.私密状态"
+          :is-busy="aiBusyKey === 'protagonist.private-status'"
+          :is-any-ai-busy="Boolean(aiBusyKey)"
+          @generate="$emit('assistPrivateStatus', 'protagonist.private-status')"
+          @clear="$emit('clearPrivateStatus', 'protagonist.private-status')"
+        />
       </div>
     </article>
 
@@ -162,7 +184,7 @@
     <div class="npc-section-header">
       <div class="npc-header-copy">
         <h3 class="npc-section-title">重要登场角色 (NPC)</h3>
-        <p class="npc-section-desc">第一幕聚焦已登记角色，支持随时增删。留空时 AI 将以环境和低权重背景人物切入。</p>
+        <p class="npc-section-desc">第一幕聚焦已登记角色，支持随时增删。姓名为空的角色不会写入 NPC序列。</p>
       </div>
       <button class="add-role-btn" type="button" @click="$emit('addCharacter')">
         <Plus :size="14" stroke-width="2.2" />
@@ -238,44 +260,53 @@
             </div>
           </div>
 
-          <div class="field-row-2">
+          <div class="field-row-3 npc-profile-row">
             <div class="form-item">
-              <label class="form-label">与主角的关系定位</label>
-              <input
-                v-model="character.关系定位"
-                type="text"
-                class="dossier-input"
-                placeholder="例如：档案馆调查员、长期暗中光顾的熟客"
-              />
+              <label class="form-label">身份</label>
+              <input v-model="character.身份" type="text" class="dossier-input" placeholder="如：档案馆调查员" />
             </div>
             <div class="form-item">
-              <label class="form-label">当下的欲望与隐秘压力</label>
+              <label class="form-label">与主角的关系定位</label>
+              <input v-model="character.关系定位" type="text" class="dossier-input" placeholder="如：长期熟客" />
+            </div>
+            <div class="form-item favorability-item">
+              <div class="favorability-label-row">
+                <label class="form-label" :for="`favorability-${character.localId}`">好感度</label>
+                <output class="favorability-value">{{ character.好感度 }}</output>
+              </div>
               <input
-                v-model="character.欲望与压力"
-                type="text"
-                class="dossier-input"
-                placeholder="例如：急需保住自己的独立调查权限，暗中提防上级清算"
+                :id="`favorability-${character.localId}`"
+                v-model.number="character.好感度"
+                class="favorability-range"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                :aria-valuenow="character.好感度"
+                aria-valuemin="0"
+                aria-valuemax="100"
               />
+              <div class="range-scale"><span>0</span><span>100</span></div>
             </div>
           </div>
 
           <div class="field-row-2">
             <div class="form-item">
-              <label class="form-label">性格特色与说话方式</label>
+              <label class="form-label">性格主色</label>
+              <input
+                v-model="character.性格主色"
+                type="text"
+                class="dossier-input"
+                placeholder="如：压力下显露出冒险和攻击性"
+              />
+            </div>
+            <div class="form-item">
+              <label class="form-label">性格底色与说话方式</label>
               <input
                 v-model="character.性格与声音"
                 type="text"
                 class="dossier-input"
                 placeholder="例如：语气平缓克制，语速慢，习惯先听完再表态"
-              />
-            </div>
-            <div class="form-item">
-              <label class="form-label">开场关联 / 正在进行的事</label>
-              <input
-                v-model="character.当前关联"
-                type="text"
-                class="dossier-input"
-                placeholder="例如：雨夜走进书店，手里拿着一份被涂抹的旧档案"
               />
             </div>
           </div>
@@ -318,8 +349,43 @@
                   placeholder="如：大衣袖口微湿，佩戴银色领夹"
                 />
               </div>
+              <div class="form-item">
+                <label class="form-label">罩杯</label>
+                <select v-model="character.罩杯" class="dossier-input dossier-select">
+                  <option v-for="cup in cupOptions" :key="cup" :value="cup">{{ cup }}</option>
+                </select>
+              </div>
             </div>
           </details>
+
+          <details class="appearance-panel" :open="hasClothing(character.穿着)">
+            <summary class="appearance-summary">
+              <span class="summary-title">
+                <Shirt :size="14" />
+                <span>穿着（点击展开/折叠）</span>
+              </span>
+              <span class="summary-status">{{ hasClothing(character.穿着) ? '已填写细节' : '配饰默认无' }}</span>
+            </summary>
+            <div class="appearance-grid clothing-grid">
+              <ClothingField v-model="character.穿着.上装" label="上装" placeholder="如：浅色衬衫" />
+              <ClothingField v-model="character.穿着.下装" label="下装" placeholder="如：深色长裤" />
+              <ClothingField v-model="character.穿着.内衣" label="内衣" placeholder="可留空" />
+              <ClothingField v-model="character.穿着.袜子" label="袜子" placeholder="可留空" />
+              <ClothingField v-model="character.穿着.鞋子" label="鞋子" placeholder="如：旧皮靴" />
+              <ClothingField v-model="character.穿着.配饰" label="配饰" placeholder="无" />
+            </div>
+          </details>
+
+          <PrivateStatusPanel
+            title="私密状态"
+            :status="character.私密状态"
+            :is-busy="aiBusyKey === `character:${index}.private-status`"
+            :is-any-ai-busy="Boolean(aiBusyKey)"
+            :disabled="!character.姓名.trim()"
+            :disabled-message="character.姓名.trim() ? '' : '请先填写 NPC 姓名，再生成私密状态。'"
+            @generate="$emit('assistPrivateStatus', `character:${index}.private-status`)"
+            @clear="$emit('clearPrivateStatus', `character:${index}.private-status`)"
+          />
         </div>
       </article>
     </div>
@@ -327,8 +393,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { CircleAlert, Eye, Plus, Sparkles, Trash2, Users } from '@lucide/vue';
+import { computed, defineComponent, h, type PropType } from 'vue';
+import { CircleAlert, Eye, Plus, Shirt, Sparkles, Trash2, Users } from '@lucide/vue';
+
+type ClothingDraft = {
+  上装: string;
+  下装: string;
+  内衣: string;
+  袜子: string;
+  鞋子: string;
+  配饰: string;
+};
+type PrivateStatusDraft = Record<string, { 外观描述: string; 当前状态: string }>;
 
 const props = defineProps<{
   form: any;
@@ -339,21 +415,32 @@ const props = defineProps<{
 defineEmits<{
   (e: 'assistProtagonist'): void;
   (e: 'assistCharacter', index: number): void;
+  (e: 'assistPrivateStatus', target: string): void;
+  (e: 'clearPrivateStatus', target: string): void;
   (e: 'addCharacter'): void;
   (e: 'removeCharacter', index: number): void;
 }>();
 
-const hasProtagonistAppearance = computed(() =>
-  Boolean(
-    props.form.主角.外貌.身高 ||
-    props.form.主角.外貌.体型 ||
-    props.form.主角.外貌.面容气质 ||
-    props.form.主角.外貌.身体特征,
-  ),
-);
+const cupOptions = ['不适用', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
-function hasCharacterAppearance(c: any): boolean {
-  return Boolean(c.身高 || c.体型 || c.面容气质 || c.身体特征);
+const hasProtagonistAppearance = computed(() => hasCharacterAppearance(props.form.主角));
+
+function hasCharacterAppearance(character: any): boolean {
+  return Boolean(
+    character.身高 ||
+    character.体型 ||
+    character.面容气质 ||
+    character.身体特征 ||
+    (Object.prototype.hasOwnProperty.call(character, '罩杯') && character.罩杯 !== '不适用'),
+  );
+}
+
+function hasClothing(clothing: ClothingDraft): boolean {
+  return Object.entries(clothing).some(([key, value]) => value && (key !== '配饰' || value !== '无'));
+}
+
+function privateStatusEntries(status: PrivateStatusDraft) {
+  return Object.entries(status) as Array<[string, { 外观描述: string; 当前状态: string }]>;
 }
 
 function sanitizePositiveInteger(val: string): string {
@@ -376,6 +463,121 @@ function onCharacterAgeInput(character: any, e: Event) {
   target.value = sanitized;
   character.年龄 = sanitized;
 }
+
+const ClothingField = defineComponent({
+  name: 'ClothingField',
+  props: {
+    modelValue: { type: String, default: '' },
+    label: { type: String, required: true },
+    placeholder: { type: String, default: '' },
+  },
+  emits: ['update:modelValue'],
+  setup(fieldProps, { emit }) {
+    return () =>
+      h('div', { class: 'form-item' }, [
+        h('label', { class: 'form-label' }, fieldProps.label),
+        h('input', {
+          value: fieldProps.modelValue,
+          type: 'text',
+          class: 'dossier-input',
+          placeholder: fieldProps.placeholder,
+          onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
+        }),
+      ]);
+  },
+});
+
+const PrivateStatusPanel = defineComponent({
+  name: 'PrivateStatusPanel',
+  props: {
+    title: { type: String, required: true },
+    status: { type: Object as PropType<PrivateStatusDraft>, required: true },
+    isBusy: { type: Boolean, default: false },
+    isAnyAiBusy: { type: Boolean, default: false },
+    disabled: { type: Boolean, default: false },
+    disabledMessage: { type: String, default: '' },
+  },
+  emits: ['generate', 'clear'],
+  setup(panelProps, { emit }) {
+    const entries = computed(
+      () => Object.entries(panelProps.status) as Array<[string, { 外观描述: string; 当前状态: string }]>,
+    );
+    return () =>
+      h('details', { class: 'appearance-panel private-status-panel', open: entries.value.length > 0 }, [
+        h('summary', { class: 'appearance-summary private-status-summary' }, [
+          h('span', { class: 'summary-title' }, [h(Eye, { size: 14 }), h('span', panelProps.title)]),
+          h(
+            'span',
+            { class: 'summary-status' },
+            entries.value.length ? `${entries.value.length} 个动态部位` : '初始为空',
+          ),
+        ]),
+        h('div', { class: 'private-status-body' }, [
+          h('div', { class: 'private-status-actions' }, [
+            h(
+              'button',
+              {
+                class: ['private-status-btn', { 'is-busy': panelProps.isBusy }],
+                type: 'button',
+                disabled: panelProps.disabled || panelProps.isAnyAiBusy,
+                title: panelProps.disabledMessage || '只通过 AI 创建动态部位；结果需预览确认',
+                onClick: () => emit('generate'),
+              },
+              [h(Sparkles, { size: 13 }), h('span', panelProps.isBusy ? '生成中…' : 'AI 生成私密状态')],
+            ),
+            entries.value.length
+              ? h(
+                  'button',
+                  {
+                    class: 'private-status-clear',
+                    type: 'button',
+                    disabled: panelProps.isAnyAiBusy,
+                    onClick: () => emit('clear'),
+                  },
+                  '清空',
+                )
+              : null,
+          ]),
+          panelProps.disabledMessage
+            ? h('p', { class: 'private-status-disabled-hint' }, panelProps.disabledMessage)
+            : h(
+                'p',
+                { class: 'private-status-hint' },
+                '初始为空。动态部位只能由专用 AI 生成；采用后可编辑文字，但不能手工新增部位。',
+              ),
+          entries.value.length
+            ? h(
+                'div',
+                { class: 'private-status-list' },
+                entries.value.map(([part, detail]) =>
+                  h('div', { key: part, class: 'private-status-entry' }, [
+                    h('div', { class: 'private-status-part' }, part),
+                    h('label', { class: 'form-item' }, [
+                      h('span', { class: 'form-label' }, '外观描述'),
+                      h('textarea', {
+                        value: detail.外观描述,
+                        class: 'dossier-textarea private-status-textarea',
+                        rows: 2,
+                        onInput: (event: Event) => (detail.外观描述 = (event.target as HTMLTextAreaElement).value),
+                      }),
+                    ]),
+                    h('label', { class: 'form-item' }, [
+                      h('span', { class: 'form-label' }, '当前状态'),
+                      h('textarea', {
+                        value: detail.当前状态,
+                        class: 'dossier-textarea private-status-textarea',
+                        rows: 2,
+                        onInput: (event: Event) => (detail.当前状态 = (event.target as HTMLTextAreaElement).value),
+                      }),
+                    ]),
+                  ]),
+                ),
+              )
+            : null,
+        ]),
+      ]);
+  },
+});
 </script>
 
 <style scoped>
@@ -401,42 +603,41 @@ function onCharacterAgeInput(character: any, e: Event) {
 
 .banner-badge {
   display: inline-block;
+  margin-bottom: 4px;
+  color: var(--brass);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  color: var(--brass);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 4px;
 }
 
 .banner-title {
   margin: 0 0 4px;
+  color: var(--ink-heading);
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
-  color: var(--ink-heading);
 }
 
 .banner-desc {
   margin: 0;
-  font-size: 12.5px;
   color: var(--ink-muted);
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
-/* 角色卷宗卡片 */
 .character-dossier-card {
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--paper-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  transition: all 0.2s ease;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
+  transition: border-color 0.2s ease;
 }
 
 .character-dossier-card:hover {
@@ -453,25 +654,39 @@ function onCharacterAgeInput(character: any, e: Event) {
 
 .card-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border-hairline);
   background: var(--paper-subtle);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.head-left,
+.head-actions {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .head-left {
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
+.head-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .head-seal {
+  flex: 0 0 auto;
   padding: 2px 8px;
   background: var(--cinnabar);
-  color: #fff;
   border-radius: var(--radius-pill);
+  color: #fff;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.3;
@@ -485,28 +700,30 @@ function onCharacterAgeInput(character: any, e: Event) {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
 .head-name {
+  overflow: hidden;
   margin: 0;
+  color: var(--ink-heading);
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: var(--ink-heading);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .head-role-tag {
-  font-size: 12px;
+  overflow: hidden;
   color: var(--ink-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.head-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ai-assist-btn {
+.ai-assist-btn,
+.private-status-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -514,18 +731,21 @@ function onCharacterAgeInput(character: any, e: Event) {
   background: var(--paper-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-pill);
+  color: var(--cinnabar);
   font-size: 12px;
   font-weight: 500;
-  color: var(--cinnabar);
   transition: all 0.18s ease;
 }
 
-.ai-assist-btn:hover:not(:disabled) {
+.ai-assist-btn:hover:not(:disabled),
+.private-status-btn:hover:not(:disabled) {
   background: var(--cinnabar-soft);
   border-color: var(--cinnabar);
 }
 
-.ai-assist-btn:disabled {
+.ai-assist-btn:disabled,
+.private-status-btn:disabled {
+  cursor: not-allowed;
   opacity: 0.5;
 }
 
@@ -539,180 +759,196 @@ function onCharacterAgeInput(character: any, e: Event) {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: var(--ink-muted);
-  transition: all 0.15s ease;
 }
 
 .del-role-btn:hover {
   background: var(--cinnabar-soft);
-  color: var(--cinnabar);
   border-color: var(--cinnabar);
+  color: var(--cinnabar);
 }
 
 .disabled-notice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 14px 18px;
-  font-size: 12.5px;
-  color: var(--ink-muted);
   background: var(--paper-base);
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .card-form-grid {
-  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 16px 18px;
+}
+
+.field-row-3,
+.field-row-2,
+.appearance-grid {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .field-row-3 {
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.field-row-3 .flex-2 {
-  grid-column: span 1;
 }
 
 .field-row-2 {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
+}
+
+.appearance-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-hairline);
 }
 
 .form-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .form-label {
+  color: var(--ink-muted);
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--ink-muted);
 }
 
-.dossier-input {
+.dossier-input,
+.dossier-textarea {
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  padding: 7px 10px;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  padding: 7px 10px;
   color: var(--ink-body);
   font-size: 13px;
-  transition: all 0.18s ease;
+  line-height: 1.45;
 }
 
-.dossier-input:focus {
+.dossier-textarea {
+  resize: vertical;
+}
+
+.dossier-input:focus,
+.dossier-textarea:focus {
   outline: none;
   background: var(--paper-elevated);
   border-color: var(--brass);
   box-shadow: 0 0 0 2px var(--brass-soft);
 }
 
-.dossier-input::placeholder {
+.dossier-input::placeholder,
+.dossier-textarea::placeholder {
   color: var(--ink-faint);
   font-size: 12px;
 }
 
-/* 外貌折叠面板 */
+.dossier-select {
+  min-height: 32px;
+}
+
 .appearance-panel {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-top: 4px;
+  padding: 8px 12px;
   background: var(--paper-subtle);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  padding: 8px 12px;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .appearance-summary {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
-  font-size: 12px;
   color: var(--ink-muted);
+  font-size: 12px;
 }
 
 .summary-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   font-weight: 500;
 }
 
+.summary-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .summary-status {
-  font-size: 11px;
+  flex: 0 0 auto;
   color: var(--brass);
+  font-size: 11px;
 }
 
-.appearance-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border-hairline);
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* NPC Section Header */
 .npc-section-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-end;
+  justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   margin-top: 8px;
+}
+
+.npc-header-copy {
+  min-width: 0;
 }
 
 .npc-section-title {
   margin: 0 0 2px;
+  color: var(--ink-heading);
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: var(--ink-heading);
 }
 
-.npc-section-desc {
+.npc-section-desc,
+.empty-desc {
   margin: 0;
-  font-size: 12px;
   color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .add-role-btn {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 5px;
   padding: 6px 12px;
   background: var(--paper-elevated);
   border: 1px solid var(--brass-border);
   border-radius: var(--radius-md);
+  color: var(--brass);
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--brass);
-  flex-shrink: 0;
-  transition: all 0.18s ease;
 }
 
 .add-role-btn:hover {
@@ -732,41 +968,40 @@ function onCharacterAgeInput(character: any, e: Event) {
 }
 
 .empty-icon {
+  flex: 0 0 auto;
   color: var(--brass);
-  flex-shrink: 0;
 }
 
 .empty-title {
   display: block;
-  font-size: 13.5px;
   color: var(--ink-heading);
+  font-size: 13.5px;
 }
 
 .empty-desc {
-  margin: 2px 0 0;
-  font-size: 12px;
+  margin-top: 2px;
 }
 
 .npc-cards-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
-/* Switch Toggle */
 .switch-toggle {
   position: relative;
   display: inline-block;
+  flex: 0 0 auto;
   width: 38px;
   height: 20px;
-  flex-shrink: 0;
   cursor: pointer;
 }
 
 .switch-toggle input {
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
 }
 
 .switch-slider {
@@ -774,20 +1009,20 @@ function onCharacterAgeInput(character: any, e: Event) {
   inset: 0;
   background-color: var(--border-subtle);
   border-radius: var(--radius-pill);
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.2s ease;
 }
 
 .switch-slider::before {
   position: absolute;
-  content: '';
-  height: 14px;
-  width: 14px;
-  left: 3px;
   bottom: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
   background-color: #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+  content: '';
+  transition: transform 0.2s ease;
 }
 
 .switch-toggle input:checked + .switch-slider {
@@ -798,19 +1033,259 @@ function onCharacterAgeInput(character: any, e: Event) {
   transform: translateX(18px);
 }
 
-@media (max-width: 640px) {
+.favorability-label-row,
+.range-scale,
+.private-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.favorability-value {
+  min-width: 30px;
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.favorability-range {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--cinnabar);
+}
+
+.range-scale {
+  margin-top: 1px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.private-status-body {
+  min-width: 0;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-hairline);
+}
+
+.private-status-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.private-status-clear {
+  padding: 4px 9px;
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}
+
+.private-status-clear:hover:not(:disabled) {
+  background: var(--cinnabar-soft);
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
+}
+
+.private-status-hint,
+.private-status-disabled-hint {
+  margin: 7px 0 0;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.private-status-disabled-hint {
+  color: var(--cinnabar);
+}
+
+.private-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.private-status-entry {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.7fr) repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+}
+
+.private-status-part {
+  overflow-wrap: anywhere;
+  padding-top: 22px;
+  color: var(--ink-heading);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.private-status-textarea {
+  min-height: 54px;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
   .field-row-3,
   .field-row-2,
   .appearance-grid {
     grid-template-columns: 1fr;
   }
-  .card-head {
-    flex-direction: column;
-    align-items: flex-start;
+
+  .private-status-entry {
+    grid-template-columns: 1fr;
   }
-  .head-actions {
+
+  .private-status-part {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .card-head,
+  .npc-section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .head-actions,
+  .add-role-btn {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+  }
+
+  .head-actions .switch-toggle {
+    margin-left: auto;
+  }
+
+  .head-title-wrap {
+    flex-wrap: wrap;
+  }
+}
+
+/* ClothingField / PrivateStatusPanel are local render components; keep their controls inside the same visual system. */
+:deep(.form-item) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+:deep(.form-label) {
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+:deep(.dossier-input),
+:deep(.dossier-textarea) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  color: var(--ink-body);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+:deep(.dossier-textarea) {
+  resize: vertical;
+}
+
+:deep(.dossier-input:focus),
+:deep(.dossier-textarea:focus) {
+  outline: none;
+  background: var(--paper-elevated);
+  border-color: var(--brass);
+  box-shadow: 0 0 0 2px var(--brass-soft);
+}
+
+:deep(.private-status-body) {
+  min-width: 0;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-hairline);
+}
+
+:deep(.private-status-actions) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:deep(.private-status-hint),
+:deep(.private-status-disabled-hint) {
+  margin: 7px 0 0;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+:deep(.private-status-disabled-hint) {
+  color: var(--cinnabar);
+}
+
+:deep(.private-status-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+:deep(.private-status-entry) {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.7fr) repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+}
+
+:deep(.private-status-part) {
+  overflow-wrap: anywhere;
+  padding-top: 22px;
+  color: var(--ink-heading);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:deep(.private-status-textarea) {
+  min-height: 54px;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  :deep(.private-status-entry) {
+    grid-template-columns: 1fr;
+  }
+
+  :deep(.private-status-part) {
+    padding-top: 0;
   }
 }
 </style>

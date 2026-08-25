@@ -6,6 +6,32 @@
       <p class="banner-desc">先确立阅读与游玩时的核心快感与镜头视角，不必急于为世界定名。</p>
     </div>
 
+    <section class="date-card" :class="{ 'is-invalid': dateTouched && !isDateValid }">
+      <div class="date-card-head">
+        <div>
+          <h3 class="choice-title">故事起始日期</h3>
+          <p class="choice-hint">填写开场发生的年月日。只接受数字，签发前必须完整有效；不会自动使用现实当前日期。</p>
+        </div>
+        <span class="date-required-tag">签发必填</span>
+      </div>
+      <div class="date-grid">
+        <label v-for="part in dateParts" :key="part.key" class="form-item">
+          <span class="form-label">{{ part.label }}</span>
+          <input
+            :value="form.故事起始日期[part.key]"
+            type="text"
+            inputmode="numeric"
+            :maxlength="part.maxLength"
+            class="dossier-input date-input"
+            :placeholder="part.placeholder"
+            @input="onDateInput(part.key, $event)"
+            @blur="dateTouched = true"
+          />
+        </label>
+      </div>
+      <p v-if="dateTouched && !isDateValid" class="date-error">请输入 1–9999 年、1–12 月、1–31 日。</p>
+    </section>
+
     <div class="layer-fields">
       <QuestionField
         title="想体验怎样的故事？"
@@ -92,14 +118,49 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import QuestionField from './QuestionField.vue';
 
-defineProps<{
+const props = defineProps<{
   form: any;
   aiBusyKey: string;
   povOptions: Array<{ value: string; label: string }>;
   styleOptions: Array<{ value: string; label: string }>;
 }>();
+
+const dateTouched = ref(false);
+const dateParts = [
+  { key: '年', label: '年', maxLength: 4, placeholder: '如：2026' },
+  { key: '月', label: '月', maxLength: 2, placeholder: '如：08' },
+  { key: '日', label: '日', maxLength: 2, placeholder: '如：26' },
+] as const;
+
+const isDateValid = computed(() => {
+  const date = props.form.故事起始日期;
+  const year = Number(date.年);
+  const month = Number(date.月);
+  const day = Number(date.日);
+  return (
+    /^\d{1,4}$/.test(date.年) &&
+    /^\d{1,2}$/.test(date.月) &&
+    /^\d{1,2}$/.test(date.日) &&
+    year >= 1 &&
+    year <= 9999 &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= 31
+  );
+});
+
+function onDateInput(part: (typeof dateParts)[number]['key'], event: Event) {
+  const target = event.target as HTMLInputElement;
+  const maxLength = dateParts.find(item => item.key === part)?.maxLength ?? 4;
+  const value = target.value.replace(/\D/g, '').slice(0, maxLength);
+  target.value = value;
+  props.form.故事起始日期[part] = value;
+  dateTouched.value = true;
+}
 
 defineEmits<{
   (e: 'assist', key: string): void;
@@ -160,6 +221,83 @@ defineEmits<{
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+.date-card {
+  background: var(--paper-elevated);
+  border: 1px solid var(--brass-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.date-card.is-invalid {
+  border-color: var(--cinnabar);
+}
+
+.date-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.date-required-tag {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--brass-soft);
+  color: var(--brass);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.date-grid .form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.date-grid .form-label {
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.date-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--paper-base);
+  color: var(--ink-body);
+  font-size: 13px;
+  text-align: center;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 2px var(--brass-soft);
+}
+
+.date-error {
+  margin: 8px 0 0;
+  color: var(--cinnabar);
+  font-size: 11.5px;
 }
 
 .grid-2-col {
@@ -244,6 +382,10 @@ defineEmits<{
 @media (max-width: 640px) {
   .grid-2-col {
     grid-template-columns: 1fr;
+  }
+
+  .date-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

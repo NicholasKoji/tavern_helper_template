@@ -1,5 +1,5 @@
 <template>
-  <footer class="dossier-action-footer">
+  <footer class="dossier-action-footer" :class="{ 'has-plan-actions': isLastLayer }">
     <div v-if="statusMessage" class="status-toast" :class="statusType">
       <span class="status-dot"></span>
       <span class="status-text">{{ statusMessage }}</span>
@@ -7,12 +7,7 @@
 
     <div class="footer-buttons">
       <div class="left-actions">
-        <button
-          v-if="currentLayer > 0"
-          class="nav-btn prev-btn"
-          type="button"
-          @click="$emit('previous')"
-        >
+        <button v-if="currentLayer > 0" class="nav-btn prev-btn" type="button" @click="$emit('previous')">
           <ChevronLeft :size="16" />
           <span>上一层</span>
         </button>
@@ -30,32 +25,28 @@
       </div>
 
       <div class="right-actions">
-        <button
-          v-if="!isLastLayer"
-          class="nav-btn next-btn"
-          type="button"
-          @click="$emit('next')"
-        >
+        <button v-if="!isLastLayer" class="nav-btn next-btn" type="button" @click="$emit('next')">
           <span>进入下一层</span>
           <ChevronRight :size="16" />
         </button>
 
-        <button
-          v-else
-          class="nav-btn sign-btn"
-          type="button"
-          @click="$emit('scrollToSigning')"
-        >
-          <Stamp :size="15" />
-          <span>前往签发开局</span>
-        </button>
+        <div v-else class="plan-save-actions">
+          <template v-if="hasCurrentPlan">
+            <span class="plan-source-label" :title="`当前内容源自：${currentPlanName}`">
+              源自：{{ currentPlanName }}
+            </span>
+            <button class="plan-save-btn" type="button" @click="$emit('updateCurrentPlan')">更新当前方案</button>
+            <button class="plan-save-btn secondary" type="button" @click="$emit('saveAsPlan')">另存为</button>
+          </template>
+          <button v-else class="plan-save-btn" type="button" @click="$emit('saveNewPlan')">保存为新方案</button>
+        </div>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Stamp, WandSparkles } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, WandSparkles } from '@lucide/vue';
 
 defineProps<{
   currentLayer: number;
@@ -63,13 +54,17 @@ defineProps<{
   isAiBusy: string;
   statusMessage: string;
   statusType: '' | 'working' | 'success' | 'error';
+  currentPlanName: string;
+  hasCurrentPlan: boolean;
 }>();
 
 defineEmits<{
   (e: 'previous'): void;
   (e: 'next'): void;
   (e: 'completeRemaining'): void;
-  (e: 'scrollToSigning'): void;
+  (e: 'saveNewPlan'): void;
+  (e: 'updateCurrentPlan'): void;
+  (e: 'saveAsPlan'): void;
 }>();
 </script>
 
@@ -128,6 +123,7 @@ defineEmits<{
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .left-actions,
@@ -135,6 +131,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .nav-btn {
@@ -170,18 +167,6 @@ defineEmits<{
   color: var(--ink-heading);
 }
 
-.sign-btn {
-  background: var(--cinnabar);
-  border: 1px solid var(--cinnabar-hover);
-  color: #fff;
-  box-shadow: 0 2px 8px var(--cinnabar-glow);
-}
-
-.sign-btn:hover {
-  background: var(--cinnabar-hover);
-  transform: translateY(-1px);
-}
-
 .bulk-ai-btn {
   display: inline-flex;
   align-items: center;
@@ -203,6 +188,59 @@ defineEmits<{
 
 .bulk-ai-btn:disabled {
   opacity: 0.5;
+}
+
+.plan-save-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.plan-source-label {
+  flex: 1 1 150px;
+  max-width: 220px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-save-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.plan-save-btn:hover {
+  background: var(--brass-soft);
+  border-color: var(--brass-border);
+  color: var(--brass);
+}
+
+.plan-save-btn.secondary {
+  color: var(--cinnabar);
+}
+
+.plan-save-btn.secondary:hover {
+  background: var(--cinnabar-soft);
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
 }
 
 @keyframes fadeIn {
@@ -227,6 +265,22 @@ defineEmits<{
   .bulk-ai-btn {
     padding: 7px 10px;
     font-size: 11.5px;
+  }
+  .dossier-action-footer.has-plan-actions .footer-buttons {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .dossier-action-footer.has-plan-actions .right-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dossier-action-footer.has-plan-actions .plan-save-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dossier-action-footer.has-plan-actions .plan-source-label {
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
 </style>
