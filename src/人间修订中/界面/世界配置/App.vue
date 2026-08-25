@@ -20,6 +20,17 @@
     <div class="dossier-workspace">
       <!-- 左侧主表单区 -->
       <section class="dossier-form-column" role="region" :aria-label="currentLayerMeta.title">
+        <OpeningPlanLibrary
+          v-if="currentLayer === 0"
+          :plans="openingPlans"
+          :current-plan-id="currentPlanId"
+          @apply="applyOpeningPlan"
+          @apply-and-forward="applyOpeningPlanAndForward"
+          @export="exportOpeningPlan"
+          @delete="deleteOpeningPlan"
+          @import="importOpeningPlan"
+        />
+
         <transition name="layer-fade" mode="out-in">
           <LayerExperience
             v-if="currentLayerMeta.id === 'experience'"
@@ -68,10 +79,15 @@
             :opening-preview="openingPreview"
             :opening-preview-stale="openingPreviewStale"
             :starting="starting"
+            :current-plan-name="currentPlanName"
+            :has-current-plan="hasCurrentPlan"
             @assist="requestAi"
             @generate-opening="generateOpeningDraft('')"
             @generate-opening-with-note="generateOpeningDraft"
             @confirm-opening="confirmOpening"
+            @save-new-plan="saveNewOpeningPlan"
+            @update-current-plan="updateCurrentOpeningPlan"
+            @save-as-plan="saveAsOpeningPlan"
           />
         </transition>
 
@@ -135,6 +151,21 @@ import {
   verifyChatLoreMutation,
   type ChatLoreMutation,
 } from './chat-lore';
+import {
+  OPENING_PLAN_STORAGE_KEY,
+  cloneOpeningPlanWithNewId,
+  createOpeningPlan,
+  findOpeningPlanById,
+  findOpeningPlanByName,
+  formatOpeningPlanError,
+  normalizeOpeningPlanName,
+  parseOpeningPlan,
+  parseOpeningPlanJson,
+  readOpeningPlans,
+  serializeOpeningPlan,
+  writeOpeningPlans,
+  type OpeningPlan,
+} from './opening-plans';
 
 // 子组件导入
 import HeaderBar from './components/HeaderBar.vue';
@@ -147,6 +178,7 @@ import LayerEditor from './components/LayerEditor.vue';
 import AiAssistModal from './components/AiAssistModal.vue';
 import ConfirmedDrawer from './components/ConfirmedDrawer.vue';
 import ActionFooter from './components/ActionFooter.vue';
+import OpeningPlanLibrary from './components/OpeningPlanLibrary.vue';
 
 const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v3';
 const OPENING_READBACK_CHECKS = 8;
@@ -187,7 +219,13 @@ type StoryForm = {
     补充设定: string;
   };
   重要角色: CharacterDraft[];
-  世界落地与开场准备: { 起始地点: string; 日常秩序: string; 组织势力: string; 必要规则: string; 当前矛盾与开场: string };
+  世界落地与开场准备: {
+    起始地点: string;
+    日常秩序: string;
+    组织势力: string;
+    必要规则: string;
+    当前矛盾与开场: string;
+  };
   现实编辑器: {
     表现形式: string;
     可见与知晓: string;
@@ -390,6 +428,13 @@ const openingPreviewStale = computed(
 const aiPreviewStale = computed(
   () => Boolean(aiPreview.value) && aiPreview.value?.contextRevision !== contextRevision.value,
 );
+const openingPlans = ref<OpeningPlan[]>([]);
+const currentPlanId = ref<string | null>(null);
+const currentPlan = computed(() =>
+  currentPlanId.value ? findOpeningPlanById(openingPlans.value, currentPlanId.value) : undefined,
+);
+const currentPlanName = computed(() => currentPlan.value?.名称 ?? '');
+const hasCurrentPlan = computed(() => Boolean(currentPlan.value));
 
 function readCurrentPersona(): PersonaSnapshot {
   const getPersona = (globalThis as typeof globalThis & { getPersona?: PersonaReader }).getPersona;
@@ -476,6 +521,227 @@ function setStatus(message: string, type: StatusType = '') {
   statusType.value = type;
 }
 
+function hasOpeningDraft(): boolean {
+  return Boolean(
+    form.让现实编辑器参与世界观生成 ||
+    Object.values(form.体验与叙事方向).some(value => value.trim()) ||
+    Object.values(form.世界与故事骨架).some(value => value.trim()) ||
+    form.主角.启用 !== true ||
+    form.主角.性别 ||
+    form.主角.年龄 ||
+    Object.values(form.主角.外貌).some(value => value.trim()) ||
+    form.主角.身份与位置 ||
+    form.主角.追求 ||
+    form.主角.处境与压力 ||
+    form.主角.性格与声音 ||
+    form.主角.补充设定 ||
+    form.重要角色.some(hasCharacterDraft) ||
+    Object.values(form.世界落地与开场准备).some(value => value.trim()) ||
+    hasEditorDraft(),
+  );
+}
+
+function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
+  form.让现实编辑器参与世界观生成 = snapshot.让现实编辑器参与世界观生成;
+  Object.assign(form.体验与叙事方向, snapshot.体验与叙事方向);
+  Object.assign(form.世界与故事骨架, snapshot.世界与故事骨架);
+  Object.assign(form.主角, {
+    ...snapshot.主角,
+    外貌: { ...snapshot.主角.外貌 },
+  });
+  form.重要角色.splice(
+    0,
+    form.重要角色.length,
+    ...snapshot.重要角色.map(character => ({
+      localId: createCharacter().localId,
+      ...character,
+    })),
+  );
+  Object.assign(form.世界落地与开场准备, snapshot.世界落地与开场准备);
+  Object.assign(form.现实编辑器, {
+    ...snapshot.现实编辑器,
+    可修改范围: [...snapshot.现实编辑器.可修改范围],
+  });
+  aiPreview.value = null;
+  openingPreview.value = '';
+  openingContextRevision.value = contextRevision.value;
+}
+
+function applyOpeningPlan(plan: OpeningPlan, jumpToFinal = false) {
+  if (hasOpeningDraft()) {
+    const confirmed = window.confirm(`套用“${plan.名称}”会覆盖当前五层草稿，是否继续？`);
+    if (!confirmed) {
+      setStatus('已取消套用，当前草稿保持不变。');
+      return;
+    }
+  }
+  applyOpeningSnapshot(plan.表单快照);
+  currentPlanId.value = plan.id;
+  if (jumpToFinal) {
+    maxVisitedLayer.value = layers.length - 1;
+    currentLayer.value = layers.length - 1;
+    scrollToTop();
+    setStatus(`已套用“${plan.名称}”，前四层已标记为已访问。`, 'success');
+  } else {
+    currentLayer.value = 0;
+    setStatus(`已套用“${plan.名称}”，可从第一层继续检查或修改。`, 'success');
+  }
+}
+
+function applyOpeningPlanAndForward(plan: OpeningPlan) {
+  applyOpeningPlan(plan, true);
+}
+
+function persistOpeningPlans(nextPlans: OpeningPlan[]): boolean {
+  try {
+    openingPlans.value = writeOpeningPlans(nextPlans);
+    return true;
+  } catch (error) {
+    console.error('[人间修订中·世界配置] 本地方案库写入失败', error);
+    setStatus(`方案库保存失败：${formatOpeningPlanError(error)}`, 'error');
+    return false;
+  }
+}
+
+function promptPlanName(defaultName: string): string | null {
+  const value = window.prompt('请输入方案名称：', defaultName);
+  if (value === null) return null;
+  const name = normalizeOpeningPlanName(value);
+  if (!name) {
+    setStatus('方案名称不能为空，尚未保存。', 'error');
+    return null;
+  }
+  return name;
+}
+
+function choosePlanName(defaultName: string): { name: string; conflict?: OpeningPlan } | null {
+  let name = promptPlanName(defaultName);
+  while (name) {
+    const conflict = findOpeningPlanByName(openingPlans.value, name);
+    if (!conflict) return { name };
+    const overwrite = window.confirm(`已有同名方案“${conflict.名称}”。确定覆盖它吗？取消后可输入新名称另存。`);
+    if (overwrite) return { name, conflict };
+    name = promptPlanName(`${name} 副本`);
+  }
+  return null;
+}
+
+function saveNewOpeningPlan(defaultName = '未命名开场方案') {
+  const choice = choosePlanName(defaultName);
+  if (!choice) return;
+  try {
+    const plan = createOpeningPlan(choice.name, buildOpeningPlanSummary(), buildOpeningSnapshot());
+    const nextPlans = choice.conflict
+      ? openingPlans.value.map(item => (item.id === choice.conflict?.id ? plan : item))
+      : [...openingPlans.value, plan];
+    if (!persistOpeningPlans(nextPlans)) return;
+    currentPlanId.value = plan.id;
+    setStatus(`方案“${plan.名称}”已保存。`, 'success');
+  } catch (error) {
+    console.error('[人间修订中·世界配置] 新方案校验失败', error);
+    setStatus(`保存失败：${formatOpeningPlanError(error)}`, 'error');
+  }
+}
+
+function saveAsOpeningPlan() {
+  const defaultName = currentPlanName.value ? `${currentPlanName.value} 副本` : '未命名开场方案';
+  saveNewOpeningPlan(defaultName);
+}
+
+function updateCurrentOpeningPlan() {
+  const current = currentPlan.value;
+  if (!current) {
+    setStatus('当前没有可更新的已保存方案，请先保存为新方案。', 'error');
+    return;
+  }
+  try {
+    const updated = parseOpeningPlan({
+      ...current,
+      updatedAt: new Date().toISOString(),
+      摘要: buildOpeningPlanSummary(),
+      表单快照: buildOpeningSnapshot(),
+    });
+    const nextPlans = openingPlans.value.map(item => (item.id === current.id ? updated : item));
+    if (!persistOpeningPlans(nextPlans)) return;
+    setStatus(`方案“${updated.名称}”已更新。`, 'success');
+  } catch (error) {
+    console.error('[人间修订中·世界配置] 当前方案校验失败', error);
+    setStatus(`更新失败：${formatOpeningPlanError(error)}`, 'error');
+  }
+}
+
+function deleteOpeningPlan(plan: OpeningPlan) {
+  const confirmed = window.confirm(`确定删除本地方案“${plan.名称}”吗？此操作不会影响当前表单。`);
+  if (!confirmed) return;
+  const nextPlans = openingPlans.value.filter(item => item.id !== plan.id);
+  if (!persistOpeningPlans(nextPlans)) return;
+  if (currentPlanId.value === plan.id) currentPlanId.value = null;
+  setStatus(`方案“${plan.名称}”已删除。`, 'success');
+}
+
+function exportOpeningPlan(plan: OpeningPlan) {
+  try {
+    const blob = new Blob([serializeOpeningPlan(plan)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeName = plan.名称.replace(/[\\/:*?"<>|]+/g, '-').slice(0, 64) || '未命名方案';
+    anchor.href = url;
+    anchor.download = `人间修订中-开场方案-${safeName}.json`;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setStatus(`方案“${plan.名称}”已导出 JSON。`, 'success');
+  } catch (error) {
+    console.error('[人间修订中·世界配置] 方案导出失败', error);
+    setStatus(`导出失败：${formatOpeningPlanError(error)}`, 'error');
+  }
+}
+
+async function importOpeningPlan(file: File) {
+  setStatus('正在完整校验方案 JSON…', 'working');
+  try {
+    let importedPlan = parseOpeningPlanJson(await file.text());
+    let nameConflict = findOpeningPlanByName(openingPlans.value, importedPlan.名称);
+    while (nameConflict) {
+      const overwrite = window.confirm(
+        `已有同名方案“${nameConflict.名称}”。确定用导入文件覆盖它吗？取消后可另存为新名称。`,
+      );
+      if (overwrite) break;
+      const alternateName = promptPlanName(`${importedPlan.名称} 副本`);
+      if (!alternateName) {
+        setStatus('已取消导入，当前表单与方案库保持不变。');
+        return;
+      }
+      importedPlan = parseOpeningPlan({ ...importedPlan, 名称: alternateName });
+      nameConflict = findOpeningPlanByName(openingPlans.value, importedPlan.名称);
+    }
+    const idConflict = findOpeningPlanById(openingPlans.value, importedPlan.id);
+    const storedPlan =
+      idConflict && idConflict.id !== nameConflict?.id ? cloneOpeningPlanWithNewId(importedPlan) : importedPlan;
+    const nextPlans = nameConflict
+      ? openingPlans.value.map(item => (item.id === nameConflict.id ? storedPlan : item))
+      : [...openingPlans.value, storedPlan];
+    if (!persistOpeningPlans(nextPlans)) return;
+    if (currentPlanId.value === nameConflict?.id) currentPlanId.value = storedPlan.id;
+    setStatus(`方案“${storedPlan.名称}”已导入方案库。`, 'success');
+  } catch (error) {
+    console.error('[人间修订中·世界配置] 方案导入校验失败', error);
+    setStatus(`导入失败：${formatOpeningPlanError(error)}。当前表单与方案库未改变。`, 'error');
+  }
+}
+
+function refreshOpeningPlans() {
+  const previousCurrentId = currentPlanId.value;
+  openingPlans.value = readOpeningPlans();
+  if (previousCurrentId && !findOpeningPlanById(openingPlans.value, previousCurrentId)) currentPlanId.value = null;
+}
+
+function onOpeningPlanStorageChange(event: StorageEvent) {
+  if (event.key === OPENING_PLAN_STORAGE_KEY) refreshOpeningPlans();
+}
+
 function openingMessages() {
   return getChatMessages('0-{{lastMessageId}}');
 }
@@ -546,6 +812,21 @@ function removeCharacter(index: number) {
 function compact(text: string, fallback: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
   return normalized ? (normalized.length > 70 ? `${normalized.slice(0, 70)}…` : normalized) : fallback;
+}
+
+function buildOpeningPlanSummary(): string {
+  return compact(
+    [
+      form.体验与叙事方向.故事体验,
+      form.世界与故事骨架.时代与舞台,
+      form.主角.身份与位置,
+      form.世界落地与开场准备.起始地点,
+      form.世界落地与开场准备.当前矛盾与开场,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    '五层开场配置方案',
+  );
 }
 
 function hasCharacterDraft(character: CharacterDraft): boolean {
@@ -1525,6 +1806,8 @@ async function confirmOpening() {
 
 onMounted(() => {
   hydrateFromMvu();
+  refreshOpeningPlans();
+  window.addEventListener('storage', onOpeningPlanStorageChange);
   syncProtagonistPersona();
   listenForPersonaChanges();
   removeThemeListener = onThemeChange(theme => (activeTheme.value = theme));
@@ -1538,6 +1821,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('storage', onOpeningPlanStorageChange);
   removePersonaListener?.();
   removeThemeListener?.();
   injectedThemeFontStyle?.remove();
@@ -1581,7 +1865,9 @@ onUnmounted(() => {
 /* Layer transition */
 .layer-fade-enter-active,
 .layer-fade-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 
 .layer-fade-enter-from {
