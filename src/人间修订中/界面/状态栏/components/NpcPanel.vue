@@ -32,12 +32,28 @@
             <h2 class="card-title">{{ selectedName }}</h2>
             <span class="card-role-tag">{{ selectedNpc.基础信息.关系定位 || '关系未指定' }}</span>
           </div>
-          <div class="favor-head-badge">
-            <span class="favor-title">好感度</span>
-            <span class="meter-bar" aria-hidden="true">
-              <span class="meter-fill" :style="{ width: `${Math.min(selectedNpc.基础信息.好感度 || 0, 100)}%` }"></span>
-            </span>
-            <span class="favor-num">{{ selectedNpc.基础信息.好感度 ?? '--' }}</span>
+          <div class="card-head-actions">
+            <div class="favor-head-badge">
+              <span class="favor-title">好感度</span>
+              <span class="meter-bar" aria-hidden="true">
+                <span
+                  class="meter-fill"
+                  :style="{ width: `${Math.min(selectedNpc.基础信息.好感度 || 0, 100)}%` }"
+                ></span>
+              </span>
+              <span class="favor-num">{{ selectedNpc.基础信息.好感度 ?? '--' }}</span>
+            </div>
+            <button
+              class="lore-action"
+              type="button"
+              :disabled="loreBusy"
+              :aria-busy="loreBusy"
+              @click="$emit('persistNpcLore', { name: selectedName, npc: selectedNpc })"
+            >
+              <span v-if="loreBusy">整理中…</span>
+              <span v-else-if="loreManaged">重新整理并更新</span>
+              <span v-else>整理并存入世界书</span>
+            </button>
           </div>
         </header>
 
@@ -172,10 +188,13 @@ const props = defineProps<{
   npcEntries: Array<[string, any]>;
   selectedName: string;
   selectedNpc: any;
+  loreManaged: boolean;
+  loreBusy: boolean;
 }>();
 
 defineEmits<{
   (e: 'selectNpc', name: string): void;
+  (e: 'persistNpcLore', payload: { name: string; npc: unknown }): void;
 }>();
 
 function formatAge(value: unknown): string {
@@ -349,6 +368,40 @@ const privateEntries = computed(() => {
   font-family: var(--font-mono);
   font-size: 11px;
   flex-shrink: 0;
+}
+
+.card-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.lore-action {
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid var(--brass-border);
+  border-radius: var(--radius-sm);
+  background: var(--paper-base);
+  color: var(--ink-heading);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.lore-action:hover:not(:disabled) {
+  background: var(--brass);
+  color: var(--paper-base);
+}
+
+.lore-action:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .favor-title {
@@ -558,6 +611,15 @@ const privateEntries = computed(() => {
   }
   .span-2 {
     grid-column: span 1;
+  }
+  .card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .card-head-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
   }
 }
 </style>

@@ -18,6 +18,7 @@ type ChatLoreEntry = Omit<WorldbookEntry, 'uid' | 'position'> & {
 
 function getManagedKind(entry: Partial<WorldbookEntry>): ChatLoreKind | null {
   const metadata = entry.extra?.[EXTRA_NAMESPACE];
+  if (metadata?.managed === 'npc-lore') return null;
   if (metadata?.kind === 'world' || metadata?.kind === 'editor') return metadata.kind;
   if (entry.name === CHAT_LORE_NAMES.world) return 'world';
   if (entry.name === CHAT_LORE_NAMES.editor) return 'editor';
@@ -113,7 +114,10 @@ async function settlePendingWorldbookWrite(): Promise<void> {
 }
 
 function entriesMatch(actual: WorldbookEntry[], expected: WorldbookEntry[]): boolean {
-  return actual.length === expected.length && actual.every((entry, index) => JSON.stringify(entry) === JSON.stringify(expected[index]));
+  return (
+    actual.length === expected.length &&
+    actual.every((entry, index) => JSON.stringify(entry) === JSON.stringify(expected[index]))
+  );
 }
 
 async function verifyRestoredWorldbook(name: string, expected: WorldbookEntry[]): Promise<void> {
@@ -223,6 +227,75 @@ export async function commitCurrentChatLore(snapshot: OpeningFormSnapshot): Prom
       if (mutation) {
         await rollbackChatLoreMutation(mutation);
       } else {
+        await settlePendingWorldbookWrite();
+        const leakedWorldbooks = getWorldbookNames().filter(name => !knownWorldbooks.has(name));
+        for (const leakedWorldbook of leakedWorldbooks) {
+          if (getChatWorldbookName('current') === leakedWorldbook) await unbindChatWorldbookAndVerify();
+          await deleteWorldbookAndVerify(leakedWorldbook);
+        }
+      }
+    } catch (rollbackError) {
+      const originalError = error instanceof Error ? error : new Error(String(error));
+      const detail = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      originalError.message = `${originalError.message}；Chat Lore 回滚失败：${detail}`;
+      throw originalError;
+    }
+    throw error;
+  }
+}
+
+export type CurrentChatLoreMutationContext = {
+  worldbookName: string;
+  originalWorldbookName: string | null;
+  originalEntries: WorldbookEntry[];
+  beforeEntries: WorldbookEntry[];
+  worldbookCreated: boolean;
+};
+
+/**
+ * 为状态栏等局部功能提供与世界配置相同的安全事务：确认阶段重新读取世界书，
+ * updater 只返回需要保留的完整列表；写入或回读校验失败时恢复原绑定和原条目。
+ */
+export async function commitCurrentChatLoreEntries(
+  updater: (context: CurrentChatLoreMutationContext) => Partial<WorldbookEntry>[] | Promise<Partial<WorldbookEntry>[]>,
+  verify?: (worldbookName: string, entries: WorldbookEntry[]) => void | Promise<void>,
+): Promise<ChatLoreMutation> {
+  const originalWorldbookName = getChatWorldbookName('current');
+  const originalEntries = originalWorldbookName ? await getWorldbook(originalWorldbookName) : [];
+  const knownWorldbooks = new Set(getWorldbookNames());
+  let mutation: ChatLoreMutation | undefined;
+  let writeStarted = false;
+
+  try {
+    const worldbookName = await getOrCreateChatWorldbook('current');
+    const beforeEntries = await getWorldbook(worldbookName);
+    mutation = {
+      worldbookName,
+      originalWorldbookName,
+      originalEntries,
+      beforeEntries,
+      worldbookCreated: !knownWorldbooks.has(worldbookName),
+    };
+    const nextEntries = await updater({
+      worldbookName,
+      originalWorldbookName,
+      originalEntries,
+      beforeEntries,
+      worldbookCreated: mutation.worldbookCreated,
+    });
+    writeStarted = true;
+    mutation.replaceResult = await createOrReplaceWorldbook(worldbookName, nextEntries, { render: 'immediate' });
+    await settlePendingWorldbookWrite();
+    const afterEntries = await getWorldbook(worldbookName);
+    await verify?.(worldbookName, afterEntries);
+    return mutation;
+  } catch (error) {
+    try {
+      // updater 在已有世界书上发现冲突时尚未写入，保留其他进程刚刚完成的改动；
+      // 新建世界书或已开始写入时才执行完整回滚。
+      if (mutation && (writeStarted || mutation.worldbookCreated)) {
+        await rollbackChatLoreMutation(mutation);
+      } else if (!mutation) {
         await settlePendingWorldbookWrite();
         const leakedWorldbooks = getWorldbookNames().filter(name => !knownWorldbooks.has(name));
         for (const leakedWorldbook of leakedWorldbooks) {

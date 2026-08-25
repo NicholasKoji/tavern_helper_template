@@ -30,17 +30,17 @@
           @open-rule-editor="openRuleEditor"
         />
 
-        <ProtagonistPanel
-          v-else-if="activeTab === 'protagonist'"
-          :protagonist="data.主角"
-        />
+        <ProtagonistPanel v-else-if="activeTab === 'protagonist'" :protagonist="data.主角" />
 
         <NpcPanel
           v-else-if="activeTab === 'npc'"
           :npc-entries="npcEntries"
           :selected-name="selectedNpcName"
           :selected-npc="selectedNpc"
+          :lore-managed="selectedNpcLoreManaged"
+          :lore-busy="npcLoreBusy"
           @select-npc="selectedNpcName = $event"
+          @persist-npc-lore="openNpcLorePreview"
         />
       </transition>
     </div>
@@ -61,11 +61,18 @@
       @confirm-rules="confirmRules"
     />
 
-    <!-- 规则变动系统公告横幅 -->
-    <SystemAnnouncement
-      :announcement="announcement"
-      @dismiss="announcement = null"
+    <NpcLorePreviewModal
+      v-if="npcLorePreview"
+      :preview="npcLorePreview"
+      :busy="npcLoreBusy"
+      :error="npcLoreError"
+      @cancel="closeNpcLorePreview"
+      @regenerate="regenerateNpcLore"
+      @confirm="confirmNpcLore"
     />
+
+    <!-- 规则变动系统公告横幅 -->
+    <SystemAnnouncement :announcement="announcement" @dismiss="announcement = null" />
   </main>
   <div class="sr-only" aria-live="polite">{{ announcer }}</div>
 </template>
@@ -79,6 +86,16 @@ import themeAstrolabeFontUrl from '../世界配置/fonts/theme-astrolabe.woff2?u
 import themeNeonFontUrl from '../世界配置/fonts/theme-neon.woff2?url';
 import themeTerminalFontUrl from '../世界配置/fonts/theme-terminal.woff2?url';
 import { onThemeChange, readSavedTheme, saveTheme, type ThemeId } from '../theme';
+import { extractGenerateText, parseJsonLoose } from '../ai-helpers';
+import {
+  cloneNpcSnapshot,
+  commitNpcLorePreview,
+  createNpcLorePreview,
+  isManagedNpcLoreEntry,
+  readRecentAssistantStoryBodies,
+  NpcLoreConflictError,
+  type NpcLorePreview,
+} from './npc-lore';
 import { useDataStore } from './store';
 
 // 子组件引入
@@ -90,6 +107,7 @@ import ProtagonistPanel from './components/ProtagonistPanel.vue';
 import NpcPanel from './components/NpcPanel.vue';
 import RuleEditorModal from './components/RuleEditorModal.vue';
 import SystemAnnouncement from './components/SystemAnnouncement.vue';
+import NpcLorePreviewModal from './components/NpcLorePreviewModal.vue';
 
 type TabId = 'overview' | 'protagonist' | 'npc';
 type RuleGroupKey = '世界规则' | '区域规则' | '个人规则';
@@ -118,6 +136,11 @@ function setTheme(theme: ThemeId) {
 
 const npcEntries = computed(() => Object.entries(data.value.NPC序列 ?? {}));
 const selectedNpc = computed(() => (selectedNpcName.value ? data.value.NPC序列[selectedNpcName.value] : undefined));
+const managedNpcLoreNames = ref<string[]>([]);
+const npcLorePreview = ref<NpcLorePreview | null>(null);
+const npcLoreBusy = ref(false);
+const npcLoreError = ref('');
+const selectedNpcLoreManaged = computed(() => managedNpcLoreNames.value.includes(selectedNpcName.value));
 
 const tabs = computed(() => [
   { id: 'overview', label: '总览', icon: BookOpen },
@@ -159,6 +182,84 @@ watch(
   },
   { immediate: true },
 );
+
+async function refreshNpcLoreManagedNames(): Promise<void> {
+  const worldbookName = getChatWorldbookName('current');
+  if (!worldbookName) {
+    managedNpcLoreNames.value = [];
+    return;
+  }
+  try {
+    const entries = await getWorldbook(worldbookName);
+    managedNpcLoreNames.value = entries
+      .filter(entry => isManagedNpcLoreEntry(entry))
+      .map(entry => {
+        const metadata = entry.extra?.human_revision;
+        return typeof metadata?.npcKey === 'string' ? metadata.npcKey : entry.name;
+      });
+  } catch (error) {
+    console.warn('[人间修订中·状态栏] 读取 NPC Chat Lore 状态失败', error);
+    managedNpcLoreNames.value = [];
+  }
+}
+
+async function openNpcLorePreview(payload: { name: string; npc: unknown }): Promise<void> {
+  if (npcLoreBusy.value) return;
+  const targetName = payload.name.trim();
+  if (!targetName) return;
+  const npcSnapshot = cloneNpcSnapshot(payload.npc);
+  npcLoreBusy.value = true;
+  npcLoreError.value = '';
+  try {
+    npcLorePreview.value = await createNpcLorePreview(targetName, npcSnapshot);
+    announcer.value = `已生成 ${targetName} 的世界书草稿，等待确认。`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    npcLoreError.value = `整理失败：${message}`;
+    toastr.error(message, 'NPC 档案整理失败');
+  } finally {
+    npcLoreBusy.value = false;
+  }
+}
+
+function closeNpcLorePreview(): void {
+  if (npcLoreBusy.value) return;
+  npcLorePreview.value = null;
+  npcLoreError.value = '';
+}
+
+function regenerateNpcLore(): void {
+  const preview = npcLorePreview.value;
+  if (!preview || npcLoreBusy.value) return;
+  void openNpcLorePreview({ name: preview.targetName, npc: preview.npcSnapshot });
+}
+
+async function confirmNpcLore(finalContent: string): Promise<void> {
+  const preview = npcLorePreview.value;
+  if (!preview || npcLoreBusy.value) return;
+  npcLoreBusy.value = true;
+  npcLoreError.value = '';
+  try {
+    await commitNpcLorePreview(preview, finalContent);
+    managedNpcLoreNames.value = Array.from(new Set([...managedNpcLoreNames.value, preview.targetName]));
+    npcLorePreview.value = null;
+    announcer.value = `已将 ${preview.targetName} 的最终文本写入当前聊天世界书。`;
+    toastr.success(`已写入 NPC「${preview.targetName}」世界书条目`, 'NPC 档案');
+    await refreshNpcLoreManagedNames();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof NpcLoreConflictError && npcLorePreview.value) {
+      npcLorePreview.value = {
+        ...npcLorePreview.value,
+        conflictingEntries: error.conflictingEntries.map(entry => ({ name: entry.name, content: entry.content })),
+      };
+    }
+    npcLoreError.value = message;
+    toastr.error(message, 'NPC 世界书写入失败');
+  } finally {
+    npcLoreBusy.value = false;
+  }
+}
 
 // 规则修订模块状态
 const ruleEditorOpen = ref(false);
@@ -363,42 +464,11 @@ async function confirmRules() {
   }
 }
 
-function parseJsonLoose(text: string): unknown {
-  const trimmed = text
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf('{');
-    const end = trimmed.lastIndexOf('}');
-    if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
-    throw new Error('AI 返回的内容不是可解析的 JSON');
-  }
-}
-
-function extractRecentStoryBodies(maxLayers = 3): string[] {
-  const lastMessageId = getLastMessageId();
-  if (lastMessageId < 0) return [];
-  const assistantMessages = getChatMessages(`0-${lastMessageId}`, {
-    role: 'assistant',
-    hide_state: 'unhidden',
-  });
-  const bodies: string[] = [];
-  for (let index = assistantMessages.length - 1; index >= 0 && bodies.length < maxLayers; index -= 1) {
-    const match = assistantMessages[index].message.match(/<content>([\s\S]*?)<\/content>/i);
-    const body = match?.[1]?.trim();
-    if (body) bodies.push(body);
-  }
-  return bodies.reverse();
-}
-
 function buildWorldviewPrompt(groupKey: RuleGroupKey, hint: string): string {
   const sceneVal = data.value.当前场景;
   const protagonist = data.value.主角;
   const editor = data.value.现实编辑器;
-  const recentBodies = extractRecentStoryBodies();
+  const recentBodies = readRecentAssistantStoryBodies();
   const recentStory = recentBodies.length
     ? recentBodies.map((body, index) => `第 ${index + 1} 层：\n${body}`).join('\n\n')
     : '（暂无可用正文楼层）';
@@ -456,18 +526,6 @@ function suggestionSchema(groupKey: RuleGroupKey) {
       required: rootRequired,
     },
   };
-}
-
-function extractGenerateText(
-  result: string | { content?: string; tool_calls?: Array<{ arguments?: string; function?: { arguments?: string } }> },
-): string {
-  if (typeof result === 'string') return result;
-  const calls = result?.tool_calls;
-  if (Array.isArray(calls) && calls.length) {
-    const args = calls[0]?.function?.arguments ?? calls[0]?.arguments ?? '';
-    if (args) return args;
-  }
-  return result?.content ?? '';
 }
 
 async function suggestRules(groupKey: RuleGroupKey) {
@@ -558,6 +616,7 @@ async function suggestRules(groupKey: RuleGroupKey) {
 
 onMounted(() => {
   removeThemeListener = onThemeChange(theme => (themeId.value = theme));
+  void refreshNpcLoreManagedNames();
   if (!document.getElementById(themeFontStyleId)) {
     const style = document.createElement('style');
     style.id = themeFontStyleId;
@@ -598,7 +657,9 @@ onUnmounted(() => {
 
 .tab-fade-enter-active,
 .tab-fade-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .tab-fade-enter-from {
