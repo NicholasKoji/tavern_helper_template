@@ -633,11 +633,55 @@ const privateEntries = computed(() => {
   .card-head {
     align-items: flex-start;
     flex-direction: column;
+    min-width: 0;
+  }
+  .head-left {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: 7px;
+    row-gap: 2px;
+  }
+  .head-icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    margin-top: 2px;
+  }
+  .card-title {
+    grid-column: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-role-tag {
+    grid-column: 2;
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
   }
   .card-head-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    max-width: 100%;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 8px;
+  }
+  .favor-head-badge,
+  .lore-action {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .lore-action {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 </style>
