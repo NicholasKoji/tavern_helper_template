@@ -223,6 +223,7 @@ const privateEntries = computed(() => {
 <style scoped>
 .panel-container {
   padding: 12px;
+  min-width: 0;
 }
 
 .npc-workspace {
@@ -230,6 +231,7 @@ const privateEntries = computed(() => {
   grid-template-columns: 180px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+  min-width: 0;
 }
 
 .npc-roster {
@@ -317,6 +319,7 @@ const privateEntries = computed(() => {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  min-width: 0;
 }
 
 .npc-card {
@@ -327,6 +330,7 @@ const privateEntries = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 10px 14px;
   background: var(--paper-subtle);
@@ -338,6 +342,7 @@ const privateEntries = computed(() => {
   align-items: center;
   gap: 7px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .head-icon {
@@ -351,6 +356,8 @@ const privateEntries = computed(() => {
   font-size: 15px;
   font-weight: 600;
   color: var(--ink-heading);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .card-role-tag {
@@ -359,6 +366,7 @@ const privateEntries = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .favor-head-badge {
@@ -375,7 +383,8 @@ const privateEntries = computed(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  flex-shrink: 0;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .lore-action {
@@ -436,12 +445,14 @@ const privateEntries = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .section-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .section-title {
@@ -456,8 +467,9 @@ const privateEntries = computed(() => {
 
 .data-grid-2col {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
+  min-width: 0;
 }
 
 .span-2 {
@@ -466,22 +478,25 @@ const privateEntries = computed(() => {
 
 .data-row {
   display: grid;
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 80px minmax(0, 1fr);
   gap: 8px;
   font-size: 12px;
   line-height: 1.5;
   padding: 3px 0;
   border-bottom: 1px dashed var(--border-hairline);
+  min-width: 0;
 }
 
 .data-key {
   color: var(--ink-muted);
   font-weight: 600;
+  min-width: 0;
 }
 
 .data-val {
   color: var(--ink-body);
   word-break: break-word;
+  min-width: 0;
 }
 
 .narrative-paragraph {
@@ -502,8 +517,9 @@ const privateEntries = computed(() => {
 
 .clothing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+  min-width: 0;
 }
 
 .clothing-tag {
@@ -514,6 +530,7 @@ const privateEntries = computed(() => {
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
   font-size: 11.5px;
+  min-width: 0;
 }
 
 .cloth-part {
@@ -526,6 +543,7 @@ const privateEntries = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 /* 私密状态 */
@@ -590,7 +608,7 @@ const privateEntries = computed(() => {
   color: var(--ink-muted);
 }
 
-@media (max-width: 680px) {
+@media (max-width: 720px) {
   .npc-workspace {
     grid-template-columns: 1fr;
   }
@@ -607,7 +625,7 @@ const privateEntries = computed(() => {
   }
   .data-grid-2col,
   .clothing-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .span-2 {
     grid-column: span 1;
