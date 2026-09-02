@@ -5,8 +5,10 @@
       :editor-status="data.现实编辑器.状态"
       :editor-manifested="data.现实编辑器.是否显现"
       :active-theme="themeId"
+      :is-collapsed="isCollapsed"
       @open-rule-editor="openRuleEditor"
       @select-theme="setTheme"
+      @toggle-collapse="toggleCollapse"
     />
 
     <!-- 场景元信息栏 -->
@@ -17,32 +19,72 @@
       :summary="scene.摘要"
     />
 
-    <!-- 3 页签视图切换导航 -->
-    <TabNav v-model="activeTab" :tabs="tabs" />
+    <!-- 收起状态下的展开引导条 -->
+    <transition name="collapse-bar-fade">
+      <div
+        v-if="isCollapsed"
+        class="status-collapsed-bar"
+        role="button"
+        tabindex="0"
+        :aria-expanded="false"
+        aria-controls="status-foldable-drawer"
+        aria-label="展开详细卷宗档案"
+        @click="toggleCollapse"
+        @keydown.enter="toggleCollapse"
+        @keydown.space.prevent="toggleCollapse"
+      >
+        <div class="collapsed-bar-content">
+          <ChevronDown :size="14" stroke-width="2.2" class="collapsed-icon" />
+          <span class="collapsed-text">展开卷宗档案</span>
+          <span class="collapsed-tabs-preview">（总览 · 主角 · NPC{{ npcCountBadge }}）</span>
+        </div>
+      </div>
+    </transition>
 
-    <!-- 主体内容卡片区域 -->
-    <div class="status-content-area">
-      <transition name="tab-fade" mode="out-in">
-        <OverviewPanel
-          v-if="activeTab === 'overview'"
-          :data="data"
-          :format-location="formatLocation"
-          @open-rule-editor="openRuleEditor"
-        />
+    <!-- 可折叠详细区域：包含 TabNav、内容卡片区及底部收起栏 -->
+    <div
+      id="status-foldable-drawer"
+      class="status-foldable-drawer"
+      :class="{ 'is-collapsed': isCollapsed }"
+      :aria-hidden="isCollapsed"
+    >
+      <div class="status-drawer-inner">
+        <!-- 3 页签视图切换导航 -->
+        <TabNav v-model="activeTab" :tabs="tabs" />
 
-        <ProtagonistPanel v-else-if="activeTab === 'protagonist'" :protagonist="data.主角" />
+        <!-- 主体内容卡片区域 -->
+        <div class="status-content-area">
+          <transition name="tab-fade" mode="out-in">
+            <OverviewPanel
+              v-if="activeTab === 'overview'"
+              :data="data"
+              :format-location="formatLocation"
+              @open-rule-editor="openRuleEditor"
+            />
 
-        <NpcPanel
-          v-else-if="activeTab === 'npc'"
-          :npc-entries="npcEntries"
-          :selected-name="selectedNpcName"
-          :selected-npc="selectedNpc"
-          :lore-managed="selectedNpcLoreManaged"
-          :lore-busy="npcLoreBusy"
-          @select-npc="selectedNpcName = $event"
-          @persist-npc-lore="openNpcLorePreview"
-        />
-      </transition>
+            <ProtagonistPanel v-else-if="activeTab === 'protagonist'" :protagonist="data.主角" />
+
+            <NpcPanel
+              v-else-if="activeTab === 'npc'"
+              :npc-entries="npcEntries"
+              :selected-name="selectedNpcName"
+              :selected-npc="selectedNpc"
+              :lore-managed="selectedNpcLoreManaged"
+              :lore-busy="npcLoreBusy"
+              @select-npc="selectedNpcName = $event"
+              @persist-npc-lore="openNpcLorePreview"
+            />
+          </transition>
+
+          <!-- 底部快捷收起栏 -->
+          <footer class="drawer-footer">
+            <button class="bottom-collapse-btn" type="button" aria-label="收起详细卷宗" @click="toggleCollapse">
+              <ChevronUp :size="13" stroke-width="2.2" />
+              <span>收起卷宗</span>
+            </button>
+          </footer>
+        </div>
+      </div>
     </div>
 
     <!-- 现实编辑器 · 规则修订弹窗 -->
@@ -79,7 +121,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
-import { BookOpen, User, Users } from '@lucide/vue';
+import { BookOpen, ChevronDown, ChevronUp, User, Users } from '@lucide/vue';
 import { useLocalStorage } from '@vueuse/core';
 import themeArchiveFontUrl from '../世界配置/fonts/theme-archive.woff2?url';
 import themeAstrolabeFontUrl from '../世界配置/fonts/theme-astrolabe.woff2?url';
@@ -147,6 +189,18 @@ const tabs = computed(() => [
   { id: 'protagonist', label: '主角', icon: User },
   { id: 'npc', label: 'NPC', icon: Users, badge: npcEntries.value.length },
 ]);
+
+const isCollapsed = useLocalStorage('human-revision:status_collapsed', false);
+
+const npcCountBadge = computed(() => {
+  const count = npcEntries.value.length;
+  return count > 0 ? ` ${count}` : '';
+});
+
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value;
+  announcer.value = isCollapsed.value ? '已收起详细档案' : '已展开详细档案';
+}
 
 const formatDate = computed(() => {
   const date = scene.value.日期;
@@ -653,6 +707,140 @@ onUnmounted(() => {
 .status-content-area {
   min-height: 200px;
   background: var(--paper-deep);
+}
+
+/* 折叠展开引导条 */
+.status-collapsed-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: var(--paper-subtle);
+  border-top: 1px dashed var(--border-hairline);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-collapsed-bar:hover {
+  background: var(--paper-elevated);
+  border-top-color: var(--brass-border);
+}
+
+.status-collapsed-bar:active {
+  transform: scale(0.99);
+}
+
+.collapsed-bar-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  transition: color 0.15s ease;
+}
+
+.status-collapsed-bar:hover .collapsed-bar-content {
+  color: var(--cinnabar);
+}
+
+.collapsed-icon {
+  color: var(--cinnabar);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.status-collapsed-bar:hover .collapsed-icon {
+  transform: translateY(2px);
+}
+
+.collapsed-text {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.collapsed-tabs-preview {
+  font-size: 11px;
+  color: var(--ink-muted);
+  opacity: 0.85;
+}
+
+.collapse-bar-fade-enter-active,
+.collapse-bar-fade-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.collapse-bar-fade-enter-from,
+.collapse-bar-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 折叠抽屉物理动效容器 */
+.status-foldable-drawer {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease;
+}
+
+.status-foldable-drawer.is-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    grid-template-rows 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 150ms ease,
+    visibility 0s 240ms;
+}
+
+.status-drawer-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 底部快捷收起栏 */
+.drawer-footer {
+  display: flex;
+  justify-content: center;
+  padding: 10px 14px 14px;
+  background: var(--paper-deep);
+  border-top: 1px dashed var(--border-hairline);
+}
+
+.bottom-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 16px;
+  background: var(--paper-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bottom-collapse-btn:hover {
+  background: var(--paper-subtle);
+  border-color: var(--brass-border);
+  color: var(--cinnabar);
+}
+
+.bottom-collapse-btn:active {
+  transform: scale(0.96);
 }
 
 .tab-fade-enter-active,

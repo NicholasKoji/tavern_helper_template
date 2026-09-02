@@ -24,6 +24,17 @@
         <span>改规则</span>
       </button>
       <button
+        class="collapse-toggle-btn"
+        :class="{ 'is-collapsed': isCollapsed }"
+        type="button"
+        :aria-expanded="!isCollapsed"
+        :aria-label="isCollapsed ? '展开详细卷宗' : '收起详细卷宗'"
+        :title="isCollapsed ? '展开详细卷宗' : '收起详细卷宗'"
+        @click="$emit('toggleCollapse')"
+      >
+        <ChevronDown :size="16" stroke-width="2" class="collapse-icon" />
+      </button>
+      <button
         class="settings-btn"
         :class="{ active: settingsOpen }"
         type="button"
@@ -86,18 +97,20 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Check, PenLine, Settings, X } from '@lucide/vue';
+import { Check, ChevronDown, PenLine, Settings, X } from '@lucide/vue';
 import { themeOptions, type ThemeId } from '../../theme';
 
 defineProps<{
   editorStatus: string;
   editorManifested: boolean;
   activeTheme: ThemeId;
+  isCollapsed: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'openRuleEditor'): void;
   (e: 'selectTheme', theme: ThemeId): void;
+  (e: 'toggleCollapse'): void;
 }>();
 
 const settingsOpen = ref(false);
@@ -228,6 +241,39 @@ function selectTheme(theme: ThemeId) {
   background: var(--cinnabar);
   color: #fff;
   box-shadow: 0 2px 8px var(--cinnabar-glow);
+}
+
+.collapse-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--paper-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.collapse-toggle-btn:hover {
+  background: var(--paper-elevated);
+  border-color: var(--brass);
+  color: var(--ink-heading);
+}
+
+.collapse-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.collapse-icon {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotate(180deg);
+}
+
+.collapse-toggle-btn.is-collapsed .collapse-icon {
+  transform: rotate(0deg);
 }
 
 .settings-btn {
@@ -397,7 +443,9 @@ function selectTheme(theme: ThemeId) {
 
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .dropdown-fade-enter-from,
