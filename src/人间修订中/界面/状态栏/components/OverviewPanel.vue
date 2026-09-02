@@ -5,31 +5,31 @@
       <header class="card-head">
         <div class="head-left">
           <BookOpen :size="16" class="head-icon" />
-          <h2 class="card-title">世界档案</h2>
+          <h2 class="card-title">世界档案 · 运行状态</h2>
         </div>
-        <span class="card-tag">{{ formatLocation }}</span>
+        <span class="status-seal">{{ data.现实编辑器.状态 }}</span>
       </header>
 
-      <div class="data-grid">
-        <div class="data-row">
-          <span class="data-key">当前地点</span>
-          <span class="data-val">{{ formatLocation }}</span>
+      <div class="card-body-sections">
+        <div class="meta-pills-row">
+          <div class="meta-pill">
+            <span class="pill-label">主角状态</span>
+            <span class="pill-value">{{ data.主角.启用 ? '已启用（在场）' : '未启用（故事外）' }}</span>
+          </div>
+          <div class="meta-pill">
+            <span class="pill-label">编辑器显现</span>
+            <span class="pill-value">{{ data.现实编辑器.是否显现 ? '已显现于世' : '潜伏（未显现）' }}</span>
+          </div>
         </div>
-        <div class="data-row">
-          <span class="data-key">当前摘要</span>
-          <span class="data-val">{{ data.当前场景.摘要 }}</span>
+
+        <div class="field-stack state-highlight">
+          <span class="field-label">现实编辑器 · 最近反馈</span>
+          <div class="field-value">{{ data.现实编辑器.最近反馈 || '暂无异常变动' }}</div>
         </div>
-        <div class="data-row">
-          <span class="data-key">主角状态</span>
-          <span class="data-val">{{ data.主角.启用 ? '已启用（在场）' : '未启用（故事外）' }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-key">编辑器显现</span>
-          <span class="data-val">{{ data.现实编辑器.是否显现 ? '已显现于世' : '未显现（潜伏）' }}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-key">最近反馈</span>
-          <span class="data-val">{{ data.现实编辑器.最近反馈 || '暂无异常变动' }}</span>
+
+        <div class="field-stack">
+          <span class="field-label">当前场景摘要</span>
+          <div class="field-value">{{ data.当前场景.摘要 || '暂无摘要' }}</div>
         </div>
       </div>
     </article>
@@ -195,10 +195,8 @@ const ruleScopeCount = computed(() => ruleScopes.value.reduce((sum, scope) => su
 .card-tag {
   font-size: 11px;
   color: var(--ink-muted);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .head-badges {
@@ -236,34 +234,82 @@ const ruleScopeCount = computed(() => ruleScopes.value.reduce((sum, scope) => su
   color: #fff;
 }
 
-.data-grid {
+.card-body-sections {
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  padding: 8px 14px;
+  gap: 10px;
+  min-width: 0;
 }
 
-.data-row {
+.meta-pills-row {
   display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 12px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border-hairline);
-  font-size: 12.5px;
-  line-height: 1.5;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
 }
 
-.data-row:last-child {
-  border-bottom: none;
+.meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  min-width: 0;
 }
 
-.data-key {
-  color: var(--ink-muted);
+.pill-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
+  color: var(--ink-muted);
+  flex-shrink: 0;
 }
 
-.data-val {
-  color: var(--ink-body);
+.pill-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-heading);
+  white-space: normal;
   word-break: break-word;
+}
+
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+}
+
+.field-value {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-body);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.state-highlight {
+  background: var(--paper-subtle);
+  border-left: 3px solid var(--cinnabar);
+}
+
+.state-highlight .field-label {
+  color: var(--cinnabar);
 }
 
 /* 生效规则树状折叠组 */

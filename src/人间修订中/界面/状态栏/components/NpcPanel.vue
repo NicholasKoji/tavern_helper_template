@@ -32,94 +32,106 @@
             <h2 class="card-title">{{ selectedName }}</h2>
             <span class="card-role-tag">{{ selectedNpc.基础信息.关系定位 || '关系未指定' }}</span>
           </div>
-          <div class="card-head-actions">
-            <div class="favor-head-badge">
-              <span class="favor-title">好感度</span>
-              <span class="meter-bar" aria-hidden="true">
-                <span
-                  class="meter-fill"
-                  :style="{ width: `${Math.min(selectedNpc.基础信息.好感度 || 0, 100)}%` }"
-                ></span>
-              </span>
-              <span class="favor-num">{{ selectedNpc.基础信息.好感度 ?? '--' }}</span>
-            </div>
-            <button
-              class="lore-action"
-              type="button"
-              :disabled="loreBusy"
-              :aria-busy="loreBusy"
-              @click="$emit('persistNpcLore', { name: selectedName, npc: selectedNpc })"
-            >
-              <span v-if="loreBusy">整理中…</span>
-              <span v-else-if="loreManaged">重新整理并更新</span>
-              <span v-else>整理并存入世界书</span>
-            </button>
-          </div>
+          <button
+            class="lore-action"
+            type="button"
+            :disabled="loreBusy"
+            :aria-busy="loreBusy"
+            @click="$emit('persistNpcLore', { name: selectedName, npc: selectedNpc })"
+          >
+            <span v-if="loreBusy">整理中…</span>
+            <span v-else-if="loreManaged">重新整理并更新</span>
+            <span v-else>整理并存入世界书</span>
+          </button>
         </header>
+
+        <!-- 好感度全宽沉浸式遥测条 -->
+        <section class="favor-full-strip" aria-label="好感度">
+          <div class="favor-info-row">
+            <span class="favor-title-group">
+              <Heart :size="13" class="favor-heart-icon" />
+              <span class="favor-title">好感度</span>
+            </span>
+            <span class="favor-score">
+              <strong class="score-val">{{ selectedNpc.基础信息.好感度 ?? '--' }}</strong>
+              <span class="score-max">/ 100</span>
+            </span>
+          </div>
+          <div
+            class="favor-progress-track"
+            role="progressbar"
+            :aria-valuenow="selectedNpc.基础信息.好感度 || 0"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <div
+              class="favor-progress-fill"
+              :style="{ width: `${Math.min(selectedNpc.基础信息.好感度 || 0, 100)}%` }"
+            ></div>
+          </div>
+        </section>
 
         <div class="card-body-sections">
           <!-- 基础信息 -->
           <section class="section-block">
             <h3 class="section-title">基础档案</h3>
-            <div class="data-grid-2col">
-              <div class="data-row">
-                <span class="data-key">性别</span>
-                <span class="data-val">{{ selectedNpc.基础信息.性别 || '未指定' }}</span>
+            <div class="meta-pills-row">
+              <div class="meta-pill">
+                <span class="pill-label">性别</span>
+                <span class="pill-value">{{ selectedNpc.基础信息.性别 || '未指定' }}</span>
               </div>
-              <div class="data-row">
-                <span class="data-key">年龄</span>
-                <span class="data-val">{{ formatAge(selectedNpc.基础信息.年龄) }}</span>
+              <div class="meta-pill">
+                <span class="pill-label">年龄</span>
+                <span class="pill-value">{{ formatAge(selectedNpc.基础信息.年龄) }}</span>
               </div>
-              <div class="data-row">
-                <span class="data-key">身份</span>
-                <span class="data-val">{{ selectedNpc.基础信息.身份 || '未指定' }}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">关系定位</span>
-                <span class="data-val">{{ selectedNpc.基础信息.关系定位 || '未指定' }}</span>
-              </div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">身份</span>
+              <div class="field-value">{{ selectedNpc.基础信息.身份 || '未指定' }}</div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">关系定位</span>
+              <div class="field-value">{{ selectedNpc.基础信息.关系定位 || '未指定' }}</div>
             </div>
           </section>
 
-          <!-- 外貌特征 -->
+          <!-- 外貌身形 -->
           <section class="section-block">
             <h3 class="section-title">外貌身形</h3>
-            <div class="data-grid-2col">
-              <div class="data-row">
-                <span class="data-key">身高</span>
-                <span class="data-val">{{ selectedNpc.外貌.身高 || '未指定' }}</span>
+            <div class="meta-pills-row">
+              <div class="meta-pill">
+                <span class="pill-label">身高</span>
+                <span class="pill-value">{{ selectedNpc.外貌.身高 || '未指定' }}</span>
               </div>
-              <div class="data-row">
-                <span class="data-key">罩杯</span>
-                <span class="data-val">{{ selectedNpc.外貌.罩杯 || '未指定' }}</span>
+              <div class="meta-pill">
+                <span class="pill-label">罩杯</span>
+                <span class="pill-value">{{ selectedNpc.外貌.罩杯 || '未指定' }}</span>
               </div>
-              <div class="data-row">
-                <span class="data-key">体型</span>
-                <span class="data-val">{{ selectedNpc.外貌.体型 || '未指定' }}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">面容气质</span>
-                <span class="data-val">{{ selectedNpc.外貌.面容气质 || '未指定' }}</span>
-              </div>
-              <div class="data-row span-2">
-                <span class="data-key">身体特征</span>
-                <span class="data-val">{{ selectedNpc.外貌.身体特征 || '未指定' }}</span>
-              </div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">体型</span>
+              <div class="field-value">{{ selectedNpc.外貌.体型 || '未指定' }}</div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">面容气质</span>
+              <div class="field-value">{{ selectedNpc.外貌.面容气质 || '未指定' }}</div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">身体特征</span>
+              <div class="field-value">{{ selectedNpc.外貌.身体特征 || '未指定' }}</div>
             </div>
           </section>
 
-          <!-- 性格底色 -->
+          <!-- 性格心性 -->
           <section class="section-block">
             <h3 class="section-title">性格心性</h3>
-            <div class="data-grid-2col">
-              <div class="data-row">
-                <span class="data-key">底色</span>
-                <span class="data-val">{{ selectedNpc.性格.底色 || '未指定' }}</span>
-              </div>
-              <div class="data-row">
-                <span class="data-key">主色调</span>
-                <span class="data-val">{{ selectedNpc.性格.主色调 || '未指定' }}</span>
-              </div>
+            <div class="field-stack">
+              <span class="field-label">底色</span>
+              <div class="field-value">{{ selectedNpc.性格.底色 || '未指定' }}</div>
+            </div>
+            <div class="field-stack">
+              <span class="field-label">主色调</span>
+              <div class="field-value">{{ selectedNpc.性格.主色调 || '未指定' }}</div>
             </div>
           </section>
 
@@ -132,10 +144,10 @@
           <!-- 当前穿着 -->
           <section class="section-block">
             <h3 class="section-title">当前穿着</h3>
-            <div class="clothing-grid">
-              <div v-for="(val, part) in clothingMap" :key="part" class="clothing-tag">
-                <span class="cloth-part">{{ part }}：</span>
-                <span class="cloth-val">{{ val || '默认' }}</span>
+            <div class="clothing-stack">
+              <div v-for="(val, part) in clothingMap" :key="part" class="clothing-item-card">
+                <span class="clothing-part-tag">{{ part }}</span>
+                <span class="clothing-desc-text">{{ val || '默认' }}</span>
               </div>
             </div>
           </section>
@@ -152,17 +164,17 @@
             <div class="private-states-list">
               <details v-for="[part, state] in privateEntries" :key="part" class="private-card" open>
                 <summary class="private-summary">
-                  <span class="private-part">{{ part }}</span>
-                  <span class="private-status-tag">{{ state.当前状态 || '正常' }}</span>
+                  <span class="private-part-title">{{ part }}</span>
+                  <ChevronDown :size="14" class="private-arrow" />
                 </summary>
                 <div class="private-body">
-                  <div class="data-row">
-                    <span class="data-key">外观描述</span>
-                    <span class="data-val">{{ state.外观描述 || '无特殊记录' }}</span>
+                  <div class="field-stack">
+                    <span class="field-label">外观描述</span>
+                    <div class="field-value">{{ state.外观描述 || '无特殊记录' }}</div>
                   </div>
-                  <div class="data-row">
-                    <span class="data-key">当前状态</span>
-                    <span class="data-val">{{ state.当前状态 || '无特殊记录' }}</span>
+                  <div class="field-stack state-highlight">
+                    <span class="field-label">当前状态</span>
+                    <div class="field-value">{{ state.当前状态 || '无特殊记录' }}</div>
                   </div>
                 </div>
               </details>
@@ -182,7 +194,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Users } from '@lucide/vue';
+import { ChevronDown, Heart, Users } from '@lucide/vue';
 
 const props = defineProps<{
   npcEntries: Array<[string, any]>;
@@ -294,18 +306,17 @@ const privateEntries = computed(() => {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-heading);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .roster-identity {
   display: block;
   font-size: 11px;
   color: var(--ink-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .roster-favor {
@@ -373,45 +384,27 @@ const privateEntries = computed(() => {
   font-weight: 600;
   color: var(--ink-heading);
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .card-role-tag {
   font-size: 11px;
   color: var(--ink-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
   min-width: 0;
-}
-
-.favor-head-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.card-head-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-width: 0;
-  flex-wrap: wrap;
 }
 
 .lore-action {
   min-height: 28px;
-  padding: 5px 9px;
+  padding: 5px 12px;
   border: 1px solid var(--brass-border);
   border-radius: var(--radius-sm);
   background: var(--paper-base);
   color: var(--ink-heading);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -429,31 +422,68 @@ const privateEntries = computed(() => {
   opacity: 0.62;
 }
 
-.favor-title {
-  color: var(--ink-muted);
-  font-size: 10.5px;
+/* 好感度全宽遥测条 */
+.favor-full-strip {
+  padding: 10px 14px;
+  background: var(--paper-subtle);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
-.meter-bar {
-  display: block;
-  width: 60px;
-  height: 6px;
+.favor-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.favor-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-heading);
+}
+
+.favor-heart-icon {
+  color: var(--cinnabar);
+}
+
+.favor-score {
+  font-family: var(--font-mono);
+}
+
+.score-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cinnabar);
+}
+
+.score-max {
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-left: 2px;
+}
+
+.favor-progress-track {
+  width: 100%;
+  height: 8px;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-pill);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.meter-fill {
-  display: block;
+.favor-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--brass), var(--cinnabar));
   border-radius: var(--radius-pill);
-}
-
-.favor-num {
-  font-weight: 700;
-  color: var(--cinnabar);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-body-sections {
@@ -481,38 +511,67 @@ const privateEntries = computed(() => {
   text-transform: uppercase;
 }
 
-.data-grid-2col {
+/* 短字段紧凑标签矩阵 */
+.meta-pills-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
-  min-width: 0;
-}
-
-.span-2 {
-  grid-column: span 2;
-}
-
-.data-row {
-  display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
   gap: 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  padding: 3px 0;
-  border-bottom: 1px dashed var(--border-hairline);
   min-width: 0;
 }
 
-.data-key {
-  color: var(--ink-muted);
+.meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.pill-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.pill-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-heading);
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* 长字段上下分布流式块 */
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
   min-width: 0;
 }
 
-.data-val {
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+}
+
+.field-value {
+  font-size: 12.5px;
+  line-height: 1.6;
   color: var(--ink-body);
+  white-space: normal;
   word-break: break-word;
-  min-width: 0;
 }
 
 .narrative-paragraph {
@@ -524,6 +583,8 @@ const privateEntries = computed(() => {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-hairline);
+  white-space: normal;
+  word-break: break-word;
 }
 
 .thought-paragraph {
@@ -531,42 +592,47 @@ const privateEntries = computed(() => {
   color: var(--ink-muted);
 }
 
-.clothing-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* 当前穿着流式卡片 */
+.clothing-stack {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   min-width: 0;
 }
 
-.clothing-tag {
+.clothing-item-card {
   display: flex;
-  gap: 4px;
-  padding: 4px 8px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
-  font-size: 11.5px;
   min-width: 0;
 }
 
-.cloth-part {
-  color: var(--ink-muted);
-  font-weight: 600;
+.clothing-part-tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--brass);
+  letter-spacing: 0.05em;
 }
 
-.cloth-val {
+.clothing-desc-text {
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--ink-body);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* 私密状态 */
 .private-states-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .private-card {
@@ -574,34 +640,61 @@ const privateEntries = computed(() => {
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  min-width: 0;
 }
 
 .private-summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: 8px 12px;
   cursor: pointer;
   user-select: none;
-  font-size: 12px;
+  font-size: 12.5px;
   background: var(--paper-subtle);
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease;
 }
 
-.private-part {
+.private-summary:hover {
+  background: var(--paper-elevated);
+}
+
+.private-part-title {
+  font-family: var(--font-display);
   font-weight: 600;
   color: var(--ink-heading);
 }
 
-.private-status-tag {
-  font-size: 10.5px;
-  color: var(--cinnabar);
+.private-arrow {
+  color: var(--ink-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.private-card[open] .private-arrow {
+  transform: rotate(180deg);
+}
+
+.private-card[open] .private-summary {
+  border-bottom-color: var(--border-hairline);
 }
 
 .private-body {
-  padding: 6px 10px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.state-highlight {
+  background: var(--paper-subtle);
+  border-left: 3px solid var(--cinnabar);
+}
+
+.state-highlight .field-label {
+  color: var(--cinnabar);
 }
 
 .notice-card {
@@ -655,71 +748,31 @@ const privateEntries = computed(() => {
     width: 100%;
     max-width: 100%;
   }
-  .data-grid-2col,
-  .clothing-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .span-2 {
-    grid-column: span 1;
+  .roster-track > .roster-item:only-child .roster-identity {
+    white-space: normal;
+    word-break: break-word;
   }
   .card-head {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+    gap: 8px;
     min-width: 0;
     max-width: 100%;
     width: 100%;
   }
   .head-left {
-    display: grid;
-    width: 100%;
-    max-width: 100%;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    column-gap: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
     row-gap: 2px;
     min-width: 0;
   }
-  .head-icon {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    margin-top: 2px;
-    flex-shrink: 0;
-  }
-  .card-title {
-    grid-column: 2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  .card-role-tag {
-    grid-column: 2;
-    width: 100%;
-    max-width: 100%;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    overflow-wrap: anywhere;
-    min-width: 0;
-  }
-  .card-head-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
-    max-width: 100%;
-    align-items: stretch;
-    justify-content: stretch;
-    gap: 8px;
-    min-width: 0;
-  }
-  .favor-head-badge,
   .lore-action {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
-  }
-  .lore-action {
     white-space: normal;
     overflow-wrap: anywhere;
     text-align: center;

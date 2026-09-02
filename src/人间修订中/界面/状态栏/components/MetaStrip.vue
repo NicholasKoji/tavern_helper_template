@@ -48,7 +48,7 @@ defineProps<{
 <style scoped>
 .meta-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: 140px 100px minmax(0, 1.2fr) minmax(0, 1.8fr);
   gap: 1px;
   background: var(--border-hairline);
   border-bottom: 1px solid var(--border-hairline);
@@ -77,22 +77,27 @@ defineProps<{
 .meta-value {
   font-size: 12.5px;
   color: var(--ink-heading);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.5;
 }
 
 .summary-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  font-size: 12px;
+  color: var(--ink-body);
+  line-height: 1.6;
   white-space: normal;
+  word-break: break-word;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .meta-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .location-item,
+  .summary-item {
+    grid-column: span 2;
   }
 }
 </style>
