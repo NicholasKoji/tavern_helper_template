@@ -241,8 +241,9 @@ const privateEntries = computed(() => Object.entries(props.protagonist.私密状
 
 .data-grid-2col {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
+  min-width: 0;
 }
 
 .span-2 {
@@ -251,12 +252,13 @@ const privateEntries = computed(() => Object.entries(props.protagonist.私密状
 
 .data-row {
   display: grid;
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 80px minmax(0, 1fr);
   gap: 8px;
   font-size: 12px;
   line-height: 1.5;
   padding: 3px 0;
   border-bottom: 1px dashed var(--border-hairline);
+  min-width: 0;
 }
 
 .data-key {
@@ -373,7 +375,7 @@ const privateEntries = computed(() => Object.entries(props.protagonist.私密状
 @media (max-width: 600px) {
   .data-grid-2col,
   .clothing-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .span-2 {
     grid-column: span 1;

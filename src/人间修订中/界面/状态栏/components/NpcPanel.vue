@@ -224,6 +224,8 @@ const privateEntries = computed(() => {
 .panel-container {
   padding: 12px;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .npc-workspace {
@@ -232,6 +234,7 @@ const privateEntries = computed(() => {
   gap: 12px;
   align-items: start;
   min-width: 0;
+  max-width: 100%;
 }
 
 .npc-roster {
@@ -240,12 +243,17 @@ const privateEntries = computed(() => {
   border-radius: var(--radius-lg);
   padding: 8px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .roster-track {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .roster-item {
@@ -259,6 +267,9 @@ const privateEntries = computed(() => {
   border-radius: var(--radius-md);
   text-align: left;
   transition: all 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .roster-item:hover {
@@ -272,7 +283,9 @@ const privateEntries = computed(() => {
 }
 
 .roster-main {
+  flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .roster-name {
@@ -301,6 +314,7 @@ const privateEntries = computed(() => {
   align-items: flex-end;
   font-family: var(--font-mono);
   font-size: 10px;
+  flex-shrink: 0;
 }
 
 .favor-label {
@@ -320,6 +334,8 @@ const privateEntries = computed(() => {
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .npc-card {
@@ -610,18 +626,34 @@ const privateEntries = computed(() => {
 
 @media (max-width: 720px) {
   .npc-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .npc-roster {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
   .roster-track {
     flex-direction: row;
     overflow-x: auto;
     scrollbar-width: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
   .roster-track::-webkit-scrollbar {
     display: none;
   }
   .roster-item {
     min-width: 140px;
+    max-width: 220px;
+    flex: 0 0 auto;
+  }
+  .roster-track > .roster-item:only-child {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
   }
   .data-grid-2col,
   .clothing-grid {
@@ -634,6 +666,8 @@ const privateEntries = computed(() => {
     align-items: flex-start;
     flex-direction: column;
     min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
   .head-left {
     display: grid;
@@ -643,17 +677,20 @@ const privateEntries = computed(() => {
     align-items: start;
     column-gap: 7px;
     row-gap: 2px;
+    min-width: 0;
   }
   .head-icon {
     grid-column: 1;
     grid-row: 1 / span 2;
     margin-top: 2px;
+    flex-shrink: 0;
   }
   .card-title {
     grid-column: 2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
   .card-role-tag {
     grid-column: 2;
@@ -663,6 +700,7 @@ const privateEntries = computed(() => {
     overflow: visible;
     text-overflow: clip;
     overflow-wrap: anywhere;
+    min-width: 0;
   }
   .card-head-actions {
     display: grid;
@@ -672,16 +710,19 @@ const privateEntries = computed(() => {
     align-items: stretch;
     justify-content: stretch;
     gap: 8px;
+    min-width: 0;
   }
   .favor-head-badge,
   .lore-action {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
   }
   .lore-action {
     white-space: normal;
     overflow-wrap: anywhere;
+    text-align: center;
   }
 }
 </style>
