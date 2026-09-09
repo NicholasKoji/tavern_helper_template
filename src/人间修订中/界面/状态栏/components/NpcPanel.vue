@@ -195,6 +195,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { ChevronDown, Heart, Users } from '@lucide/vue';
+import { sortPrivateStatusEntries } from '../../private-status';
 
 const props = defineProps<{
   npcEntries: Array<[string, any]>;
@@ -228,7 +229,10 @@ const clothingMap = computed(() => {
 
 const privateEntries = computed(() => {
   if (!props.selectedNpc) return [];
-  return Object.entries(props.selectedNpc.私密状态 || {});
+  return sortPrivateStatusEntries<{ 外观描述?: string; 当前状态?: string }>(
+    props.selectedNpc.私密状态 || {},
+    props.selectedNpc.基础信息?.性别,
+  );
 });
 </script>
 

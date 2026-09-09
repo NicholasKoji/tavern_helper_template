@@ -172,8 +172,11 @@
         <PrivateStatusPanel
           title="私密状态"
           :status="form.主角.私密状态"
+          :gender="form.主角.性别"
           :is-busy="aiBusyKey === 'protagonist.private-status'"
           :is-any-ai-busy="Boolean(aiBusyKey)"
+          :disabled="!hasPrivateStatusGender(form.主角.性别)"
+          :disabled-message="hasPrivateStatusGender(form.主角.性别) ? '' : '请先将性别明确填写为女或男。'"
           @generate="$emit('assistPrivateStatus', 'protagonist.private-status')"
           @clear="$emit('clearPrivateStatus', 'protagonist.private-status')"
         />
@@ -379,10 +382,11 @@
           <PrivateStatusPanel
             title="私密状态"
             :status="character.私密状态"
+            :gender="character.性别"
             :is-busy="aiBusyKey === `character:${index}.private-status`"
             :is-any-ai-busy="Boolean(aiBusyKey)"
-            :disabled="!character.姓名.trim()"
-            :disabled-message="character.姓名.trim() ? '' : '请先填写 NPC 姓名，再生成私密状态。'"
+            :disabled="!character.姓名.trim() || !hasPrivateStatusGender(character.性别)"
+            :disabled-message="privateStatusDisabledMessage(character.姓名, character.性别)"
             @generate="$emit('assistPrivateStatus', `character:${index}.private-status`)"
             @clear="$emit('clearPrivateStatus', `character:${index}.private-status`)"
           />
@@ -395,6 +399,7 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, type PropType } from 'vue';
 import { CircleAlert, Eye, Plus, Shirt, Sparkles, Trash2, Users } from '@lucide/vue';
+import { classifyPrivateStatusGender, sortPrivateStatusEntries } from '../../private-status';
 
 type ClothingDraft = {
   上装: string;
@@ -441,6 +446,16 @@ function hasClothing(clothing: ClothingDraft): boolean {
 
 function privateStatusEntries(status: PrivateStatusDraft) {
   return Object.entries(status) as Array<[string, { 外观描述: string; 当前状态: string }]>;
+}
+
+function hasPrivateStatusGender(gender: unknown): boolean {
+  return classifyPrivateStatusGender(gender) !== null;
+}
+
+function privateStatusDisabledMessage(name: unknown, gender: unknown): string {
+  if (!String(name ?? '').trim()) return '请先填写 NPC 姓名，再生成私密状态。';
+  if (!hasPrivateStatusGender(gender)) return '请先将 NPC 性别明确填写为女或男。';
+  return '';
 }
 
 function sanitizePositiveInteger(val: string): string {
@@ -492,6 +507,7 @@ const PrivateStatusPanel = defineComponent({
   props: {
     title: { type: String, required: true },
     status: { type: Object as PropType<PrivateStatusDraft>, required: true },
+    gender: { type: String, default: '' },
     isBusy: { type: Boolean, default: false },
     isAnyAiBusy: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
@@ -499,9 +515,7 @@ const PrivateStatusPanel = defineComponent({
   },
   emits: ['generate', 'clear'],
   setup(panelProps, { emit }) {
-    const entries = computed(
-      () => Object.entries(panelProps.status) as Array<[string, { 外观描述: string; 当前状态: string }]>,
-    );
+    const entries = computed(() => sortPrivateStatusEntries(panelProps.status, panelProps.gender));
     return () =>
       h('details', { class: 'appearance-panel private-status-panel', open: entries.value.length > 0 }, [
         h('summary', { class: 'appearance-summary private-status-summary' }, [
@@ -543,7 +557,7 @@ const PrivateStatusPanel = defineComponent({
             : h(
                 'p',
                 { class: 'private-status-hint' },
-                '初始为空。动态部位只能由专用 AI 生成；采用后可编辑文字，但不能手工新增部位。',
+                '初始为空。女性按九个标准部位、男性按两个标准部位生成；采用后可编辑文字，但不能手工新增部位。',
               ),
           entries.value.length
             ? h(

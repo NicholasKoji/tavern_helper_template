@@ -186,6 +186,7 @@ import AiAssistModal from './components/AiAssistModal.vue';
 import ConfirmedDrawer from './components/ConfirmedDrawer.vue';
 import ActionFooter from './components/ActionFooter.vue';
 import OpeningPlanLibrary from './components/OpeningPlanLibrary.vue';
+import { privateStatusPartsForGender } from '../private-status';
 
 const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v3';
 const OPENING_READBACK_CHECKS = 8;
@@ -1519,7 +1520,13 @@ function suggestionSchema() {
   };
 }
 
-function privateStatusSuggestionSchema() {
+function privateStatusSuggestionSchema(expectedParts: readonly string[]) {
+  const privatePartSchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: { 外观描述: { type: 'string' }, 当前状态: { type: 'string' } },
+    required: ['外观描述', '当前状态'],
+  };
   return {
     name: 'human_revision_private_status_suggestion',
     description: '动态私密状态 AI 预览结果',
@@ -1537,12 +1544,9 @@ function privateStatusSuggestionSchema() {
           properties: {
             私密状态: {
               type: 'object',
-              additionalProperties: {
-                type: 'object',
-                additionalProperties: false,
-                properties: { 外观描述: { type: 'string' }, 当前状态: { type: 'string' } },
-                required: ['外观描述', '当前状态'],
-              },
+              additionalProperties: false,
+              properties: Object.fromEntries(expectedParts.map(part => [part, privatePartSchema])),
+              required: [...expectedParts],
             },
           },
           required: ['私密状态'],
@@ -1764,24 +1768,35 @@ async function requestCharacterAi(index: number) {
 function privateStatusTargetInfo(
   target: string,
 ):
-  | { owner: 'protagonist'; label: string; status: PrivateStatusDraft }
-  | { owner: 'character'; index: number; label: string; status: PrivateStatusDraft }
+  | { owner: 'protagonist'; label: string; gender: string; status: PrivateStatusDraft }
+  | { owner: 'character'; index: number; label: string; gender: string; status: PrivateStatusDraft }
   | null {
   if (target === 'protagonist.private-status') {
-    return { owner: 'protagonist', label: protagonistName.value || '主角', status: form.主角.私密状态 };
+    return {
+      owner: 'protagonist',
+      label: protagonistName.value || '主角',
+      gender: form.主角.性别,
+      status: form.主角.私密状态,
+    };
   }
   const match = target.match(/^character:(\d+)\.private-status$/);
   if (!match) return null;
   const index = Number(match[1]);
   const character = form.重要角色[index];
   if (!character) return null;
-  return { owner: 'character', index, label: character.姓名.trim(), status: character.私密状态 };
+  return {
+    owner: 'character',
+    index,
+    label: character.姓名.trim(),
+    gender: character.性别,
+    status: character.私密状态,
+  };
 }
 
-function normalizePrivateStatusAiValue(value: unknown): PrivateStatusDraft {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
+function normalizePrivateStatusAiValue(value: unknown, expectedParts: readonly string[]): PrivateStatusDraft {
+  const entries = value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value) : [];
+  const normalized = Object.fromEntries(
+    entries
       .map(([part, detail]) => {
         if (!part.trim() || !detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
         const item = detail as Record<string, unknown>;
@@ -1793,6 +1808,11 @@ function normalizePrivateStatusAiValue(value: unknown): PrivateStatusDraft {
       })
       .filter((entry): entry is readonly [string, { 外观描述: string; 当前状态: string }] => entry !== null),
   );
+  const incompleteParts = expectedParts.filter(
+    part => !normalized[part]?.外观描述.trim() || !normalized[part]?.当前状态.trim(),
+  );
+  if (incompleteParts.length) throw new Error(`AI 返回缺少完整部位：${incompleteParts.join('、')}`);
+  return Object.fromEntries(expectedParts.map(part => [part, normalized[part]]));
 }
 
 function privateStatusPreviewValues(status: PrivateStatusDraft): Record<string, string> {
@@ -1816,6 +1836,11 @@ async function requestPrivateStatusAi(target: string) {
     setStatus('主角已关闭，不能为关闭中的主角生成私密状态。', 'error');
     return;
   }
+  const expectedParts = privateStatusPartsForGender(info.gender);
+  if (!expectedParts) {
+    setStatus(`请先将“${info.label}”的性别明确填写为“女”或“男”，再生成私密状态。`, 'error');
+    return;
+  }
   aiBusyKey.value = target;
   setStatus(`正在为“${info.label}”生成私密状态预览…`, 'working');
   const revision = contextRevision.value;
@@ -1829,9 +1854,14 @@ ${JSON.stringify(contextSnapshot(false), null, 2)}
 【当前已有私密状态】
 ${JSON.stringify(currentStatus, null, 2)}
 
+【性别与标准部位】
+- 已确认性别：${info.gender}
+- 本次必须且只能返回：${expectedParts.join('、')}
+
 【输出要求】
-- 可采用对象必须只有一个“私密状态”键；其值是动态部位名到“外观描述”“当前状态”的对象。
-- 不预设固定部位，也不要返回空部位；部位名必须是当前角色设定下有叙事依据的动态键。
+- 可采用对象必须只有一个“私密状态”键；私密状态必须使用上方列出的全部标准部位，不得缺项或增加其他部位。
+- 每个部位必须同时给出非空的“外观描述”和“当前状态”。外观描述至少包含形状或比例、颜色或肤质、局部结构或辨识特征等三类有效信息；当前状态至少包含遮蔽、姿态、接触、受压或摩擦、温度、湿润程度、分泌物或残留痕迹中的三类适用事实。
+- 不要使用“胸部”“阴部”“下体”“生殖器”“脚部”等概括键，也不要返回“待记录”“未知”“普通”“正常”“隐藏在衣物下”等低信息内容。
 - 已有部位只用于参考，玩家采用时已有非空字段不会被覆盖。
 - 不要返回穿着、外貌、当前状态或其他字段；结果必须先预览再采用。
 - 只输出 JSON：结论、理由、可执行约束、可采用。`;
@@ -1840,9 +1870,9 @@ ${JSON.stringify(currentStatus, null, 2)}
       prompt,
       `请只生成“${info.label}”的私密状态结构化预览。`,
       `human-revision-private-status-${target}-${Date.now()}`,
-      privateStatusSuggestionSchema,
+      () => privateStatusSuggestionSchema(expectedParts),
     )) as PrivateStatusAiPayload;
-    const privateStatus = normalizePrivateStatusAiValue(parsed.可采用?.私密状态);
+    const privateStatus = normalizePrivateStatusAiValue(parsed.可采用?.私密状态, expectedParts);
     aiPreview.value = {
       target,
       title: `${info.label} · 私密状态 AI 预览`,
