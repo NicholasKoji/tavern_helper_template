@@ -256,6 +256,10 @@ export function invalidateOnMessageEdited(
     const nextVersion = (prev?.operationVersion ?? 0) + 1;
 
     const history: StoredImage[] = prev?.history ? [...prev.history] : [];
+    for (const scene of prev?.scenes ?? []) {
+      history.push(...scene.history);
+      if (scene.currentImage) history.push({ ...scene.currentImage, collapsed: true, staleReason: 'message-edited' });
+    }
     if (prev?.currentImage) {
       history.push({
         ...prev.currentImage,

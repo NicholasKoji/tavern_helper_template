@@ -1,3 +1,6 @@
+import { renderScenes, generateScenes, cancelSceneJobs, recoverScenes } from './scene-tasks';
+import { bindChatTextGestures } from './chat-text-gestures';
+import { selectCharacterReferences } from './reference-library';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { createScriptIdDiv, teleportStyle } from '@util/script';
@@ -12,7 +15,7 @@ import {
   popoverState,
   setPopoverActionHandler,
 } from './ui-state';
-import { clearTavernSelection, initTavernDom, tavernDocument, tavernWindow } from './tavern-dom';
+import { clearTavernSelection, initTavernDom, tavernDocument } from './tavern-dom';
 import type {
   PlanPostAction,
   SlotAction,
@@ -107,6 +110,7 @@ function getAutoRepairKey(chatId: string, messageId: number, swipeId: number): s
 
 function cancelTask(messageId: number, swipeId: number, chatId?: string, clearPendingIntent = true): void {
   const targetChatId = chatId || SillyTavern.getCurrentChatId?.() || 'chat';
+  cancelSceneJobs(messageId, swipeId, targetChatId);
   const key = getSlotKey(targetChatId, messageId, swipeId);
   if (clearPendingIntent) {
     planPostActionIntents.delete(key);
@@ -132,6 +136,7 @@ function cancelTask(messageId: number, swipeId: number, chatId?: string, clearPe
 }
 
 function cancelTasksForMessage(messageId: number, chatId?: string): void {
+  cancelSceneJobs(messageId, undefined, chatId);
   for (const [key, task] of activeTasks.entries()) {
     if (task.messageId === messageId && (!chatId || task.chatId === chatId)) {
       planPostActionIntents.delete(key);
@@ -156,6 +161,7 @@ function cancelTasksForMessage(messageId: number, chatId?: string): void {
 }
 
 function cancelAllTasks(): void {
+  cancelSceneJobs();
   planPostActionIntents.clear();
   for (const [, task] of activeTasks.entries()) {
     if (task.generationId) {
@@ -284,6 +290,10 @@ async function commitTaskSwipeState(
 }
 
 function renderMessageSlot(messageId: number, swipeId: number, state: StoryImageSwipeState): void {
+  if (state.scenes?.length) {
+    renderScenes(messageId, swipeId, state);
+    return;
+  }
   renderSlot(messageId, swipeId, state, (action, payload, slotState) => {
     void handleSlotAction(messageId, swipeId, action, payload, slotState || state).catch(err => {
       console.error(`[剧情生图] handleSlotAction 异常 (${action}):`, err);
@@ -298,6 +308,10 @@ async function handleSlotAction(
   payload?: string,
   stateHint?: StoryImageSwipeState,
 ): Promise<void> {
+  if (getSwipeState(messageId, swipeId)?.scenes?.length && ['generate', 'retry-gen', 'regenerate'].includes(action)) {
+    await generateScenes(messageId, swipeId, action === 'regenerate');
+    return;
+  }
   const settingsStore = useStoryImageSettingsStore();
   const settings = settingsStore.settings;
 
@@ -478,6 +492,8 @@ async function handleSlotAction(
           return {
             ...prev,
             scenePrompt: newPrompt,
+            characterIds: [], // 手动改写可能改变人物，清除旧身份绑定
+            referenceFraming: undefined,
             promptEditedByUser: true,
             status: 'planned',
             currentImage: undefined,
@@ -500,6 +516,10 @@ async function startImageGeneration(
   stateHint?: StoryImageSwipeState,
   action = 'generate',
 ): Promise<void> {
+  if (getSwipeState(messageId, swipeId)?.scenes?.length) {
+    await generateScenes(messageId, swipeId);
+    return;
+  }
   const settingsStore = useStoryImageSettingsStore();
   const settings = settingsStore.settings;
 
@@ -663,7 +683,12 @@ async function startImageGeneration(
     }
 
     currentStage = 'generation';
-    const payload = await requestImageGeneration(finalPrompt, settings, abortController.signal);
+    const payload = await requestImageGeneration(
+      finalPrompt,
+      settings,
+      abortController.signal,
+      selectCharacterReferences(effectiveState.characterIds ?? [], effectiveState.referenceFraming ?? 'full'),
+    );
 
     const postGenCheck = checkTaskValidity(task);
     if (!postGenCheck.valid) {
@@ -813,6 +838,11 @@ async function executePlan(
       swipeId,
       prev => {
         const history = prev?.history ? [...prev.history] : [];
+        for (const scene of prev?.scenes ?? []) {
+          history.push(...scene.history);
+          if (scene.currentImage)
+            history.push({ ...scene.currentImage, collapsed: true, staleReason: 'prompt-edited' });
+        }
         if (prev?.currentImage) {
           history.push({
             ...prev.currentImage,
@@ -829,6 +859,7 @@ async function executePlan(
           anchor: undefined,
           sceneSummary: undefined,
           scenePrompt: undefined,
+          characterIds: [],
           currentImage: undefined,
           error: undefined,
         };
@@ -841,6 +872,7 @@ async function executePlan(
       clearTaskNotification(chatId, messageId, swipeId);
       return undefined;
     }
+    removeSlot(messageId, swipeId);
     renderMessageSlot(messageId, swipeId, planningState);
 
     // 初始状态写入完成后再次检查环境与活跃任务
@@ -872,9 +904,24 @@ async function executePlan(
     const commitResult = await commitTaskSwipeState(task, planningState, prev => ({
       ...prev,
       status: 'planned',
-      anchor: result.anchor,
-      sceneSummary: result.scene_summary,
-      scenePrompt: result.scene_prompt,
+      anchor: result[0].anchor,
+      sceneSummary: result[0].scene_summary,
+      scenePrompt: result[0].scene_prompt,
+      characterIds: result[0].character_ids,
+      referenceFraming: result[0].reference_framing,
+      history: [],
+      scenes: result.map((scene, index) => ({
+        sceneId: `v${nextVersion}_s${index + 1}`,
+        status: 'planned',
+        operationVersion: nextVersion,
+        sourceFingerprint: fingerprint,
+        anchor: scene.anchor,
+        sceneSummary: scene.scene_summary,
+        scenePrompt: scene.scene_prompt,
+        characterIds: scene.character_ids,
+        referenceFraming: scene.reference_framing,
+        history: index === 0 ? prev.history : [],
+      })),
       currentImage: undefined,
       error: undefined,
     }));
@@ -1085,6 +1132,10 @@ async function handleManualPrompt(messageId: number, swipeId: number): Promise<v
     swipeId,
     prev => {
       const history = prev?.history ? [...prev.history] : [];
+      for (const scene of prev?.scenes ?? []) {
+        history.push(...scene.history);
+        if (scene.currentImage) history.push({ ...scene.currentImage, collapsed: true, staleReason: 'prompt-edited' });
+      }
       if (prev?.currentImage) {
         history.push({
           ...prev.currentImage,
@@ -1110,6 +1161,7 @@ async function handleManualPrompt(messageId: number, swipeId: number): Promise<v
 
   // 6. 打开并聚焦提示词编辑器
   if (state) {
+    removeSlot(messageId, swipeId);
     openSlotPromptEditor(messageId, swipeId);
     renderMessageSlot(messageId, swipeId, state);
     setTimeout(() => {
@@ -1189,6 +1241,11 @@ async function handleQuickReplan(
 
 async function handleQuickEditPrompt(messageId: number, swipeId: number): Promise<void> {
   let state = getSwipeState(messageId, swipeId);
+  if (state?.scenes?.length) {
+    renderScenes(messageId, swipeId, state);
+    toastr.info('请在正文对应场景卡片中点击编辑提示词');
+    return;
+  }
   if (!state || state.status === 'error' || !state.scenePrompt) {
     state = await triggerPlan(messageId, swipeId, false);
   }
@@ -1210,6 +1267,8 @@ async function reconcileTransientState(messageId: number, swipeId: number): Prom
   const currentChatId = SillyTavern.getCurrentChatId?.() || 'chat';
   const state = getSwipeState(messageId, swipeId);
   if (!state) return null;
+
+  if (state.scenes?.length) return (await recoverScenes(messageId, swipeId)) ?? null;
 
   const taskKey = getSlotKey(currentChatId, messageId, swipeId);
   const task = activeTasks.get(taskKey);
@@ -1356,17 +1415,17 @@ function ensureExtensionMenuItem(): void {
 function ensureQuickButton(messageId: number): void {
   const settingsStore = useStoryImageSettingsStore();
   if (!settingsStore.settings.enabled) return;
-  if (!settingsStore.settings.behavior?.enableQuickButton) return;
   if (!isRealChatActive()) return;
 
-  const $mes = retrieveDisplayedMessage(messageId);
+  // retrieveDisplayedMessage may return .mes_text; toolbar belongs to its parent .mes.
+  const $mes = retrieveDisplayedMessage(messageId)?.closest('.mes');
   if (!$mes || !$mes.length) return;
 
   if ($mes.attr('is_user') === 'true' || $mes.hasClass('is_user')) return;
   if ($mes.find('.story-image-quick-btn').length > 0) return;
 
-  let $container = $mes.find('.extraMesButtons');
-  if (!$container.length) $container = $mes.find('.mes_buttons');
+  const $edit = $mes.find('.mes_edit').first();
+  let $container = $mes.find('.mes_buttons').first();
   if (!$container.length) $container = $mes.find('.name_text');
   if (!$container.length) $container = $mes.find('.mes_block');
   if (!$container.length) return;
@@ -1375,7 +1434,6 @@ function ensureQuickButton(messageId: number): void {
     `
     <button type="button" class="story-image-quick-btn interactable" title="剧情生图" aria-label="剧情生图" data-message-id="${messageId}">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
-      <span class="story-image-quick-btn-text">画图</span>
     </button>
   `,
     tavernDocument,
@@ -1384,24 +1442,24 @@ function ensureQuickButton(messageId: number): void {
   $btn.on('click', e => {
     e.preventDefault();
     e.stopPropagation();
-    const swipeId = getMessageCurrentSwipeId(messageId);
-    const offset = $btn.offset();
-    const stateHint = getSwipeState(messageId, swipeId);
-    openActionPopover(
-      messageId,
-      swipeId,
-      offset ? { x: offset.left, y: offset.top + ($btn.outerHeight() ?? 30) } : undefined,
-      $btn[0],
-      stateHint,
-    );
+    try {
+      const swipeId = getMessageCurrentSwipeId(messageId);
+      const rect = $btn[0].getBoundingClientRect();
+      const stateHint = getSwipeState(messageId, swipeId);
+      openActionPopover(messageId, swipeId, { x: rect.left, y: rect.bottom }, $btn[0], stateHint);
+    } catch (error) {
+      console.error('[剧情生图] 打开楼层菜单失败:', error);
+      toastr.error('打开剧情生图菜单失败：' + String(error));
+    }
   });
 
-  $container.append($btn);
+  if ($edit.length) $btn.insertAfter($edit);
+  else $container.prepend($btn);
 }
 
 function ensureAllQuickButtons(): void {
   const settingsStore = useStoryImageSettingsStore();
-  if (!settingsStore.settings.enabled || !settingsStore.settings.behavior?.enableQuickButton || !isRealChatActive()) {
+  if (!settingsStore.settings.enabled || !isRealChatActive()) {
     $(tavernDocument).find('.story-image-quick-btn').remove();
     return;
   }
@@ -1432,7 +1490,6 @@ $(() => {
 
   const settingsStore = useStoryImageSettingsStore();
   let previousEnabled = settingsStore.settings.enabled;
-  let previousQuickBtn = settingsStore.settings.behavior?.enableQuickButton;
 
   // 注册快捷浮层菜单动作分发，统一进行异步异常收拢
   setPopoverActionHandler(async (action, messageId, swipeId, stateHint) => {
@@ -1521,21 +1578,17 @@ $(() => {
   };
   $(tavernDocument).on('keydown', onTavernKeyDown);
 
-  // 桌面端双击助手正文快捷唤起操作菜单 (仅在桌面指针/支持hover与细指针环境触发，移动端避免误弹)
-  const onDoubleClickText = function (this: HTMLElement, e: JQuery.DoubleClickEvent) {
-    const isDesktopPointer =
-      typeof tavernWindow?.matchMedia === 'function'
-        ? tavernWindow.matchMedia('(hover: hover) and (pointer: fine)').matches
-        : (tavernWindow?.innerWidth ?? window.innerWidth) > 600;
-    if (!isDesktopPointer) return;
+  // 桌面鼠标双击快捷入口；移动端使用楼层工具栏按钮
+  let lastQuickActionTriggerTime = 0;
+
+  function triggerTextQuickAction(textEl: HTMLElement, target: HTMLElement, coords: { x?: number; y?: number }) {
+    const now = Date.now();
+    if (now - lastQuickActionTriggerTime < 400) return;
 
     const store = useStoryImageSettingsStore();
     if (!store.settings.enabled) return;
     if (!store.settings.behavior?.enableDoubleClick) return;
     if (!isRealChatActive()) return;
-
-    const target = e.target as HTMLElement;
-    if (!target) return;
 
     // 排除按钮、链接、输入框、媒体、代码块、已有插画槽位等
     if (
@@ -1546,7 +1599,7 @@ $(() => {
       return;
     }
 
-    const $mes = $(this).closest('.mes');
+    const $mes = $(textEl).closest('.mes');
     if (!$mes.length) return;
 
     if ($mes.attr('is_user') === 'true' || $mes.hasClass('is_user')) return;
@@ -1560,19 +1613,24 @@ $(() => {
 
     clearTavernSelection();
 
-    e.preventDefault();
-    e.stopPropagation();
-
+    lastQuickActionTriggerTime = now;
     const stateHint = getSwipeState(messageId, swipeId);
-    openActionPopover(messageId, swipeId, { x: e.clientX, y: e.clientY }, target, stateHint);
-  };
+    openActionPopover(messageId, swipeId, coords, target, stateHint);
+  }
 
-  $(tavernDocument).on('dblclick', '#chat .mes .mes_text', onDoubleClickText);
+  const unbindTextDoubleTap = bindChatTextGestures(
+    tavernDocument,
+    () => {
+      const store = useStoryImageSettingsStore();
+      return store.settings.enabled && !!store.settings.behavior?.enableDoubleClick && isRealChatActive();
+    },
+    triggerTextQuickAction,
+  );
 
   // 监听启用开关或快捷按钮开关变化
   settingsStore.$subscribe((_mutation, state) => {
+    unbindTextDoubleTap.refresh();
     const nextEnabled = state.settings.enabled;
-    const nextQuickBtn = state.settings.behavior?.enableQuickButton;
 
     if (nextEnabled !== previousEnabled) {
       previousEnabled = nextEnabled;
@@ -1594,9 +1652,6 @@ $(() => {
           console.error('[剧情生图] 启用开关切换异常:', e);
         }
       })();
-    } else if (nextQuickBtn !== previousQuickBtn) {
-      previousQuickBtn = nextQuickBtn;
-      ensureAllQuickButtons();
     }
   });
 
@@ -1795,6 +1850,7 @@ $(() => {
 
   // 9. CHAT_CHANGED: 取消全部任务、清理节点与锁、恢复新聊天已有 UI
   eventOn(tavern_events.CHAT_CHANGED, async () => {
+    unbindTextDoubleTap.refresh();
     try {
       cancelAllTasks();
       clearAllTaskNotifications();
@@ -1832,7 +1888,7 @@ $(() => {
       '#extensionsMenuButton, #extensions_button, .extensions_button, #nav_toggle_extensions',
       onExtensionMenuBtnClick,
     );
-    $(tavernDocument).off('dblclick', '#chat .mes .mes_text', onDoubleClickText);
+    unbindTextDoubleTap();
     $(tavernDocument).off('keydown', onTavernKeyDown);
 
     cancelAllTasks();

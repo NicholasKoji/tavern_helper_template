@@ -1,13 +1,14 @@
 <template>
   <div class="story-image-root">
-    <!-- 1. 设置模态窗口 (直接渲染在当前 Vue 挂载节点中，不使用 Teleport) -->
+    <!-- 设置窗口使用浏览器 top layer，不受酒馆移动端容器层叠影响。 -->
     <Transition name="story-modal-fade">
-      <div
+      <dialog
         v-if="isModalOpen"
         ref="modalBackdropEl"
         class="story-image-modal-backdrop"
         tabindex="-1"
         @click.self="closeModal"
+        @cancel.prevent="closeModal"
       >
         <div
           ref="modalEl"
@@ -82,6 +83,27 @@
             >
               <i class="fa-solid fa-sliders"></i>
               <span>行为与偏好</span>
+            </button>
+            <button
+              type="button"
+              class="story-image-tab-btn"
+              role="tab"
+              :aria-selected="currentTab === 'mvu'"
+              :class="{ active: currentTab === 'mvu' }"
+              @click="currentTab = 'mvu'"
+            >
+              <i class="fa-solid fa-sitemap"></i>
+              <span>角色状态 (MVU)</span>
+            </button>
+            <button
+              type="button"
+              class="story-image-tab-btn"
+              role="tab"
+              :aria-selected="currentTab === 'references'"
+              :class="{ active: currentTab === 'references' }"
+              @click="currentTab = 'references'"
+            >
+              角色参考库
             </button>
           </div>
 
@@ -763,7 +785,8 @@
                   <div class="setting-card-info">
                     <div class="setting-card-title">提示词完成后自动生成图片</div>
                     <div class="setting-card-desc">
-                      开启后，无论提示词由新回复自动触发还是手动触发，AI 提示词生成成功后都会继续生成图片。
+                      开启后，无论提示词由新回复自动触发还是手动触发，AI
+                      提示词生成成功后，所有返回场景都会进入队列，依次生成图片；单个失败不阻塞后续场景。
                     </div>
                   </div>
                   <label class="story-image-switch">
@@ -774,6 +797,19 @@
 
                 <!-- 提示词上下文条数 -->
                 <div class="story-image-form-group" style="margin-top: 14px">
+                  <label>每楼场景数量</label>
+                  <input
+                    v-model.number="settings.planner.sceneCount"
+                    type="number"
+                    min="1"
+                    max="10"
+                    step="1"
+                    class="story-image-input"
+                  />
+                  <p>
+                    最多规划 1～10
+                    个不同场景，正文不足时可少于设置数量。各场景独立锚定，可任选生图；开启自动生图后全部串行生成。
+                  </p>
                   <label>提示词参考上文条数: {{ settings.planner.contextMessageCount }} 条</label>
                   <div class="story-image-desc">生成提示词时附带当前楼层前的聊天记录条数（0 - 6）</div>
                   <input
@@ -793,11 +829,13 @@
                   <span>交互手势与操作栏</span>
                 </div>
 
-                <!-- 桌面端双击触发 -->
+                <!-- 双击触发 -->
                 <div class="story-image-setting-card">
                   <div class="setting-card-info">
                     <div class="setting-card-title">桌面端双击助手正文快捷触发</div>
-                    <div class="setting-card-desc">双击 AI 回复正文空白或段落时唤起快捷画图操作菜单。</div>
+                    <div class="setting-card-desc">
+                      仅桌面鼠标双击正文时打开选项框；移动端请点击楼层编辑按钮旁的「画图」。
+                    </div>
                   </div>
                   <label class="story-image-switch">
                     <input v-model="settings.behavior.enableDoubleClick" type="checkbox" />
@@ -808,15 +846,192 @@
                 <!-- 移动端/助手显式画图按钮 -->
                 <div class="story-image-setting-card">
                   <div class="setting-card-info">
-                    <div class="setting-card-title">在助手消息显示画图快捷按钮</div>
+                    <div class="setting-card-title">楼层画图入口</div>
                     <div class="setting-card-desc">
-                      在助手消息操作栏增加触控友好的「画图」按钮，点击唤起快捷操作菜单。
+                      助手楼层编辑按钮旁固定显示「画图」，桌面与手机均可点击打开选项框，不直接生图。
                     </div>
                   </div>
-                  <label class="story-image-switch">
-                    <input v-model="settings.behavior.enableQuickButton" type="checkbox" />
-                    <span class="story-image-switch-slider"></span>
-                  </label>
+                </div>
+              </div>
+            </div>
+
+            <ReferenceLibrary
+              v-if="currentTab === 'references' && isModalOpen"
+              :key="activeReferenceOwner"
+              :settings="settings"
+            />
+            <!-- TAB 4: 角色状态 (MVU) -->
+            <div v-show="currentTab === 'mvu'" class="story-image-tab-pane">
+              <!-- 顶部状态与开关卡片 -->
+              <div class="story-image-section">
+                <div class="mvu-status-header">
+                  <div class="mvu-status-info">
+                    <div class="mvu-status-title">
+                      <i class="fa-solid fa-id-card-clip"></i>
+                      <span
+                        >当前绑定角色卡：<strong>{{ activeCharName }}</strong></span
+                      >
+                    </div>
+                    <div class="mvu-status-badges">
+                      <span class="mvu-badge" :class="isMvuAvailable ? 'is-success' : 'is-warn'">
+                        <i class="fa-solid" :class="isMvuAvailable ? 'fa-check' : 'fa-triangle-exclamation'"></i>
+                        {{ isMvuAvailable ? 'MVU 框架已就绪' : '未检测到 MVU 全局环境' }}
+                      </span>
+                      <span class="mvu-badge is-info"> 独立保存至当前角色卡 </span>
+                    </div>
+                  </div>
+
+                  <div class="mvu-status-toggle">
+                    <label class="story-image-switch" title="是否将状态注入到场景提示词规划中">
+                      <input v-model="charMvuSettings.enabled" type="checkbox" />
+                      <span class="story-image-switch-slider"></span>
+                    </label>
+                    <span class="mvu-toggle-label">{{
+                      charMvuSettings.enabled ? '已启用状态参考' : '已停用状态参考'
+                    }}</span>
+                  </div>
+                </div>
+
+                <div class="mvu-desc-card">
+                  <i class="fa-solid fa-circle-info"></i>
+                  <span>
+                    在此勾选当前角色卡中需要提供给生图规划器的基准状态（如当前服装、发型、地点、随身物品等）。
+                    系统会自动将其转换为<strong>无变量标记的自然语义参考</strong>注入提示词，让 AI
+                    更好地统一画面的外观与场景细节。
+                  </span>
+                </div>
+              </div>
+
+              <!-- 树形结构选择区 -->
+              <div class="story-image-section">
+                <div class="story-image-section-title">
+                  <div class="section-title-left">
+                    <i class="fa-solid fa-folder-tree"></i>
+                    <span>当前角色的状态树</span>
+                    <span v-if="charMvuSettings.rules.length > 0" class="mvu-badge is-info"
+                      >已选 {{ charMvuSettings.rules.length }} 项</span
+                    >
+                  </div>
+                  <div class="section-title-actions">
+                    <button
+                      v-if="charMvuSettings.rules.length > 0"
+                      type="button"
+                      class="story-image-btn-sm"
+                      title="清空所有已选状态项"
+                      @click="clearAllMvuSelections"
+                    >
+                      <i class="fa-solid fa-trash-can"></i>
+                      <span>清空勾选</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="story-image-btn-sm"
+                      :disabled="isFetchingMvuTree"
+                      @click="fetchCurrentMvuTree"
+                    >
+                      <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': isFetchingMvuTree }"></i>
+                      <span>{{ isFetchingMvuTree ? '抓取中...' : '抓取当前聊天结构' }}</span>
+                    </button>
+                    <button
+                      v-if="mvuTree.length > 0"
+                      type="button"
+                      class="story-image-btn-sm"
+                      @click="expandAllMvuTree"
+                    >
+                      <i class="fa-solid fa-angles-down"></i>
+                      <span>展开全部</span>
+                    </button>
+                    <button
+                      v-if="mvuTree.length > 0"
+                      type="button"
+                      class="story-image-btn-sm"
+                      @click="collapseAllMvuTree"
+                    >
+                      <i class="fa-solid fa-angles-up"></i>
+                      <span>收起全部</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 搜索过滤 -->
+                <div v-if="mvuTree.length > 0" class="mvu-search-bar">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input
+                    v-model="mvuSearchQuery"
+                    type="text"
+                    class="story-image-input"
+                    placeholder="快速搜索路径或键名（如：服装、发型、地点）..."
+                  />
+                  <button
+                    v-if="mvuSearchQuery"
+                    type="button"
+                    class="mvu-search-clear"
+                    title="清空搜索"
+                    @click="mvuSearchQuery = ''"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                <!-- 抓取报错提示 -->
+                <div v-if="mvuFetchError" class="mvu-error-box">
+                  <i class="fa-solid fa-circle-exclamation"></i>
+                  <span>{{ mvuFetchError }}</span>
+                </div>
+
+                <!-- 树形展示容器 -->
+                <div v-if="filteredMvuTree.length > 0" class="mvu-tree-container">
+                  <MvuTreeNodeItem
+                    v-for="rootNode in filteredMvuTree"
+                    :key="rootNode.path"
+                    :node="rootNode"
+                    :depth="0"
+                    :selected-paths="selectedMvuPaths"
+                    :collapsed-paths="collapsedPaths"
+                    @toggle-select="handleTreeToggleSelect"
+                    @toggle-collapse="handleTreeToggleCollapse"
+                  />
+                </div>
+
+                <!-- 未抓取或为空提示 -->
+                <div v-else-if="!isFetchingMvuTree" class="mvu-empty-tree-box">
+                  <div class="mvu-empty-icon">
+                    <i class="fa-solid fa-sitemap"></i>
+                  </div>
+                  <div class="mvu-empty-text">
+                    {{
+                      mvuTree.length === 0 ? '暂未抓取当前角色的状态树，点击上方按钮一键读取' : '未找到匹配的状态节点'
+                    }}
+                  </div>
+                  <button
+                    v-if="mvuTree.length === 0"
+                    type="button"
+                    class="story-image-btn story-image-btn-primary"
+                    @click="fetchCurrentMvuTree"
+                  >
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>抓取当前聊天状态结构</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 实时注入效果预览 -->
+              <div class="story-image-section">
+                <div class="story-image-section-title">
+                  <div class="section-title-left">
+                    <i class="fa-solid fa-code"></i>
+                    <span>状态注入快照预览（点击抓取刷新）</span>
+                  </div>
+                </div>
+                <div class="mvu-preview-box">
+                  <div class="mvu-preview-label">
+                    <span
+                      >来源消息 ID：{{ previewMessageId ?? '未读取' }}；{{
+                        charMvuSettings.enabled ? '已启用' : '已关闭，不注入'
+                      }}。历史楼层请求读取其自身状态。</span
+                    >
+                  </div>
+                  <pre class="mvu-preview-code"><code>{{ mvuPreviewJson }}</code></pre>
                 </div>
               </div>
             </div>
@@ -834,17 +1049,18 @@
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </Transition>
 
-    <!-- 2. 快捷画图浮层菜单 (直接渲染在当前 Vue 挂载节点中，不使用 Teleport) -->
+    <!-- 快捷菜单使用原生顶层 dialog，避开宿主层叠与裁剪。 -->
     <Transition name="story-popover-fade">
-      <div
+      <dialog
         v-if="popoverState.visible"
         ref="popoverBackdropEl"
         class="story-image-popover-backdrop"
         tabindex="-1"
         @click.self="closeActionPopover"
+        @cancel.prevent="closeActionPopover"
       >
         <div
           ref="popoverEl"
@@ -895,7 +1111,7 @@
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </Transition>
   </div>
 </template>
@@ -906,10 +1122,24 @@ import { STYLE_PRESETS } from './style-presets';
 import { CHARACTER_SPECIALIZATIONS } from './character-specialization';
 import { storeToRefs } from 'pinia';
 import { deriveChatEndpoints, deriveEndpoints, fetchModels, useStoryImageSettingsStore } from './settings';
+import { bindSettingsDialog } from './settings-dialog';
 import { getTavernViewport, tavernDocument } from './tavern-dom';
 import { closeActionPopover, closeModal, isModalOpen, popoverState, triggerPopoverAction } from './ui-state';
 import { getSwipeState } from './message-state';
-import type { AspectRatioPreset, PopoverAction, ProviderProtocol } from './types';
+import MvuTreeNodeItem from './MvuTreeNodeItem.vue';
+import ReferenceLibrary from './ReferenceLibrary.vue';
+import { referenceOwner } from './reference-library';
+import {
+  buildMvuTree,
+  extractSelectedMvuState,
+  getActiveCharacterKey,
+  getActiveCharacterName,
+  getCharacterMvuSettings,
+  safeCheckMvuAvailable,
+  safeGetMvuData,
+  saveCharacterMvuSettings,
+} from './mvu-state';
+import type { AspectRatioPreset, CharacterMvuSettings, MvuTreeNode, PopoverAction, ProviderProtocol } from './types';
 
 const settingsStore = useStoryImageSettingsStore();
 const { settings } = storeToRefs(settingsStore);
@@ -931,7 +1161,11 @@ function restoreSpecialization() {
   delete settings.value.visual.characterSpecializationEdits[selectedSpecialization.value.id];
 }
 
-const currentTab = ref<'connection' | 'canvas' | 'behavior'>('connection');
+const activeReferenceOwner = ref(referenceOwner());
+eventOn(tavern_events.CHAT_CHANGED, () => {
+  activeReferenceOwner.value = referenceOwner();
+});
+const currentTab = ref<'connection' | 'canvas' | 'behavior' | 'mvu' | 'references'>('connection');
 
 // --- 提示词模型 (Prompt Planner) ---
 const plannerShowApiKey = ref(false);
@@ -1063,9 +1297,23 @@ const isFetchingModels = ref(false);
 const fetchStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 
 const modalEl = ref<HTMLElement | null>(null);
-const modalBackdropEl = ref<HTMLElement | null>(null);
+const modalBackdropEl = ref<HTMLDialogElement | null>(null);
+watch(
+  modalBackdropEl,
+  (dialog, _previous, onCleanup) => {
+    if (dialog) onCleanup(bindSettingsDialog(dialog));
+  },
+  { flush: 'post' },
+);
 const popoverEl = ref<HTMLElement | null>(null);
-const popoverBackdropEl = ref<HTMLElement | null>(null);
+const popoverBackdropEl = ref<HTMLDialogElement | null>(null);
+watch(
+  popoverBackdropEl,
+  (dialog, _previous, onCleanup) => {
+    if (dialog) onCleanup(bindSettingsDialog(dialog));
+  },
+  { flush: 'post' },
+);
 const actionBtnRefs = ref<HTMLElement[]>([]);
 
 function setActionBtnRef(el: any, idx: number) {
@@ -1237,6 +1485,30 @@ const popoverActions = computed<{ id: PopoverAction; icon: string; label: string
   const hasPrompt = Boolean(state?.scenePrompt?.trim());
   const hasImage = Boolean(state?.currentImage);
   const autoGenImage = Boolean(settings.value.behavior?.autoGenerateImageEnabled);
+
+  if (state?.scenes?.length) {
+    return [
+      {
+        id: 'generate',
+        icon: 'fa-solid fa-images',
+        label: '生成全部未完成场景',
+        desc: '已完成的图片保留，其余场景依次生图',
+      },
+      { id: 'edit-prompt', icon: 'fa-solid fa-pen', label: '查看各场景', desc: '在正文锚点处分别编辑、生成或重试' },
+      {
+        id: 'replan-only',
+        icon: 'fa-solid fa-arrows-rotate',
+        label: '重新规划全部场景',
+        desc: '替换本楼场景规划，旧图片保留在历史中，本次不自动生图',
+      },
+      {
+        id: 'replan-and-generate',
+        icon: 'fa-solid fa-bolt',
+        label: '重新规划并全部生图',
+        desc: '按当前场景数量重新规划，然后串行生成全部图片',
+      },
+    ];
+  }
 
   if (!hasPrompt) {
     if (!autoGenImage) {
@@ -1412,10 +1684,173 @@ const popoverStyle = computed(() => {
   };
 });
 
+// --- MVU / 角色状态配置 ---
+const isMvuAvailable = ref(safeCheckMvuAvailable());
+const activeCharName = ref(getActiveCharacterName());
+const charMvuSettings = ref<CharacterMvuSettings>(getCharacterMvuSettings());
+const mvuTree = ref<MvuTreeNode[]>([]);
+const isFetchingMvuTree = ref(false);
+const mvuFetchError = ref<string | null>(null);
+const collapsedPaths = ref<Set<string>>(new Set());
+const mvuSearchQuery = ref('');
+
+const previewState = ref<Record<string, any>>({});
+const previewMessageId = ref<number | null>(null);
+const mvuOwner = ref('');
+const currentMvuOwner = () => String(SillyTavern.getCurrentChatId()) + ':' + String(getActiveCharacterKey());
+const selectedMvuPaths = computed(() => new Set(charMvuSettings.value.rules.filter(r => r.enabled).map(r => r.path)));
+
+function reloadCharMvuSettings() {
+  mvuOwner.value = currentMvuOwner();
+  activeCharName.value = getActiveCharacterName();
+  isMvuAvailable.value = safeCheckMvuAvailable();
+  charMvuSettings.value = getCharacterMvuSettings();
+}
+
+watch(
+  charMvuSettings,
+  newVal => {
+    if (mvuOwner.value === currentMvuOwner()) saveCharacterMvuSettings(newVal);
+  },
+  { deep: true },
+);
+
+function fetchCurrentMvuTree() {
+  isFetchingMvuTree.value = true;
+  mvuFetchError.value = null;
+  try {
+    activeCharName.value = getActiveCharacterName();
+    isMvuAvailable.value = safeCheckMvuAvailable();
+    previewMessageId.value = getLastMessageId();
+    const mvuData = safeGetMvuData(previewMessageId.value);
+    previewState.value = mvuData?.stat_data ?? {};
+    const statData = mvuData?.stat_data;
+    if (!statData || typeof statData !== 'object' || Object.keys(statData).length === 0) {
+      mvuTree.value = [];
+      mvuFetchError.value = '未在当前聊天中检测到有效状态数据（请确认角色卡已初始化或已产生对话）';
+    } else {
+      mvuTree.value = buildMvuTree(statData);
+      if (mvuTree.value.length === 0) {
+        mvuFetchError.value = '解析到的状态树为空';
+      }
+    }
+  } catch (e: any) {
+    mvuFetchError.value = `抓取状态异常: ${e?.message ?? e}`;
+  } finally {
+    isFetchingMvuTree.value = false;
+  }
+}
+
+function handleTreeToggleSelect(payload: { path: string; node: MvuTreeNode; select: boolean }) {
+  const { path, node, select } = payload;
+  if (select) {
+    const leavesToAdd: { path: string; alias: string }[] = [];
+    const collectLeaves = (n: MvuTreeNode) => {
+      if (n.isLeaf) {
+        leavesToAdd.push({ path: n.path, alias: n.key });
+      } else if (n.children) {
+        n.children.forEach(collectLeaves);
+      }
+    };
+    collectLeaves(node);
+
+    const currentPaths = new Set(charMvuSettings.value.rules.map(r => r.path));
+    for (const item of leavesToAdd) {
+      if (!currentPaths.has(item.path)) {
+        charMvuSettings.value.rules.push({
+          path: item.path,
+          alias: item.alias,
+          enabled: true,
+        });
+      }
+    }
+  } else {
+    charMvuSettings.value.rules = charMvuSettings.value.rules.filter(
+      r => r.path !== path && !r.path.startsWith(`${path}/`),
+    );
+  }
+}
+
+function handleTreeToggleCollapse(path: string) {
+  const nextSet = new Set(collapsedPaths.value);
+  if (nextSet.has(path)) {
+    nextSet.delete(path);
+  } else {
+    nextSet.add(path);
+  }
+  collapsedPaths.value = nextSet;
+}
+
+function expandAllMvuTree() {
+  collapsedPaths.value = new Set();
+}
+
+function collapseAllMvuTree() {
+  const allPaths = new Set<string>();
+  const collect = (nodes: MvuTreeNode[]) => {
+    for (const n of nodes) {
+      if (!n.isLeaf) {
+        allPaths.add(n.path);
+        if (n.children) collect(n.children);
+      }
+    }
+  };
+  collect(mvuTree.value);
+  collapsedPaths.value = allPaths;
+}
+
+function clearAllMvuSelections() {
+  charMvuSettings.value.rules = [];
+}
+
+const filteredMvuTree = computed(() => {
+  const query = mvuSearchQuery.value.trim().toLowerCase();
+  if (!query) return mvuTree.value;
+
+  const filterNode = (node: MvuTreeNode): MvuTreeNode | null => {
+    const matchKey = node.key.toLowerCase().includes(query);
+    const matchPath = node.path.toLowerCase().includes(query);
+    const matchVal = (node.valueText || '').toLowerCase().includes(query);
+
+    if (node.isLeaf) {
+      return matchKey || matchPath || matchVal ? node : null;
+    }
+
+    const filteredChildren = (node.children || []).map(filterNode).filter((n): n is MvuTreeNode => n !== null);
+
+    if (matchKey || matchPath || filteredChildren.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren,
+      };
+    }
+    return null;
+  };
+
+  return mvuTree.value.map(filterNode).filter((n): n is MvuTreeNode => n !== null);
+});
+
+const mvuPreviewJson = computed(() =>
+  JSON.stringify(extractSelectedMvuState(previewState.value, charMvuSettings.value) ?? {}, null, 2),
+);
+
+// 切换聊天时清空旧树与规则上下文，防止写入另一张卡。
+eventOn(tavern_events.CHAT_CHANGED, () => {
+  mvuTree.value = [];
+  previewState.value = {};
+  previewMessageId.value = null;
+  collapsedPaths.value = new Set();
+  mvuSearchQuery.value = '';
+  reloadCharMvuSettings();
+  if (isModalOpen.value) fetchCurrentMvuTree();
+});
+
 // 弹窗打开焦点约束与重新同步最新已保存设置
 watch(isModalOpen, isOpen => {
   if (isOpen) {
     settingsStore.reloadSettings();
+    reloadCharMvuSettings();
+    fetchCurrentMvuTree();
     plannerBaseUrlInputValue.value = settings.value.planner.baseUrl || '';
     baseUrlInputValue.value = settings.value.provider.baseUrl || '';
     plannerModelSelectValue.value = settings.value.planner.availableModels?.includes(settings.value.planner.model)
@@ -1433,9 +1868,9 @@ watch(isModalOpen, isOpen => {
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         );
         if (focusable.length > 0) {
-          focusable[0].focus();
+          focusable[0].focus({ preventScroll: true });
         } else {
-          modalEl.value.focus();
+          modalEl.value.focus({ preventScroll: true });
         }
       }
     });
@@ -1446,6 +1881,7 @@ function handleDoneClick() {
   commitPlannerBaseUrl();
   commitBaseUrl();
   settingsStore.saveNow();
+  if (mvuOwner.value === currentMvuOwner()) saveCharacterMvuSettings(charMvuSettings.value);
   if (typeof toastr !== 'undefined' && toastr.success) {
     toastr.success('设置已保存');
   }

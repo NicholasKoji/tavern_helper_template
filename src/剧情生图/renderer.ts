@@ -301,7 +301,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
             isEditing
               ? `
             <div class="story-image-edit-panel">
-              <div class="story-image-edit-title">修改本楼场景提示词：</div>
+              <div class="story-image-edit-title">修改此场景提示词：</div>
               <textarea class="story-image-textarea" rows="3">${prompt}</textarea>
               <div class="story-image-edit-actions">
                 <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="save-prompt">
@@ -333,7 +333,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
               <div class="story-image-ready-actions">
                 <button type="button" class="story-image-btn story-image-btn-sm" disabled>
                   <i class="fa-solid fa-spinner fa-spin"></i>
-                  <span>正在生成…</span>
+                  <span>${state.queued ? '排队等待…' : '正在生成…'}</span>
                 </button>
                 <button type="button" class="story-image-btn story-image-btn-danger story-image-btn-sm" data-action="cancel" title="取消当前任务">
                   <i class="fa-solid fa-xmark"></i>
@@ -355,7 +355,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
               <div class="story-image-actions">
                 <button type="button" class="story-image-btn story-image-btn-primary" disabled>
                   <i class="fa-solid fa-spinner fa-spin"></i>
-                  <span>正在生成…</span>
+                  <span>${state.queued ? '排队等待…' : '正在生成…'}</span>
                 </button>
                 <button type="button" class="story-image-btn story-image-btn-danger story-image-btn-sm" data-action="cancel" title="取消当前任务">
                   <i class="fa-solid fa-xmark"></i>
@@ -418,7 +418,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
     case 'error': {
       const error = state.error;
       const stage = error?.stage || 'general';
-      const isPlanningError = stage === 'planning' || stage === 'render';
+      const isPlanningError = stage === 'planning' || (stage === 'render' && !state.sceneId);
       const msg = escapeHtml(error?.message || '发生未知错误');
 
       bodyHtml = `
@@ -472,14 +472,17 @@ export function renderSlot(
   }
 
   const doc = $mes[0].ownerDocument || tavernDocument;
-  const slotKey = `${messageId}:${swipeId}`;
+  const slotKey = `${messageId}:${swipeId}${state.sceneId ? `:${state.sceneId}` : ''}`;
   const slotSelector = `[data-story-image-slot="${slotKey}"]`;
   let $slot = $(slotSelector, doc);
 
-  const innerHtml = buildSlotInnerHtml(slotKey, state);
+  const innerHtml =
+    (state.anchorWarning
+      ? `<p role="status" class="story-image-anchor-warning">${escapeHtml(state.anchorWarning)}</p>`
+      : '') + buildSlotInnerHtml(slotKey, state);
   if (!innerHtml.trim()) {
     if ($slot.length) {
-      removeSlot(messageId, swipeId, doc);
+      $slot.remove();
     }
     return;
   }
@@ -494,6 +497,7 @@ export function renderSlot(
     $slot = $(`<div class="story-image-slot" data-story-image-slot="${slotKey}"></div>`, doc);
   }
 
+  $slot.attr('data-scene-order', state.sceneId?.match(/_s(\d+)$/)?.[1] ?? '0');
   // 定位目标锚点
   let targetBlock: HTMLElement | null = null;
   if (state.anchor) {
@@ -507,8 +511,16 @@ export function renderSlot(
       if ($slot.parent()[0] !== $mesText[0] || !$slot.is(':last-child')) {
         $mesText.append($slot);
       }
-    } else if ($slot.prev()[0] !== targetBlock) {
-      $slot.insertAfter($(targetBlock));
+    } else {
+      let after = targetBlock;
+      const order = Number(state.sceneId?.match(/_s(\d+)$/)?.[1] ?? 0);
+      while (
+        after.nextElementSibling?.classList.contains('story-image-slot') &&
+        after.nextElementSibling !== $slot[0] &&
+        Number((after.nextElementSibling as HTMLElement).dataset.sceneOrder ?? 0) < order
+      )
+        after = after.nextElementSibling as HTMLElement;
+      if ($slot.prev()[0] !== after) $slot.insertAfter($(after));
     }
     if (state.anchor) {
       onAction('anchor-resolved', undefined, state);
@@ -524,9 +536,20 @@ export function renderSlot(
     }
   }
 
+  // 保留同一场景尚未保存的编辑草稿，其他场景更新不应清空它。
+  const draftPrompt =
+    editingSlots.has(slotKey) && $slot.data('scene-prompt') === (state.scenePrompt ?? '')
+      ? $slot.find('.story-image-textarea').val()
+      : undefined;
   // 更新内容
-  $slot.html(innerHtml);
+  $slot.html(
+    (state.sceneId
+      ? `<div class="story-image-scene-title">场景 ${escapeHtml(state.sceneId.match(/_s(\d+)$/)?.[1] || '')}</div>`
+      : '') + innerHtml,
+  );
 
+  $slot.data('scene-prompt', state.scenePrompt ?? '');
+  if (draftPrompt !== undefined) $slot.find('.story-image-textarea').val(draftPrompt as string);
   // 绑定事件
   $slot.off('click').on('click', '[data-action]', function (e) {
     e.stopPropagation();
@@ -570,7 +593,8 @@ export function removeSlot(messageId: number, swipeId?: number, doc?: Document):
   if (swipeId !== undefined) {
     const slotKey = `${messageId}:${swipeId}`;
     editingSlots.delete(slotKey);
-    $(`[data-story-image-slot="${slotKey}"]`, targetDoc).remove();
+    $(`[data-story-image-slot="${slotKey}"], [data-story-image-slot^="${slotKey}:"]`, targetDoc).remove();
+    for (const key of editingSlots) if (key.startsWith(`${slotKey}:`)) editingSlots.delete(key);
   } else {
     $(`[data-story-image-slot^="${messageId}:"]`, targetDoc).remove();
   }

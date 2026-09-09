@@ -1,3 +1,4 @@
+import { referenceDataUrl, type ImageReference } from './reference-library';
 import type { GeneratedImagePayload, StoryImageSettings } from './types';
 import { B2_STYLE_REFERENCE } from './style-reference';
 
@@ -220,6 +221,7 @@ async function callChatCompletions(
   finalPrompt: string,
   settings: StoryImageSettings,
   signal?: AbortSignal,
+  references: ImageReference[] = [],
 ): Promise<GeneratedImagePayload> {
   const { endpoint, apiKey, model } = settings.provider;
   if (!endpoint.trim()) {
@@ -231,6 +233,17 @@ async function callChatCompletions(
     throw new Error('未配置生图模型名称，请在设置中填写');
   }
 
+  const content: any[] = [{ type: 'text', text: finalPrompt }];
+  if (settings.visual.stylePreset === 'B2')
+    content.push(
+      { type: 'text', text: '下一张是 B2 画法参考，不是角色身份参考。' },
+      { type: 'image_url', image_url: { url: B2_STYLE_REFERENCE } },
+    );
+  for (const ref of references)
+    content.push(
+      { type: 'text', text: ref.label },
+      { type: 'image_url', image_url: { url: await referenceDataUrl(ref.url, signal) } },
+    );
   const body = {
     model: modelName,
     stream: false,
@@ -239,13 +252,7 @@ async function callChatCompletions(
     messages: [
       {
         role: 'user',
-        content:
-          settings.visual.stylePreset === 'B2'
-            ? [
-                { type: 'text', text: finalPrompt },
-                { type: 'image_url', image_url: { url: B2_STYLE_REFERENCE } },
-              ]
-            : finalPrompt,
+        content,
       },
     ],
   };
@@ -286,12 +293,22 @@ export async function requestImageGeneration(
   finalPrompt: string,
   settings: StoryImageSettings,
   signal?: AbortSignal,
+  references: ImageReference[] = [],
 ): Promise<GeneratedImagePayload> {
-  if (settings.visual.stylePreset === 'B2' && settings.provider.protocol !== 'chat-completions') {
-    throw new Error('B2 需要附带画风参考图，请将生图协议切换为 Chat Completions，并使用支持图片输入的模型。');
+  if (
+    (references.length > 0 || settings.visual.stylePreset === 'B2') &&
+    settings.provider.protocol !== 'chat-completions'
+  ) {
+    const reason =
+      settings.visual.stylePreset === 'B2'
+        ? references.length
+          ? 'B2 画风参考图和角色参考图'
+          : 'B2 画风参考图'
+        : '角色参考图';
+    throw new Error(`当前请求包含${reason}，请将生图协议切换为 Chat Completions，并使用支持图片输入的模型。`);
   }
   if (settings.provider.protocol === 'chat-completions') {
-    return await callChatCompletions(finalPrompt, settings, signal);
+    return await callChatCompletions(finalPrompt, settings, signal, references);
   } else {
     return await callOpenAIImages(finalPrompt, settings, signal);
   }

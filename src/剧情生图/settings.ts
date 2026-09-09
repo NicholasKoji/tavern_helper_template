@@ -171,6 +171,7 @@ export const StoryImageSettingsSchema = z
     planner: z
       .object({
         contextMessageCount: z.coerce.number().prefault(2),
+        sceneCount: z.coerce.number().int().min(1).max(10).catch(1).prefault(1),
         connectionMode: z.enum(['follow-tavern', 'custom-openai']).prefault('follow-tavern'),
         baseUrl: z.string().prefault(''),
         endpoint: z.string().prefault(''),

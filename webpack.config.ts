@@ -4,6 +4,7 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import _ from 'lodash';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import { ChildProcess, exec, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -182,6 +183,70 @@ function tavern_sync(compiler: webpack.Compiler) {
       child_process?.kill();
     });
   });
+}
+
+function export_script_json_plugin(entry: Entry, script_filepath: path.ParsedPath) {
+  return {
+    apply(compiler: webpack.Compiler) {
+      if (entry.html !== undefined) return;
+
+      const src_abs_dir = path.resolve(import.meta.dirname, script_filepath.dir);
+      const rel_dir = path.relative(import.meta.dirname, src_abs_dir).replace(/^[^\\/]+[\\/]/, '');
+      const output_dir = path.join(import.meta.dirname, 'dist', rel_dir);
+      const script_name = path.basename(output_dir);
+
+      let cached_meta: any = null;
+      const cache_meta = () => {
+        const json_file = path.join(output_dir, `${script_name}.json`);
+        if (fs.existsSync(json_file)) {
+          try {
+            cached_meta = JSON.parse(fs.readFileSync(json_file, 'utf-8'));
+          } catch {}
+        }
+      };
+
+      compiler.hooks.beforeRun.tap('export_script_json_cache', cache_meta);
+      compiler.hooks.watchRun.tap('export_script_json_cache', cache_meta);
+
+      compiler.hooks.done.tap('export_script_json', () => {
+        try {
+          const js_file = path.join(output_dir, `${script_filepath.name}.js`);
+          const json_file = path.join(output_dir, `${script_name}.json`);
+          if (!fs.existsSync(js_file)) return;
+
+          const js_content = fs.readFileSync(js_file, 'utf-8');
+
+          let meta: any = {};
+          const manifest_path = path.join(src_abs_dir, 'manifest.json');
+          const src_json_path = path.join(src_abs_dir, `${script_name}.json`);
+          if (fs.existsSync(manifest_path)) {
+            try {
+              meta = JSON.parse(fs.readFileSync(manifest_path, 'utf-8'));
+            } catch {}
+          } else if (fs.existsSync(src_json_path)) {
+            try {
+              meta = JSON.parse(fs.readFileSync(src_json_path, 'utf-8'));
+            } catch {}
+          } else if (cached_meta) {
+            meta = cached_meta;
+          }
+
+          const script_json = {
+            id: meta.id || randomUUID(),
+            name: meta.name || script_name,
+            content: js_content,
+            info: meta.info || `${script_name} 脚本`,
+            buttons: meta.buttons || [],
+          };
+
+          fs.writeFileSync(json_file, JSON.stringify(script_json, null, 2), 'utf-8');
+          console.info(`\x1b[32m[script_json]\x1b[0m 成功生成酒馆助手导入包: ${path.relative(import.meta.dirname, json_file)}`);
+        } catch (error) {
+          console.error('\x1b[31m[script_json]\x1b[0m 导出脚本 JSON 失败:', error);
+        }
+      });
+    },
+  };
 }
 
 function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Configuration {
@@ -421,7 +486,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       alias: {},
     },
     plugins: (entry.html === undefined
-      ? [new MiniCssExtractPlugin()]
+      ? [new MiniCssExtractPlugin(), export_script_json_plugin(entry, script_filepath)]
       : [
           new HtmlWebpackPlugin({
             template: path.join(import.meta.dirname, entry.html),

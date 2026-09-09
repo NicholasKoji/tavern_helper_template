@@ -11,6 +11,7 @@ export type StoryImageSettings = {
 
   planner: {
     contextMessageCount: number;
+    sceneCount: number;
     connectionMode: PlannerConnectionMode;
     baseUrl: string;
     apiKey: string;
@@ -95,6 +96,10 @@ export type StoryImageSwipeError = {
 };
 
 export type StoryImageSwipeState = {
+  sceneId?: string;
+  queued?: boolean;
+  anchorWarning?: string;
+  scenes?: StoryImageSwipeState[];
   status: StoryImageSwipeStatus;
   sourceFingerprint: string;
   operationVersion: number;
@@ -103,6 +108,8 @@ export type StoryImageSwipeState = {
 
   sceneSummary?: string;
   scenePrompt?: string;
+  characterIds?: string[];
+  referenceFraming?: string;
   promptEditedByUser?: boolean;
 
   currentImage?: StoredImage;
@@ -132,6 +139,8 @@ export type PlannerResult = {
   anchor: SwipeAnchor;
   scene_summary: string;
   scene_prompt: string;
+  character_ids: string[];
+  reference_framing: string;
 };
 
 export type GeneratedImagePayload = { kind: 'base64'; data: string; mimeType: string } | { kind: 'url'; url: string };
@@ -149,3 +158,22 @@ export type PopoverAction =
   | 'replan-and-generate'
   | 'edit-prompt'
   | 'regenerate';
+
+export type MvuRule = {
+  path: string;
+  alias?: string;
+  enabled: boolean;
+};
+
+export type CharacterMvuSettings = {
+  enabled: boolean;
+  rules: MvuRule[];
+};
+
+export type MvuTreeNode = {
+  path: string;
+  key: string;
+  valueText?: string;
+  isLeaf: boolean;
+  children?: MvuTreeNode[];
+};
