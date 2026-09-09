@@ -1,6 +1,6 @@
 <template>
   <div class="rule-modal-backdrop" @click.self="$emit('close')" @keydown.esc="$emit('close')">
-    <section class="rule-modal-card" role="dialog" aria-modal="true" aria-labelledby="rule-modal-title">
+    <section ref="modalCard" class="rule-modal-card" role="dialog" aria-modal="true" aria-labelledby="rule-modal-title">
       <header class="modal-header">
         <div class="header-left">
           <span class="modal-kicker">REALITY EDITOR · REVISION</span>
@@ -11,29 +11,26 @@
         </button>
       </header>
 
-      <p class="modal-lead">
-        在此签发、修订或废止生效规则。确认后立即写入最新楼层变量，下一轮正文将按新常识显化。
-      </p>
-
-      <!-- AI 起草方向提示词 -->
-      <div class="ai-hint-box">
-        <label class="hint-label" for="rule-ai-hint-input">
-          <Sparkles :size="13" class="hint-icon" />
-          <span>AI 篡改方向（可选输入）</span>
-        </label>
-        <input
-          id="rule-ai-hint-input"
-          :value="aiHint"
-          class="dossier-input"
-          type="text"
-          maxlength="120"
-          placeholder="例如：设定该区域的所有人在午夜前必须穿戴特定样式的配饰…"
-          @input="$emit('update:aiHint', ($event.target as HTMLInputElement).value)"
-        />
-      </div>
-
-      <!-- 三类规则编辑板块 -->
       <div class="modal-body-scroll">
+        <p class="modal-lead">在此签发、修订或废止生效规则。确认后立即写入最新楼层变量，下一轮正文将按新常识显化。</p>
+
+        <!-- AI 起草方向提示词 -->
+        <div class="ai-hint-box">
+          <label class="hint-label" for="rule-ai-hint-input">
+            <Sparkles :size="13" class="hint-icon" />
+            <span>AI 篡改方向（可选输入）</span>
+          </label>
+          <textarea
+            id="rule-ai-hint-input"
+            :value="aiHint"
+            class="dossier-textarea ai-hint-input"
+            rows="3"
+            placeholder="例如：设定该区域的所有人在午夜前必须穿戴特定样式的配饰…"
+            @input="$emit('update:aiHint', ($event.target as HTMLTextAreaElement).value)"
+          ></textarea>
+        </div>
+
+        <!-- 三类规则编辑板块 -->
         <section v-for="group in editorGroups" :key="group.key" class="rule-group-card">
           <header class="group-header">
             <div class="group-title-wrap">
@@ -128,12 +125,7 @@
         <p v-if="editorError" class="footer-error-alert">{{ editorError }}</p>
         <div class="footer-actions">
           <button class="btn ghost-btn" type="button" :disabled="busy" @click="$emit('close')">取消</button>
-          <button
-            class="btn primary-btn"
-            type="button"
-            :disabled="busy || anyAiBusy"
-            @click="$emit('confirmRules')"
-          >
+          <button class="btn primary-btn" type="button" :disabled="busy || anyAiBusy" @click="$emit('confirmRules')">
             <Stamp :size="15" />
             <span>{{ busy ? '写入中…' : '签发并写入' }}</span>
           </button>
@@ -144,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { Plus, Sparkles, Stamp, Trash2, WandSparkles, X } from '@lucide/vue';
 
 type RuleGroupKey = '世界规则' | '区域规则' | '个人规则';
@@ -182,6 +174,20 @@ const editorGroups: Array<{
 ];
 
 const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
+
+const modalCard = ref<HTMLElement | null>(null);
+
+function fitLongTextareasOnOpen() {
+  modalCard.value?.querySelectorAll<HTMLTextAreaElement>('textarea').forEach(textarea => {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  });
+}
+
+onMounted(async () => {
+  await nextTick();
+  fitLongTextareasOnOpen();
+});
 </script>
 
 <style scoped>
@@ -199,7 +205,8 @@ const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
 
 .rule-modal-card {
   width: min(640px, 100%);
-  max-height: calc(100vh - 40px);
+  max-height: min(840px, calc(100vh - 32px));
+  max-height: min(840px, calc(100dvh - 32px));
   display: flex;
   flex-direction: column;
   background: var(--paper-elevated);
@@ -255,14 +262,12 @@ const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
 
 .modal-lead {
   margin: 0;
-  padding: 10px 16px 0;
   font-size: 11.5px;
   color: var(--ink-muted);
   line-height: 1.45;
 }
 
 .ai-hint-box {
-  padding: 8px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -278,8 +283,11 @@ const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
 }
 
 .modal-body-scroll {
-  padding: 8px 16px 14px;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 10px 16px 14px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -444,6 +452,10 @@ const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
   line-height: 1.4;
 }
 
+.ai-hint-input {
+  min-height: 66px;
+}
+
 .row-action-side {
   display: flex;
   flex-direction: column;
@@ -537,5 +549,23 @@ const anyAiBusy = computed(() => Object.values(props.aiBusy).some(Boolean));
 
 .primary-btn:disabled {
   opacity: 0.5;
+}
+
+@media (max-width: 720px) {
+  .rule-modal-backdrop {
+    padding: 8px 4px;
+  }
+
+  .rule-modal-card {
+    width: 100%;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+}
+
+@media (max-width: 520px) {
+  .rule-modal-backdrop {
+    padding-inline: 2px;
+  }
 }
 </style>
