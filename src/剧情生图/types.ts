@@ -7,6 +7,7 @@ export type SizePreset = '1024x1024' | '1024x1536' | '1536x1024' | 'custom';
 export type PlannerConnectionMode = 'follow-tavern' | 'custom-openai';
 
 export type StoryImageSettings = {
+  schemaVersion: number;
   enabled: boolean;
 
   planner: {

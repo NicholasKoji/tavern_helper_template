@@ -109,6 +109,17 @@ export function assembleFinalPrompt(scenePrompt: string, settings: StoryImageSet
   return sections.join('\n\n');
 }
 
+export function assembleReferencePrompt(referencePrompt: string, settings: StoryImageSettings): string {
+  const sections = [
+    '[任务]\n生成一张单人角色参考图。严格保持角色身份、明确年龄、五官与稳定外观；画风只控制绘制媒介，不覆盖人物体型、穿搭方向和拍摄方式。',
+  ];
+  const visualReq = assembleVisualRequirements(settings);
+  if (visualReq) sections.push(visualReq);
+  const reference = (referencePrompt ?? '').trim();
+  if (reference) sections.push(`[角色参考图]\n${reference}`);
+  return sections.join('\n\n');
+}
+
 const sceneJsonSchema = {
   name: 'story_scene_selection',
   description: 'Select scene and anchor from current assistant message',

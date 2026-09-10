@@ -1,5 +1,5 @@
 import { klona } from 'klona';
-import { useStoryImageSettingsStore } from './settings';
+import { DEFAULT_PROVIDER_TIMEOUT_MS, useStoryImageSettingsStore } from './settings';
 import {
   getSwipeState,
   updateSwipeState,
@@ -131,7 +131,12 @@ async function sceneAction(message: number, swipe: number, id: string, action: S
           error: undefined,
         };
       if (action === 'anchor-resolved') return { ...s, anchorWarning: undefined };
-      if (action === 'anchor-failed') return { ...s, anchorWarning: '该场景锚点暂未在显示正文中定位，先列在楼层末尾；不影响单独编辑或生图。重新规划本楼可更换锚点。' };
+      if (action === 'anchor-failed')
+        return {
+          ...s,
+          anchorWarning:
+            '该场景锚点暂未在显示正文中定位，先列在楼层末尾；不影响单独编辑或生图。重新规划本楼可更换锚点。',
+        };
       if (action === 'save-prompt')
         return {
           ...s,
@@ -191,7 +196,7 @@ async function enqueueScene(message: number, swipe: number, id: string, regenera
           timedOut = true;
           job.controller.abort();
         },
-        Math.max(5000, settings.provider.timeoutMs || 120000),
+        Math.max(5000, settings.provider.timeoutMs || DEFAULT_PROVIDER_TIMEOUT_MS),
       );
       const finalPrompt = assembleFinalPrompt(current.scenePrompt!, settings);
       const image = await interruptible(

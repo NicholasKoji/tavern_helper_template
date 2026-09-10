@@ -4,6 +4,9 @@ import { ref, watch } from 'vue';
 import { klona } from 'klona';
 import type { ProviderProtocol, StoryImageSettings } from './types';
 
+export const DEFAULT_PROVIDER_TIMEOUT_MS = 10 * 60 * 1000;
+const LEGACY_DEFAULT_PROVIDER_TIMEOUT_MS = 2 * 60 * 1000;
+
 export function deriveEndpoints(
   inputUrl: string,
   protocol: ProviderProtocol,
@@ -166,6 +169,7 @@ export async function fetchModels(
 
 export const StoryImageSettingsSchema = z
   .object({
+    schemaVersion: z.coerce.number().int().prefault(2),
     enabled: z.boolean().prefault(true),
 
     planner: z
@@ -194,7 +198,7 @@ export const StoryImageSettingsSchema = z
         model: z.string().prefault(''),
         availableModels: z.array(z.string()).prefault([]),
         customEndpointOverride: z.boolean().prefault(false),
-        timeoutMs: z.coerce.number().prefault(120000),
+        timeoutMs: z.coerce.number().prefault(DEFAULT_PROVIDER_TIMEOUT_MS),
       })
       .prefault({}),
 
@@ -272,7 +276,18 @@ export function loadSettingsFromVariables(): StoryImageSettings {
       }
     }
 
+    const rawSchemaVersion =
+      raw && typeof raw === 'object' && typeof (raw as any).schemaVersion === 'number' ? (raw as any).schemaVersion : 1;
     const parsed = StoryImageSettingsSchema.parse(raw ?? {});
+
+    // v2：将旧版默认的 2 分钟生图超时一次性迁移为 10 分钟；用户自定义的其他时长保持不变。
+    if (rawSchemaVersion < 2) {
+      if (parsed.provider.timeoutMs === LEGACY_DEFAULT_PROVIDER_TIMEOUT_MS) {
+        parsed.provider.timeoutMs = DEFAULT_PROVIDER_TIMEOUT_MS;
+      }
+      parsed.schemaVersion = 2;
+      if (raw) saveSettingsToVariables(parsed);
+    }
 
     // Backward compatibility: If endpoint exists but baseUrl is empty, derive baseUrl
     if (parsed.provider.endpoint && !parsed.provider.baseUrl) {

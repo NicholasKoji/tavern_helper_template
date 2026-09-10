@@ -5,7 +5,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { createScriptIdDiv, teleportStyle } from '@util/script';
 import SettingsPanel from './设置界面.vue';
-import { useStoryImageSettingsStore } from './settings';
+import { DEFAULT_PROVIDER_TIMEOUT_MS, useStoryImageSettingsStore } from './settings';
 import {
   closeActionPopover,
   closeModal,
@@ -625,7 +625,7 @@ async function startImageGeneration(
   cancelTask(messageId, swipeId, chatId);
 
   const abortController = new AbortController();
-  const timeoutMs = Math.max(5000, settings.provider.timeoutMs || 120000);
+  const timeoutMs = Math.max(5000, settings.provider.timeoutMs || DEFAULT_PROVIDER_TIMEOUT_MS);
   const timeoutSeconds = Math.round(timeoutMs / 1000);
   let timedOut = false;
   let currentStage: StoryImageErrorStage = 'generation';

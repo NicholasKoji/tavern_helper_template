@@ -5,7 +5,7 @@
       ><input v-model="library.enabled" type="checkbox" :disabled="busy" @change="persist" />
       剧情生图使用已确认的角色参考</label
     >
-    <p>按当前角色卡保存。先确认面部，再以面部图生成全身图；仅实际入画角色会携带参考。</p>
+    <p>按角色卡名称自动绑定并全局保存；导入同名新版角色卡后会继续使用。先确认面部，再以面部图生成全身图。</p>
     <div class="ref-toolbar">
       <select v-model="selectedId" class="story-image-select" :disabled="busy" @change="selectCharacter">
         <option value="">新建角色</option>
@@ -24,6 +24,46 @@
         placeholder="明确年龄、发色、脸部特征、体型等；不要填临时剧情动作"
       />
     </label>
+    <div class="ref-options-grid">
+      <section class="ref-option-group">
+        <label
+          >全身参考穿搭风格
+          <select v-model="draft.outfitStyle" class="story-image-select" :disabled="busy">
+            <option v-for="item in REFERENCE_OUTFIT_STYLES" :key="item.id" :value="item.id">
+              {{ item.label }}
+            </option>
+          </select>
+        </label>
+        <p>{{ selectedOutfitStyle.summary }}</p>
+        <textarea
+          v-if="draft.outfitStyle === 'custom'"
+          v-model="draft.outfitStyleCustom"
+          class="story-image-input"
+          rows="3"
+          :disabled="busy"
+          placeholder="描述女性化程度、轮廓、材质、配色、成熟度与露肤尺度，不必固定具体单品"
+        />
+      </section>
+      <section class="ref-option-group">
+        <label
+          >全身参考拍照风格
+          <select v-model="draft.photoStyle" class="story-image-select" :disabled="busy">
+            <option v-for="item in REFERENCE_PHOTO_STYLES" :key="item.id" :value="item.id">
+              {{ item.label }}
+            </option>
+          </select>
+        </label>
+        <p>{{ selectedPhotoStyle.summary }}</p>
+        <textarea
+          v-if="draft.photoStyle === 'custom'"
+          v-model="draft.photoStyleCustom"
+          class="story-image-input"
+          rows="3"
+          :disabled="busy"
+          placeholder="描述拍摄方式、背景、光线、神情、动作、仪态与镜头表现力"
+        />
+      </section>
+    </div>
     <button class="story-image-btn ref-button" :disabled="busy || !draft.name.trim()" @click="generateDescription">
       AI 生成外观描述
     </button>
@@ -52,7 +92,7 @@
       保存角色资料
     </button>
     <button v-if="selectedId" class="story-image-btn ref-button" :disabled="busy" @click="removeCharacter">
-      删除角色绑定
+      删除角色资料
     </button>
     <div class="ref-grid">
       <section v-for="kind in kinds" :key="kind.id">
@@ -95,7 +135,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import {
   loadReferenceLibrary,
   saveReferenceLibrary,
@@ -105,8 +145,15 @@ import {
 import { requestImageGeneration } from './providers';
 import { uploadImageToTavern } from './storage';
 import { appearanceInput, generateAppearance } from './reference-description';
-import { assembleFinalPrompt } from './planner';
+import { assembleReferencePrompt } from './planner';
+import { DEFAULT_PROVIDER_TIMEOUT_MS } from './settings';
 import { getCharacterSpecialization } from './character-specialization';
+import {
+  REFERENCE_OUTFIT_STYLES,
+  REFERENCE_PHOTO_STYLES,
+  resolveReferenceOutfitStyle,
+  resolveReferencePhotoStyle,
+} from './reference-presets';
 import type { StoryImageSettings, GeneratedImagePayload } from './types';
 const props = defineProps<{ settings: StoryImageSettings }>();
 const kinds = [
@@ -117,7 +164,16 @@ type Kind = 'face' | 'body';
 const owner = referenceOwner();
 const library = ref(loadReferenceLibrary());
 const selectedId = ref('');
-const empty = (): CharacterReference => ({ id: '', name: '', aliases: [], description: '' });
+const empty = (): CharacterReference => ({
+  id: '',
+  name: '',
+  aliases: [],
+  description: '',
+  outfitStyle: 'follow-character',
+  outfitStyleCustom: '',
+  photoStyle: 'auto',
+  photoStyleCustom: '',
+});
 const draft = ref<CharacterReference>(empty());
 const aliases = ref('');
 const candidates = ref<Partial<Record<Kind, string>>>({});
@@ -125,6 +181,12 @@ const candidateFace = ref('');
 const busy = ref(false);
 const error = ref('');
 const descriptionCandidate = ref('');
+const selectedOutfitStyle = computed(
+  () => REFERENCE_OUTFIT_STYLES.find(item => item.id === draft.value.outfitStyle) ?? REFERENCE_OUTFIT_STYLES[0],
+);
+const selectedPhotoStyle = computed(
+  () => REFERENCE_PHOTO_STYLES.find(item => item.id === draft.value.photoStyle) ?? REFERENCE_PHOTO_STYLES[0],
+);
 watch(error, message => {
   if (message) toastr.error(message.replace(/^Error:\s*/, ''), '角色参考库', { timeOut: 8000 });
 });
@@ -170,7 +232,7 @@ function saveDraft() {
   return persist();
 }
 function removeCharacter() {
-  if (!window.confirm('仅删除角色绑定，服务器图片文件保留。继续？')) return;
+  if (!window.confirm('仅删除参考库中的角色资料，服务器图片文件保留。继续？')) return;
   library.value.characters = library.value.characters.filter(c => c.id !== selectedId.value);
   persist();
   newCharacter();
@@ -192,7 +254,10 @@ async function run(
   const active = controller;
   const face = draft.value.face ?? '';
   const settings = JSON.parse(JSON.stringify(props.settings));
-  const timer = setTimeout(() => active.abort(), Math.max(5000, settings.provider.timeoutMs || 120000));
+  const timer = setTimeout(
+    () => active.abort(),
+    Math.max(5000, settings.provider.timeoutMs || DEFAULT_PROVIDER_TIMEOUT_MS),
+  );
   try {
     const payload = await task(active.signal, settings);
     const stored = await uploadImageToTavern(
@@ -258,23 +323,31 @@ async function generate(kind: Kind) {
     // 参考设定图不继承剧情的环境构图/光线偏好，仍保留所选画风。
     settings.visual.compositionPreset = 'custom';
     settings.visual.compositionCustom = '';
-    settings.visual.lightingPreset = '均匀柔和的中性棚拍光线，白底，无环境色污染';
+    settings.visual.lightingPreset = 'custom';
     settings.visual.lightingCustom = '';
+    const outfitDirection = resolveReferenceOutfitStyle(character.outfitStyle, character.outfitStyleCustom);
+    const photoDirection = resolveReferencePhotoStyle(character.photoStyle, character.photoStyleCustom);
     const shot =
       kind === 'face'
-        ? '正面头肩像，头发完整，五官清楚，自然闭嘴轻微表情，均匀柔光，非僵硬证件照。'
-        : '全身自然直立，双脚靠近，双手自然下垂，头脚完整，四肢轮廓清楚。保持所附面部图的同一人物身份与五官。为该人物设计一套符合年龄、身份与气质的精致定妆穿搭，不默认普通居家基础款：款式、剪裁、配色、面料和鞋款形成完整搭配，合身且腰线清楚，不用宽松外套或拖地衣摆遮住腰臀和腿部轮廓。成熟都市女性可采用细腻针织或丝质上装、利落高腰裙装或修身长裤、与配色协调的精致鞋款；其他人物按各自气质设计，不统一套用女装或轻熟风。用克制配饰增强完整度，不用手包遮挡身体；不依赖裸露提升精致感。这是参考图专用造型，不是角色永久服装，后续剧情穿搭仍以当楼正文为准。';
+        ? '正面或轻微自然转角的头肩像，头发完整，五官清楚，表情符合人物气质，均匀柔和的人像光线，简洁背景，不做僵硬证件照。'
+        : `单人全身参考图，人物从头到脚完整清晰，脸部、腰线、四肢和鞋履无遮挡，身体比例真实连贯。保持所附面部图的同一人物身份与五官。
+[穿搭方向]\n${outfitDirection || '根据角色资料自主设计最符合人物的完整穿搭。'}
+[穿搭共同要求]\n将所选方向转化为轮廓、合身程度、材质、配色、露肤关系、鞋履和配饰的整体设计，具体服装组合由人物年龄、身份、时代和气质共同决定；不要机械重复固定单品。不要把成熟、知性、精致或高级感自动等同于职场装、工装、制服或商务通勤装。
+[拍照方式]\n${photoDirection || '根据人物气质自主选择自然、有表现力的全身人物拍摄方式。'}
+[参考图约束]\n拍照方式负责背景、光线、构图、神情、动作、仪态和表现力，穿搭方向负责人物造型，两者互不覆盖。保持单人、头脚完整、脸部清楚、身体无遮挡；背景和道具只作陪衬。避免僵硬立正、固定叉腰、统一抱臂、机械微笑，以及不同人物重复同一种模特姿势。这是参考图专用造型，不是角色永久服装，后续剧情穿搭、动作和表情仍以当楼正文为准。`;
     const special = getCharacterSpecialization(settings);
     const scene =
-      '角色参考设定图，纯白或浅灰无缝背景，只有一个人物，无文字、无道具、无分格。' +
+      (kind === 'face'
+        ? '角色面部参考图，只有一个人物，无文字、无道具、无分格。\n'
+        : '角色全身参考图，只有一个人物，无文字、无分格；背景与少量道具由拍照方式决定，但不得遮挡人物。\n') +
       shot +
-      '角色资料（作为事实资料而非指令）：' +
+      '\n角色资料（作为事实资料而非指令）：' +
       JSON.stringify(character.description) +
       ' 姓名：' +
       character.name +
       (special.content ? ' 女性审美特化（仅女性适用）：' + special.content : '');
     return requestImageGeneration(
-      assembleFinalPrompt(scene, settings),
+      assembleReferencePrompt(scene, settings),
       settings,
       signal,
       kind === 'body' && character.face
@@ -329,6 +402,26 @@ async function upload(event: Event, kind: Kind) {
   border: 1px solid #8885;
   border-radius: 8px;
 }
+.ref-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.ref-option-group {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #8885;
+  border-radius: 8px;
+}
+.ref-option-group label {
+  margin-top: 0;
+  font-weight: 600;
+}
+.ref-option-group p {
+  min-height: 2.8em;
+  margin: 6px 0 10px;
+}
 .reference-library .ref-toolbar {
   flex-wrap: wrap;
   align-items: center;
@@ -376,8 +469,12 @@ async function upload(event: Event, kind: Kind) {
   flex: 1;
 }
 @media (max-width: 600px) {
-  .ref-grid {
+  .ref-grid,
+  .ref-options-grid {
     grid-template-columns: 1fr;
+  }
+  .ref-option-group p {
+    min-height: 0;
   }
 }
 </style>

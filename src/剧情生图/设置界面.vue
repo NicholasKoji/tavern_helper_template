@@ -510,14 +510,14 @@
                     </div>
 
                     <div class="story-image-form-group">
-                      <label>超时时间 (毫秒)</label>
+                      <label>超时时间 (毫秒，默认 10 分钟)</label>
                       <input
                         v-model.number="settings.provider.timeoutMs"
                         type="number"
                         min="5000"
                         step="1000"
                         class="story-image-input"
-                        placeholder="120000"
+                        placeholder="600000"
                       />
                     </div>
                   </div>

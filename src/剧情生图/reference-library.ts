@@ -3,34 +3,129 @@ export type CharacterReference = {
   name: string;
   aliases: string[];
   description: string;
+  outfitStyle: string;
+  outfitStyleCustom: string;
+  photoStyle: string;
+  photoStyleCustom: string;
   face?: string;
   body?: string;
   bodyFace?: string;
 };
 export type ReferenceLibrary = { enabled: boolean; characters: CharacterReference[] };
 export type ImageReference = { label: string; url: string };
-const KEY = 'story_image_reference_library_v1';
+const LEGACY_CHARACTER_KEY = 'story_image_reference_library_v1';
+const GLOBAL_SETTINGS_KEY = 'story_image_v1';
+const GLOBAL_LIBRARIES_KEY = 'referenceLibraries';
+
+function emptyLibrary(): ReferenceLibrary {
+  return { enabled: true, characters: [] };
+}
+
+function normalizeCharacterReference(value: Partial<CharacterReference>): CharacterReference {
+  return {
+    id: String(value.id ?? ''),
+    name: String(value.name ?? ''),
+    aliases: Array.isArray(value.aliases) ? value.aliases.map(String) : [],
+    description: String(value.description ?? ''),
+    outfitStyle: String(value.outfitStyle ?? 'follow-character'),
+    outfitStyleCustom: String(value.outfitStyleCustom ?? ''),
+    photoStyle: String(value.photoStyle ?? 'auto'),
+    photoStyleCustom: String(value.photoStyleCustom ?? ''),
+    ...(value.face ? { face: String(value.face) } : {}),
+    ...(value.body ? { body: String(value.body) } : {}),
+    ...(value.bodyFace ? { bodyFace: String(value.bodyFace) } : {}),
+  };
+}
+
+function normalizeLibrary(value: Partial<ReferenceLibrary>): ReferenceLibrary {
+  return {
+    enabled: value.enabled !== false,
+    characters: Array.isArray(value.characters) ? value.characters.map(normalizeCharacterReference) : [],
+  };
+}
+
+export function referenceLibraryName(): string {
+  try {
+    if (typeof getCurrentCharacterName === 'function') {
+      const name = getCurrentCharacterName();
+      if (name?.trim()) return name.trim();
+    }
+  } catch {
+    /* fall through to SillyTavern context */
+  }
+  const st = SillyTavern as any;
+  const character = st.characters?.[st.characterId];
+  return String(character?.data?.name ?? character?.name ?? st.name2 ?? '').trim();
+}
+
+export function normalizeReferenceLibraryName(name: string): string {
+  return name.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function referenceLibraryKey(name = referenceLibraryName()): string {
+  const normalized = normalizeReferenceLibraryName(name);
+  return normalized ? `name:${normalized}` : '';
+}
+
 export function referenceOwner(): string {
   const st = SillyTavern as any;
   return String(st.characters?.[st.characterId]?.avatar ?? '');
 }
 export function loadReferenceLibrary(): ReferenceLibrary {
+  const key = referenceLibraryKey();
+  if (!key) return emptyLibrary();
   try {
-    const value = getVariables({ type: 'character' })[KEY];
-    if (value && Array.isArray(value.characters)) return JSON.parse(JSON.stringify(value));
+    const globalVars = getVariables({ type: 'global' });
+    const value = globalVars?.[GLOBAL_SETTINGS_KEY]?.[GLOBAL_LIBRARIES_KEY]?.[key];
+    if (value && Array.isArray(value.characters)) return normalizeLibrary(JSON.parse(JSON.stringify(value)));
   } catch {
-    /* no card */
+    /* fall through to legacy character storage */
   }
-  return { enabled: true, characters: [] };
+
+  // One-way, non-destructive migration. Keep the legacy card data as a fallback.
+  try {
+    const legacy = getVariables({ type: 'character' })[LEGACY_CHARACTER_KEY];
+    if (legacy && Array.isArray(legacy.characters)) {
+      const migrated = normalizeLibrary(JSON.parse(JSON.stringify(legacy)));
+      saveReferenceLibrary(migrated, referenceOwner());
+      return migrated;
+    }
+  } catch {
+    /* no card or legacy data */
+  }
+  return emptyLibrary();
 }
 export function saveReferenceLibrary(value: ReferenceLibrary, owner: string) {
   if (!owner || owner !== referenceOwner()) throw new Error('角色卡已变化，未保存参考库');
+  const name = referenceLibraryName();
+  const key = referenceLibraryKey(name);
+  if (!key) throw new Error('未取得当前角色卡名称，未保存参考库');
+  const normalized = normalizeLibrary(JSON.parse(JSON.stringify(value)));
   updateVariablesWith(
     vars => {
-      vars[KEY] = JSON.parse(JSON.stringify(value));
+      if (!vars || typeof vars !== 'object') vars = {};
+      if (
+        !vars[GLOBAL_SETTINGS_KEY] ||
+        typeof vars[GLOBAL_SETTINGS_KEY] !== 'object' ||
+        Array.isArray(vars[GLOBAL_SETTINGS_KEY])
+      ) {
+        vars[GLOBAL_SETTINGS_KEY] = {};
+      }
+      const root = vars[GLOBAL_SETTINGS_KEY];
+      if (
+        !root[GLOBAL_LIBRARIES_KEY] ||
+        typeof root[GLOBAL_LIBRARIES_KEY] !== 'object' ||
+        Array.isArray(root[GLOBAL_LIBRARIES_KEY])
+      ) {
+        root[GLOBAL_LIBRARIES_KEY] = {};
+      }
+      root[GLOBAL_LIBRARIES_KEY][key] = {
+        displayName: name,
+        ...normalized,
+      };
       return vars;
     },
-    { type: 'character' },
+    { type: 'global' },
   );
 }
 export function referenceRoster() {
