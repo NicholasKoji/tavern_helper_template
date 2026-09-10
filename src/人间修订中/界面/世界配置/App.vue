@@ -1524,7 +1524,10 @@ function privateStatusSuggestionSchema(expectedParts: readonly string[]) {
   const privatePartSchema = {
     type: 'object',
     additionalProperties: false,
-    properties: { 外观描述: { type: 'string' }, 当前状态: { type: 'string' } },
+    properties: {
+      外观描述: { type: 'string', minLength: 60 },
+      当前状态: { type: 'string', minLength: 60 },
+    },
     required: ['外观描述', '当前状态'],
   };
   return {
@@ -1808,10 +1811,11 @@ function normalizePrivateStatusAiValue(value: unknown, expectedParts: readonly s
       })
       .filter((entry): entry is readonly [string, { 外观描述: string; 当前状态: string }] => entry !== null),
   );
-  const incompleteParts = expectedParts.filter(
-    part => !normalized[part]?.外观描述.trim() || !normalized[part]?.当前状态.trim(),
-  );
-  if (incompleteParts.length) throw new Error(`AI 返回缺少完整部位：${incompleteParts.join('、')}`);
+  const incompleteParts = expectedParts.filter(part => {
+    const detail = normalized[part];
+    return !detail || detail.外观描述.replace(/\s/g, '').length < 60 || detail.当前状态.replace(/\s/g, '').length < 60;
+  });
+  if (incompleteParts.length) throw new Error(`AI 返回部位缺失或内容过短：${incompleteParts.join('、')}`);
   return Object.fromEntries(expectedParts.map(part => [part, normalized[part]]));
 }
 
@@ -1860,10 +1864,15 @@ ${JSON.stringify(currentStatus, null, 2)}
 
 【输出要求】
 - 可采用对象必须只有一个“私密状态”键；私密状态必须使用上方列出的全部标准部位，不得缺项或增加其他部位。
-- 每个部位必须同时给出非空的“外观描述”和“当前状态”。外观描述至少包含形状或比例、颜色或肤质、局部结构或辨识特征等三类有效信息；当前状态至少包含遮蔽、姿态、接触、受压或摩擦、温度、湿润程度、分泌物或残留痕迹中的三类适用事实。
-- 不要使用“胸部”“阴部”“下体”“生殖器”“脚部”等概括键，也不要返回“待记录”“未知”“普通”“正常”“隐藏在衣物下”等低信息内容。
+- 私密状态是面向玩家的全知身体档案，不受叙事视角、衣物遮挡、角色是否主动展示或现场观察角度限制；目标是提供直白、细腻、情色化且富有窥视感的高密度身体信息。
+- 每个部位必须同时给出“外观描述”和“当前状态”，每个字段分别使用二至四句、至少六十个汉字。
+- 外观描述记录衣物之下长期存在的身体本身，覆盖形状与比例、颜色与肤质、局部结构、个体辨识特征中的至少三类，不以照片、视线或可见范围为边界。
+- 当前状态必须写明衣物或外物之下的实际身体状态，并结合当前姿态造成的形变或牵拉、接触与受压或摩擦、温度与湿润程度、汗液或分泌物及残留痕迹等至少四类适用事实；衣物遮蔽只能占其中一个信息点。
+- 脸部、口部、手部与足部同样使用具有感官吸引力和情色张力的细腻身体描写，避免普通证件照式外貌摘要；整体使用直接身体词汇和具体感官事实，避免含蓄代称、纯医学报告式表达与空泛抒情。
+- 禁止使用“胸部”“阴部”“下体”“生殖器”“脚部”等概括键，也禁止返回“待记录”“未知”“普通”“正常”“无异常”“静息”“照片中未见”“不可见”“隐藏在衣物下”“未观察到”等低信息或回避性内容。
 - 已有部位只用于参考，玩家采用时已有非空字段不会被覆盖。
 - 不要返回穿着、外貌、当前状态或其他字段；结果必须先预览再采用。
+- 输出前逐项自检：键集合必须与上方标准部位逐字一致，每个标准部位的两个字段均达到长度与信息维度，当前状态明确穿透衣物记录身体本身；任一条件未满足时继续补全。
 - 只输出 JSON：结论、理由、可执行约束、可采用。`;
   try {
     const parsed = (await requestStructuredJson(
