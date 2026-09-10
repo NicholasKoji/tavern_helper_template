@@ -2,10 +2,51 @@ import { z } from 'zod';
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { klona } from 'klona';
-import type { ProviderProtocol, StoryImageSettings } from './types';
+import type { ModelAdaptation, ProviderProtocol, StoryImageSettings } from './types';
+import { DEFAULT_STYLE_PRESET_IDS } from './style-presets';
 
 export const DEFAULT_PROVIDER_TIMEOUT_MS = 10 * 60 * 1000;
 const LEGACY_DEFAULT_PROVIDER_TIMEOUT_MS = 2 * 60 * 1000;
+
+const LEGACY_STYLE_PRESET_IDS: Record<ModelAdaptation, Record<string, string>> = {
+  'nano-banana': {
+    A: 'anime-film-nano-banana',
+    B1: 'action-webtoon-nano-banana',
+    B2: 'refined-female-webtoon-nano-banana',
+    F: 'douyin-beauty-nano-banana',
+    G: 'luxury-beauty-nano-banana',
+    H: 'cinematic-cg-nano-banana',
+    I: 'beauty-enhanced-cg-nano-banana',
+  },
+  'gpt-image': {
+    A: 'cinematic-anime-gpt-image',
+    B1: 'action-illustration-gpt-image',
+    B2: 'refined-character-webtoon-gpt-image',
+    F: 'bright-fashion-photo-gpt-image',
+    G: 'luxury-beauty-editorial-gpt-image',
+    H: 'stylized-cinematic-cg-gpt-image',
+    I: 'high-fidelity-digital-human-gpt-image',
+  },
+};
+
+export function migrateLegacyStyleSelection(
+  presetId: unknown,
+  custom: unknown,
+  adaptation: ModelAdaptation,
+): { presetId: string; custom: string } {
+  const legacyId = typeof presetId === 'string' ? presetId.trim() : '';
+  const legacyCustom = typeof custom === 'string' ? custom.trim() : '';
+  const mappedId = LEGACY_STYLE_PRESET_IDS[adaptation][legacyId];
+  if (mappedId) return { presetId: mappedId, custom: legacyCustom };
+  if (legacyId === 'custom' || legacyId === '自定义') return { presetId: 'custom', custom: legacyCustom };
+  if (legacyId) {
+    return {
+      presetId: 'custom',
+      custom: [legacyId, legacyCustom].filter(Boolean).join('\n'),
+    };
+  }
+  return { presetId: DEFAULT_STYLE_PRESET_IDS[adaptation], custom: legacyCustom };
+}
 
 export function deriveEndpoints(
   inputUrl: string,
@@ -169,7 +210,7 @@ export async function fetchModels(
 
 export const StoryImageSettingsSchema = z
   .object({
-    schemaVersion: z.coerce.number().int().prefault(2),
+    schemaVersion: z.coerce.number().int().prefault(3),
     enabled: z.boolean().prefault(true),
 
     planner: z
@@ -191,6 +232,9 @@ export const StoryImageSettingsSchema = z
     provider: z
       .object({
         protocol: z.enum(['openai-images', 'chat-completions']).prefault('openai-images'),
+        modelAdaptation: z
+          .enum(['nano-banana', 'gpt-image'] satisfies [ModelAdaptation, ...ModelAdaptation[]])
+          .prefault('nano-banana'),
         baseUrl: z.string().prefault(''),
         endpoint: z.string().prefault(''),
         modelsEndpoint: z.string().prefault(''),
@@ -230,8 +274,22 @@ export const StoryImageSettingsSchema = z
         maxVisiblePeople: z.coerce.number().int().min(1).catch(2).prefault(2),
         compositionPreset: z.string().prefault('根据剧情选择最能表达当前情节的镜头'),
         compositionCustom: z.string().prefault(''),
-        stylePreset: z.string().prefault('F'),
-        styleCustom: z.string().prefault(''),
+        styleByModel: z
+          .object({
+            'nano-banana': z
+              .object({
+                presetId: z.string().prefault(DEFAULT_STYLE_PRESET_IDS['nano-banana']),
+                custom: z.string().prefault(''),
+              })
+              .prefault({}),
+            'gpt-image': z
+              .object({
+                presetId: z.string().prefault(DEFAULT_STYLE_PRESET_IDS['gpt-image']),
+                custom: z.string().prefault(''),
+              })
+              .prefault({}),
+          })
+          .prefault({}),
         lightingPreset: z.string().prefault('符合场景时间、环境和情绪的自然光线'),
         lightingCustom: z.string().prefault(''),
         qualityPreset: z.string().prefault('主体清晰，空间关系明确，细节完整'),
@@ -279,6 +337,7 @@ export function loadSettingsFromVariables(): StoryImageSettings {
     const rawSchemaVersion =
       raw && typeof raw === 'object' && typeof (raw as any).schemaVersion === 'number' ? (raw as any).schemaVersion : 1;
     const parsed = StoryImageSettingsSchema.parse(raw ?? {});
+    let migrated = false;
 
     // v2：将旧版默认的 2 分钟生图超时一次性迁移为 10 分钟；用户自定义的其他时长保持不变。
     if (rawSchemaVersion < 2) {
@@ -286,8 +345,26 @@ export function loadSettingsFromVariables(): StoryImageSettings {
         parsed.provider.timeoutMs = DEFAULT_PROVIDER_TIMEOUT_MS;
       }
       parsed.schemaVersion = 2;
-      if (raw) saveSettingsToVariables(parsed);
+      migrated = true;
     }
+
+    // v3：为不同生图模型保存完全独立的风格预设与自定义文本，并迁移旧版单一选择。
+    if (rawSchemaVersion < 3) {
+      const legacyAdaptation: ModelAdaptation =
+        (raw as any)?.provider?.modelAdaptation === 'gpt-image' ? 'gpt-image' : 'nano-banana';
+      const legacyVisual = (raw as any)?.visual;
+      if (legacyVisual && ('stylePreset' in legacyVisual || 'styleCustom' in legacyVisual)) {
+        parsed.visual.styleByModel[legacyAdaptation] = migrateLegacyStyleSelection(
+          legacyVisual.stylePreset,
+          legacyVisual.styleCustom,
+          legacyAdaptation,
+        );
+      }
+      parsed.schemaVersion = 3;
+      migrated = true;
+    }
+
+    if (raw && migrated) saveSettingsToVariables(parsed);
 
     // Backward compatibility: If endpoint exists but baseUrl is empty, derive baseUrl
     if (parsed.provider.endpoint && !parsed.provider.baseUrl) {

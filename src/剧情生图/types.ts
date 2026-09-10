@@ -1,5 +1,12 @@
 export type ProviderProtocol = 'openai-images' | 'chat-completions';
 
+export type ModelAdaptation = 'nano-banana' | 'gpt-image';
+
+export type ModelStyleSelection = {
+  presetId: string;
+  custom: string;
+};
+
 export type AspectRatioPreset = '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '9:16' | '16:9' | 'custom';
 
 export type SizePreset = '1024x1024' | '1024x1536' | '1536x1024' | 'custom';
@@ -26,6 +33,7 @@ export type StoryImageSettings = {
 
   provider: {
     protocol: ProviderProtocol;
+    modelAdaptation: ModelAdaptation;
     baseUrl: string;
     endpoint: string;
     modelsEndpoint: string;
@@ -56,8 +64,7 @@ export type StoryImageSettings = {
     characterSpecializationEdits: Record<string, string>;
     compositionPreset: string;
     compositionCustom: string;
-    stylePreset: string;
-    styleCustom: string;
+    styleByModel: Record<ModelAdaptation, ModelStyleSelection>;
     lightingPreset: string;
     lightingCustom: string;
     qualityPreset: string;

@@ -1,6 +1,42 @@
 import { referenceDataUrl, type ImageReference } from './reference-library';
 import type { GeneratedImagePayload, StoryImageSettings } from './types';
-import { B2_STYLE_REFERENCE } from './style-reference';
+import { getStylePreset } from './style-presets';
+
+export type ReferencePromptMode = 'scene' | 'full-body-reference';
+
+export type ImageGenerationRequestOptions = {
+  referencePromptMode?: ReferencePromptMode;
+};
+
+export function buildGptPostReferenceInstruction(mode: ReferencePromptMode): string {
+  if (mode === 'full-body-reference') {
+    return `【全身参考图面部重绘协议｜最高优先级】
+这是同一人物在另一个时间、另一种构图和光线下拍摄的全新全身照片，不是把输入照片的人脸直接延伸或粘贴到新身体上。
+
+输入面部图只用于识别以下稳定身份特征：脸部轮廓、五官形状、五官相对间距、发际线和人物辨识度。
+
+在调用生图工具前，先观察输入图中的四项旧拍摄状态：
+1. 表情与面部肌肉状态；
+2. 嘴唇开合与嘴角状态；
+3. 视线方向；
+4. 头部转向、倾斜与俯仰。
+
+然后根据本次拍照方式与人物气质确定一个明确的新拍摄状态。新状态必须在上述四项中至少有三项与输入图明显不同，并把这些差异落实到生成结果。
+
+整张脸必须在新状态下重新渲染，包括眉眼张力、眼睑开合、瞳孔方向、嘴角、唇部开合、面颊张力、头部姿态，以及新环境下的面部光影。保持人物身份，不保留输入图的拍摄瞬间。
+
+验收标准：人物清楚地还是同一个人，但并非输入图中的同一拍摄瞬间；并排比较时，能够明显看出神态、嘴型、视线和头部姿态已经改变。`;
+  }
+
+  return `【剧情面部重绘协议｜最高优先级】
+输入图片只负责稳定人物身份与身体比例，不代表当前剧情中的拍摄瞬间。
+
+以当前剧情明确规定的表情、嘴型、视线、头部朝向和动作作为唯一动态目标。按照这个目标重新构建并渲染整张脸，包括眉眼肌肉、眼睑开合、瞳孔方向、嘴角、唇部开合、面颊张力、头部姿态，以及当前场景下的面部光影。
+
+只有当当前剧情文字明确要求相同状态时，生成结果才可以与参考图呈现相似神态；不得仅因为输入图已有某种微笑、凝视或头部角度就继续沿用。
+
+最终画面必须表现为同一个人物在当前剧情时刻的全新镜头，而不是把参考图的人脸状态复制到新场景中。`;
+}
 
 function createHeaders(apiKey: string): Record<string, string> {
   const headers: Record<string, string> = {
@@ -222,6 +258,7 @@ async function callChatCompletions(
   settings: StoryImageSettings,
   signal?: AbortSignal,
   references: ImageReference[] = [],
+  options: ImageGenerationRequestOptions = {},
 ): Promise<GeneratedImagePayload> {
   const { endpoint, apiKey, model } = settings.provider;
   if (!endpoint.trim()) {
@@ -234,16 +271,24 @@ async function callChatCompletions(
   }
 
   const content: any[] = [{ type: 'text', text: finalPrompt }];
-  if (settings.visual.stylePreset === 'B2')
+  const styleSelection = settings.visual.styleByModel[settings.provider.modelAdaptation];
+  const styleReference = getStylePreset(settings.provider.modelAdaptation, styleSelection.presetId)?.styleReference;
+  if (styleReference)
     content.push(
-      { type: 'text', text: '下一张是 B2 画法参考，不是角色身份参考。' },
-      { type: 'image_url', image_url: { url: B2_STYLE_REFERENCE } },
+      { type: 'text', text: styleReference.label },
+      { type: 'image_url', image_url: { url: styleReference.imageUrl } },
     );
   for (const ref of references)
     content.push(
       { type: 'text', text: ref.label },
       { type: 'image_url', image_url: { url: await referenceDataUrl(ref.url, signal) } },
     );
+  if (settings.provider.modelAdaptation === 'gpt-image' && references.length > 0) {
+    content.push({
+      type: 'text',
+      text: buildGptPostReferenceInstruction(options.referencePromptMode ?? 'scene'),
+    });
+  }
   const body = {
     model: modelName,
     stream: false,
@@ -294,21 +339,18 @@ export async function requestImageGeneration(
   settings: StoryImageSettings,
   signal?: AbortSignal,
   references: ImageReference[] = [],
+  options: ImageGenerationRequestOptions = {},
 ): Promise<GeneratedImagePayload> {
-  if (
-    (references.length > 0 || settings.visual.stylePreset === 'B2') &&
-    settings.provider.protocol !== 'chat-completions'
-  ) {
-    const reason =
-      settings.visual.stylePreset === 'B2'
-        ? references.length
-          ? 'B2 画风参考图和角色参考图'
-          : 'B2 画风参考图'
-        : '角色参考图';
+  const styleSelection = settings.visual.styleByModel[settings.provider.modelAdaptation];
+  const hasStyleReference = Boolean(
+    getStylePreset(settings.provider.modelAdaptation, styleSelection.presetId)?.styleReference,
+  );
+  if ((references.length > 0 || hasStyleReference) && settings.provider.protocol !== 'chat-completions') {
+    const reason = hasStyleReference ? (references.length ? '画风参考图和角色参考图' : '画风参考图') : '角色参考图';
     throw new Error(`当前请求包含${reason}，请将生图协议切换为 Chat Completions，并使用支持图片输入的模型。`);
   }
   if (settings.provider.protocol === 'chat-completions') {
-    return await callChatCompletions(finalPrompt, settings, signal, references);
+    return await callChatCompletions(finalPrompt, settings, signal, references, options);
   } else {
     return await callOpenAIImages(finalPrompt, settings, signal);
   }

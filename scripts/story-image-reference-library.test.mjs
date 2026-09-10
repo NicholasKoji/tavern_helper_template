@@ -63,6 +63,26 @@ function loadReferenceLibraryFixture() {
     /角色卡已变化/,
     'stale generation owner must not save into the newly opened card',
   );
+
+  const references = f.api.selectCharacterReferences(['character-a'], 'full', {
+    enabled: true,
+    characters: [
+      {
+        id: 'character-a',
+        name: '角色甲',
+        aliases: [],
+        description: '稳定身份',
+        face: 'face.png',
+        body: 'body.png',
+        bodyFace: 'face.png',
+      },
+    ],
+  });
+  assert.equal(references.length, 2);
+  assert.match(references[0].label, /表情、嘴型、目光、头部朝向/);
+  assert.match(references[0].label, /当前画面必须按剧情重新设计/);
+  assert.match(references[1].label, /只保持稳定体型与身体比例/);
+  assert.match(references[1].label, /表情、嘴型、目光、头部朝向/);
 }
 
 {

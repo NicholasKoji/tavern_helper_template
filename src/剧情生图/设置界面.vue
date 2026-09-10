@@ -467,6 +467,35 @@
                   </div>
                 </div>
 
+                <div class="story-image-form-group">
+                  <label>模型适配</label>
+                  <div class="story-image-desc">
+                    选择与当前生图模型对应的提示词调校方案；此项仅影响风格提示，不会切换接口或模型。
+                  </div>
+                  <div class="story-image-protocol-cards">
+                    <button
+                      type="button"
+                      class="story-image-proto-card"
+                      :class="{ active: settings.provider.modelAdaptation === 'gpt-image' }"
+                      :aria-pressed="settings.provider.modelAdaptation === 'gpt-image'"
+                      @click="settings.provider.modelAdaptation = 'gpt-image'"
+                    >
+                      <span class="proto-card-title">GPT Image</span>
+                      <span class="proto-card-desc">适配 GPT Image 系列的自然语言生图</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="story-image-proto-card"
+                      :class="{ active: settings.provider.modelAdaptation === 'nano-banana' }"
+                      :aria-pressed="settings.provider.modelAdaptation === 'nano-banana'"
+                      @click="settings.provider.modelAdaptation = 'nano-banana'"
+                    >
+                      <span class="proto-card-title">Nano Banana</span>
+                      <span class="proto-card-desc">沿用现有七套 Nano Banana 调校</span>
+                    </button>
+                  </div>
+                </div>
+
                 <!-- 高级接口展开 -->
                 <div class="story-image-advanced-box">
                   <button
@@ -630,21 +659,14 @@
                 <div class="story-image-form-group">
                   <label>风格要求</label>
                   <div class="story-image-preset-combo">
-                    <select v-model="settings.visual.stylePreset" class="story-image-select">
-                      <option v-for="preset in STYLE_PRESETS" :key="preset.id" :value="preset.id">
+                    <select v-model="activeStylePresetId" class="story-image-select">
+                      <option v-for="preset in activeStylePresets" :key="preset.id" :value="preset.id">
                         {{ preset.label }}
                       </option>
-                      <option value="电影感叙事插画">电影感叙事插画（旧预设）</option>
-                      <option value="二次元精致动漫风">二次元精致动漫风</option>
-                      <option value="写实摄影质感">写实摄影质感</option>
-                      <option value="古典油画质感">古典油画质感</option>
-                      <option value="赛博朋克科幻风">赛博朋克科幻风</option>
-                      <option value="水墨国风意境">水墨国风意境</option>
-                      <option value="奇幻概念艺术">奇幻概念艺术</option>
                       <option value="custom">仅使用下方自定义文本</option>
                     </select>
                     <input
-                      v-model="settings.visual.styleCustom"
+                      v-model="activeStyleCustom"
                       type="text"
                       class="story-image-input"
                       placeholder="自定义风格补充说明（可选）"
@@ -1118,7 +1140,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { STYLE_PRESETS } from './style-presets';
+import { getStylePresets } from './style-presets';
 import { CHARACTER_SPECIALIZATIONS } from './character-specialization';
 import { storeToRefs } from 'pinia';
 import { deriveChatEndpoints, deriveEndpoints, fetchModels, useStoryImageSettingsStore } from './settings';
@@ -1143,6 +1165,19 @@ import type { AspectRatioPreset, CharacterMvuSettings, MvuTreeNode, PopoverActio
 
 const settingsStore = useStoryImageSettingsStore();
 const { settings } = storeToRefs(settingsStore);
+const activeStylePresets = computed(() => getStylePresets(settings.value.provider.modelAdaptation));
+const activeStylePresetId = computed({
+  get: () => settings.value.visual.styleByModel[settings.value.provider.modelAdaptation].presetId,
+  set: value => {
+    settings.value.visual.styleByModel[settings.value.provider.modelAdaptation].presetId = value;
+  },
+});
+const activeStyleCustom = computed({
+  get: () => settings.value.visual.styleByModel[settings.value.provider.modelAdaptation].custom,
+  set: value => {
+    settings.value.visual.styleByModel[settings.value.provider.modelAdaptation].custom = value;
+  },
+});
 const selectedSpecialization = computed(
   () =>
     CHARACTER_SPECIALIZATIONS.find(item => item.id === settings.value.visual.characterSpecialization) ??
