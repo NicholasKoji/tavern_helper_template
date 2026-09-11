@@ -137,6 +137,8 @@ function fixture() {
   f.callbacks.get('v1_s2')('save-prompt', 'edited-scene-2');
   await tick();
   assert.equal(f.state().scenes[1].scenePrompt, 'edited-scene-2');
+  assert.deepEqual(Array.from(f.state().scenes[1].characterIds), ['character-2']);
+  assert.equal(f.state().scenes[1].referenceFraming, 'full');
   assert.equal(f.state().scenes[1].history.length, 1);
   assert.equal(f.state().scenes[1].currentImage, undefined);
   assert.equal(f.state().scenes[0].currentImage.path, 'scene-1');

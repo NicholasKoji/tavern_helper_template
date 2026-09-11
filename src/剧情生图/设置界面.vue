@@ -343,6 +343,85 @@
                   <span>B. 生图模型 (Image Generator)</span>
                 </div>
 
+                <!-- 可复用的生图连接方案 -->
+                <div class="story-image-provider-profile">
+                  <div class="story-image-form-group">
+                    <label for="story-image-provider-profile-name">方案名称</label>
+                    <input
+                      id="story-image-provider-profile-name"
+                      v-model="providerProfileName"
+                      type="text"
+                      class="story-image-input"
+                      placeholder="例如：GPT Image 反代"
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div class="story-image-form-group">
+                    <label for="story-image-provider-profile-select">生图连接方案</label>
+                    <div class="story-image-provider-profile-row">
+                      <select
+                        id="story-image-provider-profile-select"
+                        :value="settings.activeProviderProfileId ?? ''"
+                        class="story-image-select"
+                        @change="onProviderProfileSelect"
+                      >
+                        <option value="">当前表单（未关联方案）</option>
+                        <option v-for="profile in settings.providerProfiles" :key="profile.id" :value="profile.id">
+                          {{ profile.name }} · {{ profile.model || '未选择模型' }}
+                        </option>
+                      </select>
+                      <div class="story-image-provider-profile-actions" aria-label="连接方案操作">
+                        <button
+                          type="button"
+                          class="story-image-btn story-image-btn-icon story-image-btn-secondary"
+                          :disabled="!providerProfileName.trim()"
+                          title="将当前连接另存为新方案"
+                          aria-label="将当前连接另存为新方案"
+                          @click="addProviderProfile"
+                        >
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="story-image-btn story-image-btn-icon story-image-btn-secondary"
+                          :class="{ 'is-attention': isProviderProfileDirty }"
+                          :disabled="!activeProviderProfile || !providerProfileName.trim()"
+                          title="更新当前方案"
+                          aria-label="更新当前方案"
+                          @click="updateProviderProfile"
+                        >
+                          <i class="fa-solid fa-floppy-disk"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="story-image-btn story-image-btn-icon story-image-btn-danger"
+                          :disabled="!activeProviderProfile"
+                          title="删除当前方案"
+                          aria-label="删除当前方案"
+                          @click="deleteProviderProfile"
+                        >
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      class="story-image-provider-profile-status"
+                      :class="{ 'is-dirty': isProviderProfileDirty || !activeProviderProfile }"
+                      role="status"
+                    >
+                      <i
+                        :class="
+                          activeProviderProfile && !isProviderProfileDirty
+                            ? 'fa-solid fa-circle-check'
+                            : 'fa-solid fa-circle-info'
+                        "
+                      ></i>
+                      <span>{{ providerProfileStatusText }}</span>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- 协议选择 -->
                 <div class="story-image-form-group">
                   <label>生图接口协议</label>
@@ -1173,7 +1252,15 @@ import {
   safeGetMvuData,
   saveCharacterMvuSettings,
 } from './mvu-state';
-import type { AspectRatioPreset, CharacterMvuSettings, MvuTreeNode, PopoverAction, ProviderProtocol } from './types';
+import type {
+  AspectRatioPreset,
+  CharacterMvuSettings,
+  ImageProviderSettings,
+  MvuTreeNode,
+  PopoverAction,
+  ProviderProfile,
+  ProviderProtocol,
+} from './types';
 
 const settingsStore = useStoryImageSettingsStore();
 const { settings } = storeToRefs(settingsStore);
@@ -1342,6 +1429,173 @@ const showApiKey = ref(false);
 const showAdvancedEndpoints = ref(false);
 const isFetchingModels = ref(false);
 const fetchStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+
+const activeProviderProfile = computed(
+  () => settings.value.providerProfiles.find(profile => profile.id === settings.value.activeProviderProfileId) ?? null,
+);
+const providerProfileName = ref(activeProviderProfile.value?.name ?? '');
+
+function providerSnapshot(provider: ImageProviderSettings): Omit<ProviderProfile, 'id' | 'name'> {
+  return {
+    protocol: provider.protocol,
+    modelAdaptation: provider.modelAdaptation,
+    baseUrl: provider.baseUrl.trim(),
+    endpoint: provider.endpoint.trim(),
+    modelsEndpoint: provider.modelsEndpoint.trim(),
+    apiKey: provider.apiKey.trim(),
+    model: provider.model.trim(),
+    customEndpointOverride: provider.customEndpointOverride,
+    timeoutMs: provider.timeoutMs,
+  };
+}
+
+function normalizedProfile(profile: ProviderProfile): Omit<ProviderProfile, 'id' | 'name'> {
+  return {
+    protocol: profile.protocol,
+    modelAdaptation: profile.modelAdaptation,
+    baseUrl: profile.baseUrl.trim(),
+    endpoint: profile.endpoint.trim(),
+    modelsEndpoint: profile.modelsEndpoint.trim(),
+    apiKey: profile.apiKey.trim(),
+    model: profile.model.trim(),
+    customEndpointOverride: profile.customEndpointOverride,
+    timeoutMs: profile.timeoutMs,
+  };
+}
+
+const isProviderProfileDirty = computed(() => {
+  const profile = activeProviderProfile.value;
+  if (!profile) return true;
+  return (
+    providerProfileName.value.trim() !== profile.name ||
+    JSON.stringify(providerSnapshot(settings.value.provider)) !== JSON.stringify(normalizedProfile(profile))
+  );
+});
+
+const providerProfileStatusText = computed(() => {
+  if (!activeProviderProfile.value) return '当前连接尚未保存为方案';
+  if (isProviderProfileDirty.value) return '当前表单有未保存到方案的修改';
+  return `正在使用“${activeProviderProfile.value.name}”`;
+});
+
+function notifyProviderProfile(type: 'success' | 'warning' | 'error', message: string) {
+  if (typeof toastr !== 'undefined' && toastr[type]) toastr[type](message);
+}
+
+function syncProviderControls() {
+  baseUrlInputValue.value = settings.value.provider.baseUrl || '';
+  modelSelectValue.value = settings.value.provider.availableModels?.includes(settings.value.provider.model)
+    ? settings.value.provider.model
+    : '__custom__';
+  showApiKey.value = false;
+  fetchStatus.value = null;
+}
+
+function createProviderProfileId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `provider-profile-${crypto.randomUUID()}`;
+  }
+  return `provider-profile-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function hasDuplicateProviderProfileName(name: string, ignoredId?: string): boolean {
+  const normalizedName = name.trim().toLocaleLowerCase();
+  return settings.value.providerProfiles.some(
+    profile => profile.id !== ignoredId && profile.name.trim().toLocaleLowerCase() === normalizedName,
+  );
+}
+
+function applyProviderProfile(profile: ProviderProfile) {
+  settings.value.provider = {
+    ...normalizedProfile(profile),
+    availableModels: [],
+  };
+  settings.value.activeProviderProfileId = profile.id;
+  providerProfileName.value = profile.name;
+  syncProviderControls();
+}
+
+function onProviderProfileSelect(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const nextId = select.value;
+  const previousId = settings.value.activeProviderProfileId ?? '';
+  if (nextId === previousId) return;
+
+  if (
+    isProviderProfileDirty.value &&
+    !window.confirm('当前表单有未保存到方案的修改，切换后这些修改会被替换。继续切换吗？')
+  ) {
+    select.value = previousId;
+    return;
+  }
+
+  if (!nextId) {
+    settings.value.activeProviderProfileId = null;
+    providerProfileName.value = '';
+    return;
+  }
+
+  const profile = settings.value.providerProfiles.find(item => item.id === nextId);
+  if (!profile) {
+    select.value = previousId;
+    notifyProviderProfile('error', '连接方案不存在，请重新打开设置后再试');
+    return;
+  }
+  applyProviderProfile(profile);
+}
+
+function addProviderProfile() {
+  commitBaseUrl();
+  const name = providerProfileName.value.trim();
+  if (!name) {
+    notifyProviderProfile('warning', '请先填写方案名称');
+    return;
+  }
+  if (hasDuplicateProviderProfileName(name)) {
+    notifyProviderProfile('warning', `已存在名为“${name}”的连接方案`);
+    return;
+  }
+
+  const profile: ProviderProfile = {
+    id: createProviderProfileId(),
+    name,
+    ...providerSnapshot(settings.value.provider),
+  };
+  settings.value.providerProfiles.push(profile);
+  settings.value.activeProviderProfileId = profile.id;
+  providerProfileName.value = profile.name;
+  notifyProviderProfile('success', `已新增连接方案“${name}”`);
+}
+
+function updateProviderProfile() {
+  commitBaseUrl();
+  const profile = activeProviderProfile.value;
+  const name = providerProfileName.value.trim();
+  if (!profile || !name) {
+    notifyProviderProfile('warning', '请先选择方案并填写方案名称');
+    return;
+  }
+  if (hasDuplicateProviderProfileName(name, profile.id)) {
+    notifyProviderProfile('warning', `已存在名为“${name}”的连接方案`);
+    return;
+  }
+
+  Object.assign(profile, { name, ...providerSnapshot(settings.value.provider) });
+  providerProfileName.value = name;
+  notifyProviderProfile('success', `已更新连接方案“${name}”`);
+}
+
+function deleteProviderProfile() {
+  const profile = activeProviderProfile.value;
+  if (!profile) return;
+  if (!window.confirm(`删除连接方案“${profile.name}”？当前表单中的连接信息会保留。`)) return;
+
+  const index = settings.value.providerProfiles.findIndex(item => item.id === profile.id);
+  if (index >= 0) settings.value.providerProfiles.splice(index, 1);
+  settings.value.activeProviderProfileId = null;
+  providerProfileName.value = profile.name;
+  notifyProviderProfile('success', `已删除连接方案“${profile.name}”`);
+}
 
 const modalEl = ref<HTMLElement | null>(null);
 const modalBackdropEl = ref<HTMLDialogElement | null>(null);
@@ -1911,6 +2165,7 @@ watch(isModalOpen, isOpen => {
     modelSelectValue.value = settings.value.provider.availableModels?.includes(settings.value.provider.model)
       ? settings.value.provider.model
       : '__custom__';
+    providerProfileName.value = activeProviderProfile.value?.name ?? '';
     plannerFetchStatus.value = null;
     fetchStatus.value = null;
 

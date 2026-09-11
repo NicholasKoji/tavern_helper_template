@@ -210,7 +210,7 @@ export async function fetchModels(
 
 export const StoryImageSettingsSchema = z
   .object({
-    schemaVersion: z.coerce.number().int().prefault(3),
+    schemaVersion: z.coerce.number().int().prefault(4),
     enabled: z.boolean().prefault(true),
 
     planner: z
@@ -245,6 +245,25 @@ export const StoryImageSettingsSchema = z
         timeoutMs: z.coerce.number().prefault(DEFAULT_PROVIDER_TIMEOUT_MS),
       })
       .prefault({}),
+
+    providerProfiles: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().min(1),
+          protocol: z.enum(['openai-images', 'chat-completions']),
+          modelAdaptation: z.enum(['nano-banana', 'gpt-image'] satisfies [ModelAdaptation, ...ModelAdaptation[]]),
+          baseUrl: z.string(),
+          endpoint: z.string(),
+          modelsEndpoint: z.string(),
+          apiKey: z.string(),
+          model: z.string(),
+          customEndpointOverride: z.boolean(),
+          timeoutMs: z.coerce.number(),
+        }),
+      )
+      .prefault([]),
+    activeProviderProfileId: z.string().nullable().prefault(null),
 
     behavior: z
       .object({
@@ -361,6 +380,42 @@ export function loadSettingsFromVariables(): StoryImageSettings {
         );
       }
       parsed.schemaVersion = 3;
+      migrated = true;
+    }
+
+    // v4：将生图连接参数保存为可命名方案；旧配置自动成为首个“当前配置”方案。
+    if (rawSchemaVersion < 4) {
+      if (parsed.provider.endpoint && !parsed.provider.baseUrl) {
+        const derived = deriveEndpoints(parsed.provider.endpoint, parsed.provider.protocol);
+        parsed.provider.baseUrl = derived.baseUrl;
+        if (!parsed.provider.modelsEndpoint) parsed.provider.modelsEndpoint = derived.modelsEndpoint;
+      }
+      const migratedProfileId = 'provider-profile-current';
+      parsed.providerProfiles = [
+        {
+          id: migratedProfileId,
+          name: '当前配置',
+          protocol: parsed.provider.protocol,
+          modelAdaptation: parsed.provider.modelAdaptation,
+          baseUrl: parsed.provider.baseUrl,
+          endpoint: parsed.provider.endpoint,
+          modelsEndpoint: parsed.provider.modelsEndpoint,
+          apiKey: parsed.provider.apiKey,
+          model: parsed.provider.model,
+          customEndpointOverride: parsed.provider.customEndpointOverride,
+          timeoutMs: parsed.provider.timeoutMs,
+        },
+      ];
+      parsed.activeProviderProfileId = migratedProfileId;
+      parsed.schemaVersion = 4;
+      migrated = true;
+    }
+
+    if (
+      parsed.activeProviderProfileId &&
+      !parsed.providerProfiles.some(profile => profile.id === parsed.activeProviderProfileId)
+    ) {
+      parsed.activeProviderProfileId = null;
       migrated = true;
     }
 

@@ -208,8 +208,6 @@ async function sceneAction(
           scenePrompt: (payload as string).trim(),
           operationVersion: s.operationVersion + 1,
           promptEditedByUser: true,
-          characterIds: [],
-          referenceFraming: undefined,
           status: 'planned',
           queued: false,
           currentImage: undefined,

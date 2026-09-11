@@ -494,8 +494,6 @@ async function handleSlotAction(
           return {
             ...prev,
             scenePrompt: newPrompt,
-            characterIds: [], // 手动改写可能改变人物，清除旧身份绑定
-            referenceFraming: undefined,
             promptEditedByUser: true,
             status: 'planned',
             currentImage: undefined,

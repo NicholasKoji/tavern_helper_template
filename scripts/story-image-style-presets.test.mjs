@@ -55,17 +55,26 @@ assert.equal(
   false,
 );
 
-const settingsModule = loadTypeScript('src/剧情生图/settings.ts', {
-  zod: { z },
-  pinia: { defineStore },
-  vue: { ref, watch },
-  klona: { klona },
-  './types': {},
-  './style-presets': { DEFAULT_STYLE_PRESET_IDS: styles.DEFAULT_STYLE_PRESET_IDS },
-});
+const settingsModule = loadTypeScript(
+  'src/剧情生图/settings.ts',
+  {
+    zod: { z },
+    pinia: { defineStore },
+    vue: { ref, watch },
+    klona: { klona },
+    './types': {},
+    './style-presets': { DEFAULT_STYLE_PRESET_IDS: styles.DEFAULT_STYLE_PRESET_IDS },
+  },
+  {
+    getVariables: () => ({}),
+    getScriptId: () => '',
+    updateVariablesWith: () => {},
+  },
+);
 const defaultSettings = settingsModule.StoryImageSettingsSchema.parse({});
 assert.equal(defaultSettings.provider.modelAdaptation, 'nano-banana');
-assert.equal(defaultSettings.schemaVersion, 3);
+assert.equal(defaultSettings.schemaVersion, 4);
+assert.deepEqual([...defaultSettings.providerProfiles], []);
 assert.equal(defaultSettings.visual.styleByModel['nano-banana'].presetId, 'douyin-beauty-nano-banana');
 assert.equal(defaultSettings.visual.styleByModel['gpt-image'].presetId, 'bright-fashion-photo-gpt-image');
 assert.throws(
@@ -102,6 +111,11 @@ assert.deepEqual(
     custom: '古典油画质感\n厚涂',
   },
 );
+const migratedSettings = settingsModule.loadSettingsFromVariables();
+assert.equal(migratedSettings.schemaVersion, 4);
+assert.equal(migratedSettings.providerProfiles.length, 1);
+assert.equal(migratedSettings.providerProfiles[0].name, '当前配置');
+assert.equal(migratedSettings.activeProviderProfileId, migratedSettings.providerProfiles[0].id);
 
 const planner = loadTypeScript('src/剧情生图/planner.ts', {
   './style-presets': styles,
@@ -148,6 +162,12 @@ assert.match(legacyRequirements, /East Asian influencer/);
 assert.doesNotMatch(legacyRequirements, /Content priority:/);
 
 const settingsUi = fs.readFileSync('src/剧情生图/设置界面.vue', 'utf8');
+const profileNameIndex = settingsUi.indexOf('for="story-image-provider-profile-name"');
+const providerProtocolIndex = settingsUi.indexOf('<label>生图接口协议</label>');
+assert.ok(profileNameIndex >= 0 && providerProtocolIndex > profileNameIndex);
+assert.match(settingsUi, /@click="addProviderProfile"/);
+assert.match(settingsUi, /@click="updateProviderProfile"/);
+assert.match(settingsUi, /@click="deleteProviderProfile"/);
 const modelIndex = settingsUi.indexOf('<label>生图模型 (Model)</label>');
 const adaptationIndex = settingsUi.indexOf('<label>模型适配</label>');
 const canvasTabIndex = settingsUi.indexOf('<!-- TAB 2: 画布与视觉 -->');

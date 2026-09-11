@@ -13,6 +13,24 @@ export type SizePreset = '1024x1024' | '1024x1536' | '1536x1024' | 'custom';
 
 export type PlannerConnectionMode = 'follow-tavern' | 'custom-openai';
 
+export type ImageProviderSettings = {
+  protocol: ProviderProtocol;
+  modelAdaptation: ModelAdaptation;
+  baseUrl: string;
+  endpoint: string;
+  modelsEndpoint: string;
+  apiKey: string;
+  model: string;
+  availableModels: string[];
+  customEndpointOverride: boolean;
+  timeoutMs: number;
+};
+
+export type ProviderProfile = Omit<ImageProviderSettings, 'availableModels'> & {
+  id: string;
+  name: string;
+};
+
 export type StoryImageSettings = {
   schemaVersion: number;
   enabled: boolean;
@@ -31,18 +49,9 @@ export type StoryImageSettings = {
     customEndpointOverride: boolean;
   };
 
-  provider: {
-    protocol: ProviderProtocol;
-    modelAdaptation: ModelAdaptation;
-    baseUrl: string;
-    endpoint: string;
-    modelsEndpoint: string;
-    apiKey: string;
-    model: string;
-    availableModels: string[];
-    customEndpointOverride: boolean;
-    timeoutMs: number;
-  };
+  provider: ImageProviderSettings;
+  providerProfiles: ProviderProfile[];
+  activeProviderProfileId: string | null;
 
   behavior: {
     autoPlanEnabled: boolean;
