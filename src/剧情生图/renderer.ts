@@ -1,4 +1,10 @@
-import type { SlotAction, StoryImageSwipeState, SwipeAnchor } from './types';
+import type {
+  PromptRefinementPayload,
+  SlotAction,
+  SlotActionPayload,
+  StoryImageSwipeState,
+  SwipeAnchor,
+} from './types';
 import { tavernDocument } from './tavern-dom';
 
 export const BLOCK_TAGS = new Set([
@@ -195,6 +201,16 @@ export function findAnchorTargetElement($mesText: JQuery, anchor: SwipeAnchor): 
 
 // 记录处于提示词编辑展开态的槽位
 const editingSlots = new Set<string>();
+type PromptRefinementUiState = {
+  requestId: number;
+  status: 'idle' | 'loading';
+  direction: string;
+  draftPrompt?: string;
+  message?: string;
+  error?: string;
+};
+const promptRefinementStates = new Map<string, PromptRefinementUiState>();
+let promptRefinementRequestId = 0;
 
 export function openSlotPromptEditor(messageId: number, swipeId: number): void {
   editingSlots.add(`${messageId}:${swipeId}`);
@@ -207,6 +223,54 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function renderPromptEditPanel(slotKey: string, state: StoryImageSwipeState, prompt: string, title: string): string {
+  const refinement = promptRefinementStates.get(slotKey);
+  const isRefining = refinement?.status === 'loading';
+  const displayedPrompt = refinement?.draftPrompt ?? prompt;
+  const direction = refinement?.direction ?? '';
+  const refinementHtml = state.sceneId
+    ? `
+      <div class="story-image-refinement-row">
+        <input
+          type="text"
+          class="story-image-refinement-input"
+          value="${escapeHtml(direction)}"
+          placeholder="输入希望 AI 如何优化这个场景"
+          aria-label="场景提示词优化方向"
+          ${isRefining ? 'readonly aria-busy="true"' : ''}
+        />
+        <button
+          type="button"
+          class="story-image-btn story-image-btn-icon story-image-btn-secondary story-image-refinement-btn"
+          data-action="${isRefining ? 'cancel-refine' : 'refine-prompt'}"
+          title="${isRefining ? '取消 AI 优化' : 'AI 优化场景提示词'}"
+          aria-label="${isRefining ? '取消 AI 优化' : 'AI 优化场景提示词'}"
+        >
+          <i class="fa-solid ${isRefining ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}"></i>
+        </button>
+      </div>
+      ${isRefining ? '<p class="story-image-refinement-status" role="status">AI 正在优化当前草稿，点击右侧图标可取消。</p>' : ''}
+      ${refinement?.message ? `<p class="story-image-refinement-status is-success" role="status">${escapeHtml(refinement.message)}</p>` : ''}
+      ${refinement?.error ? `<p class="story-image-refinement-status is-error" role="alert">${escapeHtml(refinement.error)}</p>` : ''}
+    `
+    : '';
+
+  return `
+    <div class="story-image-edit-panel">
+      <div class="story-image-edit-title">${escapeHtml(title)}</div>
+      <textarea class="story-image-textarea" rows="3" ${isRefining ? 'readonly aria-busy="true"' : ''}>${escapeHtml(displayedPrompt)}</textarea>
+      ${refinementHtml}
+      <div class="story-image-edit-actions">
+        <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="save-prompt" ${isRefining ? 'disabled' : ''}>
+          <i class="fa-solid fa-check"></i>
+          <span>保存并返回待生成</span>
+        </button>
+        <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-secondary" data-action="cancel-edit">取消</button>
+      </div>
+    </div>
+  `;
 }
 
 function renderHistoryHtml(state: StoryImageSwipeState): string {
@@ -255,10 +319,16 @@ function renderHistoryHtml(state: StoryImageSwipeState): string {
 
 function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): string {
   const isEditing = editingSlots.has(slotKey);
+  const error = state.status === 'error' ? state.error : undefined;
+  const errorStage = error?.stage || 'general';
+  const isPlanningError =
+    state.status === 'error' && (errorStage === 'planning' || (errorStage === 'render' && !state.sceneId));
+  const isSceneError = state.status === 'error' && !isPlanningError;
+  const displayStatus = isSceneError ? (state.currentImage ? 'ready' : 'planned') : state.status;
 
   let bodyHtml = '';
 
-  switch (state.status) {
+  switch (displayStatus) {
     case 'planning': {
       bodyHtml = '';
       break;
@@ -266,7 +336,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
 
     case 'planned': {
       const summary = escapeHtml(state.sceneSummary || '本楼剧情画面');
-      const prompt = escapeHtml(state.scenePrompt || '');
+      const prompt = state.scenePrompt || '';
       const hasPrompt = Boolean(state.scenePrompt?.trim());
 
       bodyHtml = `
@@ -280,9 +350,9 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
               ${
                 hasPrompt
                   ? `
-                <button type="button" class="story-image-btn story-image-btn-primary" data-action="generate">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i>
-                  <span>生成图片</span>
+                <button type="button" class="story-image-btn story-image-btn-primary" data-action="${isSceneError ? 'retry-gen' : 'generate'}">
+                  <i class="fa-solid ${isSceneError ? 'fa-arrows-rotate' : 'fa-wand-magic-sparkles'}"></i>
+                  <span>${isSceneError ? '重新生图' : '生成图片'}</span>
                 </button>
                 <button type="button" class="story-image-btn story-image-btn-icon story-image-btn-secondary" data-action="toggle-edit" title="编辑提示词">
                   <i class="fa-solid fa-pen-to-square"></i>
@@ -297,23 +367,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
               }
             </div>
           </div>
-          ${
-            isEditing
-              ? `
-            <div class="story-image-edit-panel">
-              <div class="story-image-edit-title">修改此场景提示词：</div>
-              <textarea class="story-image-textarea" rows="3">${prompt}</textarea>
-              <div class="story-image-edit-actions">
-                <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="save-prompt">
-                  <i class="fa-solid fa-check"></i>
-                  <span>保存并返回待生成</span>
-                </button>
-                <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-secondary" data-action="cancel-edit">取消</button>
-              </div>
-            </div>
-          `
-              : ''
-          }
+          ${isEditing ? renderPromptEditPanel(slotKey, state, prompt, '修改此场景提示词：') : ''}
         </div>
       `;
       break;
@@ -373,7 +427,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
 
     case 'ready': {
       const current = state.currentImage;
-      const prompt = escapeHtml(state.scenePrompt || current?.finalPrompt || '');
+      const prompt = state.scenePrompt || current?.finalPrompt || '';
       const summary = escapeHtml(state.sceneSummary || '');
 
       bodyHtml = `
@@ -386,7 +440,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
             <div class="story-image-ready-actions">
               <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-accent" data-action="regenerate">
                 <i class="fa-solid fa-rotate-right"></i>
-                <span>重新生成</span>
+                <span>${isSceneError ? '重新生图' : '重新生成'}</span>
               </button>
               <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-icon story-image-btn-secondary" data-action="toggle-edit" title="修改提示词">
                 <i class="fa-solid fa-pen-to-square"></i>
@@ -395,19 +449,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
           </div>
           ${
             isEditing
-              ? `
-            <div class="story-image-edit-panel">
-              <div class="story-image-edit-title">修改本楼场景提示词（当前图将移入旧图折叠）：</div>
-              <textarea class="story-image-textarea" rows="3">${prompt}</textarea>
-              <div class="story-image-edit-actions">
-                <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="save-prompt">
-                  <i class="fa-solid fa-check"></i>
-                  <span>保存并返回待生成</span>
-                </button>
-                <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-secondary" data-action="cancel-edit">取消</button>
-              </div>
-            </div>
-          `
+              ? renderPromptEditPanel(slotKey, state, prompt, '修改本楼场景提示词（当前图将移入旧图折叠）：')
               : ''
           }
         </div>
@@ -416,9 +458,6 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
     }
 
     case 'error': {
-      const error = state.error;
-      const stage = error?.stage || 'general';
-      const isPlanningError = stage === 'planning' || (stage === 'render' && !state.sceneId);
       const msg = escapeHtml(error?.message || '发生未知错误');
 
       bodyHtml = `
@@ -428,17 +467,10 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
             <span class="story-image-error-msg">${isPlanningError ? '提示词生成失败' : '生图失败'}: ${msg}</span>
           </div>
           <div class="story-image-error-actions">
-            ${
-              isPlanningError
-                ? `<button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="retry-plan">
-                    <i class="fa-solid fa-arrows-rotate"></i>
-                    <span>重试生成提示词</span>
-                   </button>`
-                : `<button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="retry-gen">
-                    <i class="fa-solid fa-arrows-rotate"></i>
-                    <span>重试生成</span>
-                   </button>`
-            }
+            <button type="button" class="story-image-btn story-image-btn-sm story-image-btn-primary" data-action="retry-plan">
+              <i class="fa-solid fa-arrows-rotate"></i>
+              <span>重试生成提示词</span>
+            </button>
           </div>
         </div>
       `;
@@ -446,15 +478,39 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
     }
   }
 
+  const rawSceneError = error?.message || '发生未知错误';
+  const compactSceneError = rawSceneError.length > 180 ? `${rawSceneError.slice(0, 180)}…` : rawSceneError;
+  const sceneErrorHtml = isSceneError
+    ? `
+      <div class="story-image-error-box story-image-error-inline" role="alert">
+        <div class="story-image-error-header">
+          <i class="fa-solid fa-triangle-exclamation story-image-error-icon"></i>
+          <span class="story-image-error-msg">生图失败：${escapeHtml(compactSceneError)}</span>
+        </div>
+        ${
+          compactSceneError !== rawSceneError
+            ? `<details class="story-image-error-details">
+                <summary>查看完整错误</summary>
+                <div class="story-image-error-detail-text">${escapeHtml(rawSceneError)}</div>
+               </details>`
+            : ''
+        }
+      </div>
+    `
+    : '';
   const historyHtml = renderHistoryHtml(state);
-  return `${bodyHtml}${historyHtml}`;
+  return `${bodyHtml}${sceneErrorHtml}${historyHtml}`;
 }
 
 export function renderSlot(
   messageId: number,
   swipeId: number,
   state: StoryImageSwipeState,
-  onAction: (action: SlotAction, newPrompt?: string, state?: StoryImageSwipeState) => void,
+  onAction: (
+    action: SlotAction,
+    payload?: SlotActionPayload,
+    state?: StoryImageSwipeState,
+  ) => string | void | Promise<string | void>,
 ): void {
   const $mes = retrieveDisplayedMessage(messageId);
   if (!$mes || !$mes.length) {
@@ -537,10 +593,15 @@ export function renderSlot(
   }
 
   // 保留同一场景尚未保存的编辑草稿，其他场景更新不应清空它。
+  const refinementAtRender = promptRefinementStates.get(slotKey);
   const draftPrompt =
-    editingSlots.has(slotKey) && $slot.data('scene-prompt') === (state.scenePrompt ?? '')
+    refinementAtRender?.draftPrompt ??
+    (editingSlots.has(slotKey) && $slot.data('scene-prompt') === (state.scenePrompt ?? '')
       ? $slot.find('.story-image-textarea').val()
-      : undefined;
+      : undefined);
+  const draftDirection = editingSlots.has(slotKey)
+    ? ($slot.find('.story-image-refinement-input').val() ?? refinementAtRender?.direction)
+    : undefined;
   // 更新内容
   $slot.html(
     (state.sceneId
@@ -550,14 +611,23 @@ export function renderSlot(
 
   $slot.data('scene-prompt', state.scenePrompt ?? '');
   if (draftPrompt !== undefined) $slot.find('.story-image-textarea').val(draftPrompt as string);
+  if (draftDirection !== undefined) $slot.find('.story-image-refinement-input').val(draftDirection as string);
+  if (refinementAtRender?.draftPrompt !== undefined && refinementAtRender.status !== 'loading') {
+    delete refinementAtRender.draftPrompt;
+  }
   // 绑定事件
-  $slot.off('click').on('click', '[data-action]', function (e) {
+  $slot.off('click').on('click', '[data-action]', async function (e) {
     e.stopPropagation();
     const action = $(this).attr('data-action') as SlotAction;
     if (!action) return;
 
     if (action === 'toggle-edit') {
       if (editingSlots.has(slotKey)) {
+        const refinement = promptRefinementStates.get(slotKey);
+        if (refinement?.status === 'loading') {
+          void Promise.resolve(onAction('cancel-refine', undefined, state)).catch(() => {});
+        }
+        promptRefinementStates.delete(slotKey);
         editingSlots.delete(slotKey);
       } else {
         editingSlots.add(slotKey);
@@ -567,8 +637,77 @@ export function renderSlot(
     }
 
     if (action === 'cancel-edit') {
+      const refinement = promptRefinementStates.get(slotKey);
+      if (refinement?.status === 'loading') {
+        void Promise.resolve(onAction('cancel-refine', undefined, state)).catch(() => {});
+      }
+      promptRefinementStates.delete(slotKey);
       editingSlots.delete(slotKey);
       renderSlot(messageId, swipeId, state, onAction);
+      return;
+    }
+
+    if (action === 'cancel-refine') {
+      const refinement = promptRefinementStates.get(slotKey);
+      if (!refinement || refinement.status !== 'loading') return;
+      refinement.requestId = ++promptRefinementRequestId;
+      refinement.status = 'idle';
+      refinement.message = '已取消本次 AI 优化，当前草稿未变。';
+      refinement.error = undefined;
+      void Promise.resolve(onAction('cancel-refine', undefined, state)).catch(() => {});
+      renderSlot(messageId, swipeId, state, onAction);
+      return;
+    }
+
+    if (action === 'refine-prompt') {
+      const scenePrompt = String($slot.find('.story-image-textarea').val() ?? '').trim();
+      const direction = String($slot.find('.story-image-refinement-input').val() ?? '').trim();
+      if (!scenePrompt) {
+        toastr.warning('场景提示词不能为空');
+        return;
+      }
+      if (!direction) {
+        toastr.warning('请填写优化方向');
+        $slot.find('.story-image-refinement-input').focus();
+        return;
+      }
+
+      const requestId = ++promptRefinementRequestId;
+      promptRefinementStates.set(slotKey, {
+        requestId,
+        status: 'loading',
+        direction,
+        draftPrompt: scenePrompt,
+      });
+      renderSlot(messageId, swipeId, state, onAction);
+
+      const payload: PromptRefinementPayload = { scenePrompt, direction };
+      try {
+        const result = await onAction('refine-prompt', payload, state);
+        const latest = promptRefinementStates.get(slotKey);
+        if (!latest || latest.requestId !== requestId) return;
+        latest.status = 'idle';
+        latest.error = undefined;
+        if (typeof result === 'string' && result.trim()) {
+          latest.draftPrompt = result.trim();
+          latest.message = 'AI 优化结果已填入上方，请确认后保存。';
+        } else {
+          latest.draftPrompt = scenePrompt;
+          latest.message = '场景状态已变化，本次优化结果未采用。';
+        }
+        renderSlot(messageId, swipeId, state, onAction);
+      } catch (error) {
+        const latest = promptRefinementStates.get(slotKey);
+        if (!latest || latest.requestId !== requestId) return;
+        latest.status = 'idle';
+        latest.draftPrompt = scenePrompt;
+        latest.message = undefined;
+        latest.error =
+          error instanceof Error && error.name === 'AbortError'
+            ? '本次 AI 优化已取消，当前草稿未变。'
+            : `AI 优化失败：${String(error instanceof Error ? error.message : error)}`;
+        renderSlot(messageId, swipeId, state, onAction);
+      }
       return;
     }
 
@@ -579,6 +718,7 @@ export function renderSlot(
         toastr.warning('场景提示词不能为空');
         return;
       }
+      promptRefinementStates.delete(slotKey);
       editingSlots.delete(slotKey);
       onAction('save-prompt', newPrompt, state);
       return;
@@ -586,6 +726,20 @@ export function renderSlot(
 
     onAction(action, undefined, state);
   });
+
+  $slot
+    .off('input.story-image-refinement')
+    .on('input.story-image-refinement', '.story-image-textarea, .story-image-refinement-input', () => {
+      const refinement = promptRefinementStates.get(slotKey) ?? {
+        requestId: 0,
+        status: 'idle' as const,
+        direction: '',
+      };
+      refinement.direction = String($slot.find('.story-image-refinement-input').val() ?? '');
+      refinement.message = undefined;
+      refinement.error = undefined;
+      promptRefinementStates.set(slotKey, refinement);
+    });
 }
 
 export function removeSlot(messageId: number, swipeId?: number, doc?: Document): void {
@@ -593,9 +747,14 @@ export function removeSlot(messageId: number, swipeId?: number, doc?: Document):
   if (swipeId !== undefined) {
     const slotKey = `${messageId}:${swipeId}`;
     editingSlots.delete(slotKey);
+    promptRefinementStates.delete(slotKey);
     $(`[data-story-image-slot="${slotKey}"], [data-story-image-slot^="${slotKey}:"]`, targetDoc).remove();
     for (const key of editingSlots) if (key.startsWith(`${slotKey}:`)) editingSlots.delete(key);
+    for (const key of promptRefinementStates.keys())
+      if (key.startsWith(`${slotKey}:`)) promptRefinementStates.delete(key);
   } else {
     $(`[data-story-image-slot^="${messageId}:"]`, targetDoc).remove();
+    for (const key of promptRefinementStates.keys())
+      if (key.startsWith(`${messageId}:`)) promptRefinementStates.delete(key);
   }
 }

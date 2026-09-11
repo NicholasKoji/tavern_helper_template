@@ -131,6 +131,13 @@ export type StoryImageMessageData = {
   swipes: Record<string, StoryImageSwipeState>;
 };
 
+export type PromptRefinementPayload = {
+  scenePrompt: string;
+  direction: string;
+};
+
+export type SlotActionPayload = string | PromptRefinementPayload;
+
 export type SlotAction =
   | 'generate'
   | 'cancel'
@@ -139,6 +146,8 @@ export type SlotAction =
   | 'regenerate'
   | 'toggle-edit'
   | 'save-prompt'
+  | 'refine-prompt'
+  | 'cancel-refine'
   | 'cancel-edit'
   | 'anchor-failed'
   | 'anchor-resolved';

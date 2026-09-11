@@ -496,6 +496,65 @@ dialog.story-image-preview {
     }
   }
 
+  .story-image-refinement-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .story-image-refinement-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 6px 10px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.25));
+    border-radius: 6px;
+    background: var(--black30a, rgba(0, 0, 0, 0.35));
+    color: var(--SmartThemeBodyColor, #eee);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+
+    &::placeholder {
+      color: var(--SmartThemeBodyColor, #aaa);
+      opacity: 0.65;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--SmartThemeQuoteColor, #7ba0cd);
+    }
+
+    &[readonly] {
+      opacity: 0.72;
+      cursor: wait;
+    }
+  }
+
+  .story-image-refinement-btn {
+    flex: 0 0 34px;
+  }
+
+  .story-image-refinement-status {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--SmartThemeBodyColor, #bbb);
+    overflow-wrap: anywhere;
+
+    &.is-success {
+      color: var(--SmartThemeQuoteColor, #8ab4f8);
+    }
+
+    &.is-error {
+      color: #ff8585;
+    }
+  }
+
   .story-image-edit-actions {
     display: flex;
     justify-content: flex-end;
@@ -649,6 +708,46 @@ dialog.story-image-preview {
     margin-top: 8px;
     display: flex;
     justify-content: flex-end;
+  }
+
+  &.story-image-error-inline {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(60, 20, 20, 0.2);
+
+    .story-image-error-header {
+      align-items: flex-start;
+    }
+
+    .story-image-error-icon {
+      margin-top: 2px;
+      flex: 0 0 auto;
+    }
+
+    .story-image-error-msg {
+      min-width: 0;
+      margin-top: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .story-image-error-details {
+      margin: 6px 0 0 26px;
+      font-size: 12.5px;
+      color: var(--SmartThemeBodyColor, #bbb);
+
+      summary {
+        width: fit-content;
+        cursor: pointer;
+        color: var(--SmartThemeQuoteColor, #8ab4f8);
+      }
+    }
+
+    .story-image-error-detail-text {
+      margin-top: 6px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 import { referenceRoster } from './reference-library';
-import type { PlannerResult, StoryImageSettings, SwipeAnchor } from './types';
+import type { PlannerResult, StoryImageSettings, StoryImageSwipeState, SwipeAnchor } from './types';
 import { getMessageText } from './message-state';
 import { getStylePreset } from './style-presets';
 import { getCharacterSpecialization } from './character-specialization';
@@ -296,8 +296,17 @@ function cleanAndParseJson(raw: unknown): any {
   return JSON.parse(str);
 }
 
-async function planWithCustomOpenAi(
-  plannerInput: string,
+type JsonSchemaDefinition = {
+  name: string;
+  description: string;
+  strict: boolean;
+  value: Record<string, unknown>;
+};
+
+async function requestJsonWithCustomOpenAi(
+  systemPrompt: string,
+  userInput: string,
+  jsonSchema: JsonSchemaDefinition,
   settings: StoryImageSettings,
   abortSignal?: AbortSignal,
 ): Promise<any> {
@@ -346,16 +355,16 @@ async function planWithCustomOpenAi(
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: PLANNER_SYSTEM_PROMPT },
-          { role: 'user', content: plannerInput },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userInput },
         ],
         response_format: {
           type: 'json_schema',
           json_schema: {
-            name: plannerJsonSchema.name,
-            description: plannerJsonSchema.description,
-            strict: plannerJsonSchema.strict,
-            schema: plannerJsonSchema.value,
+            name: jsonSchema.name,
+            description: jsonSchema.description,
+            strict: jsonSchema.strict,
+            schema: jsonSchema.value,
           },
         },
         stream: false,
@@ -381,10 +390,10 @@ async function planWithCustomOpenAi(
               {
                 role: 'system',
                 content:
-                  PLANNER_SYSTEM_PROMPT +
+                  systemPrompt +
                   '\n【重要】：请直接输出纯 JSON 字符串，严禁使用 markdown 语法包裹，严禁包含任何前缀或解释。',
               },
-              { role: 'user', content: plannerInput },
+              { role: 'user', content: userInput },
             ],
             stream: false,
           }),
@@ -426,6 +435,121 @@ async function planWithCustomOpenAi(
     if (abortSignal && onAbortListener) {
       abortSignal.removeEventListener('abort', onAbortListener);
     }
+  }
+}
+
+async function requestJsonWithTavern(
+  systemPrompt: string,
+  userInput: string,
+  jsonSchema: JsonSchemaDefinition,
+  generationId: string,
+  settings: StoryImageSettings,
+  onFallback?: (fallbackGenId: string) => void,
+  abortSignal?: AbortSignal,
+): Promise<any> {
+  const timeoutMs = Math.max(5000, settings.planner.timeoutMs || 60000);
+  const timeoutSeconds = Math.round(timeoutMs / 1000);
+  let currentGenId = generationId;
+
+  const stopCurrentGeneration = () => {
+    try {
+      stopGenerationById(currentGenId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  let timer: any = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      stopCurrentGeneration();
+      const timeoutErr = new Error(`提示词生成超时（${timeoutSeconds}秒）`);
+      timeoutErr.name = 'TimeoutError';
+      (timeoutErr as any).isTimeout = true;
+      reject(timeoutErr);
+    }, timeoutMs);
+  });
+
+  let removeAbortListener: (() => void) | null = null;
+  const abortPromise = new Promise<never>((_, reject) => {
+    if (!abortSignal) return;
+    const createAbortError = () => {
+      stopCurrentGeneration();
+      const abortErr = new Error('任务已取消', { cause: abortSignal.reason });
+      abortErr.name = 'AbortError';
+      return abortErr;
+    };
+    if (abortSignal.aborted) {
+      reject(createAbortError());
+      return;
+    }
+    const onAbort = () => reject(createAbortError());
+    abortSignal.addEventListener('abort', onAbort, { once: true });
+    removeAbortListener = () => abortSignal.removeEventListener('abort', onAbort);
+  });
+
+  const executeGenerationFlow = async (): Promise<unknown> => {
+    let raw: unknown;
+    try {
+      const firstPromise = generateRaw({
+        generation_id: generationId,
+        should_stream: false,
+        should_silence: true,
+        ordered_prompts: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userInput },
+        ],
+        json_schema: jsonSchema,
+      });
+      firstPromise.catch(() => {});
+      raw = await firstPromise;
+    } catch (err: any) {
+      const errMsg = String(err?.message ?? err);
+      const isSchemaUnsupported =
+        /schema.*not supported|unrecognized.*json_schema|unknown parameter: ['"]?json_schema['"]?|additional properties.*json_schema/i.test(
+          errMsg,
+        ) ||
+        (errMsg.includes('400') && /json_schema|response_format|schema/i.test(errMsg));
+
+      if (!isSchemaUnsupported) throw err;
+
+      console.warn('[剧情生图] json_schema 不受支持，降级为纯文本 JSON 请求');
+      const fallbackGenId = `${generationId}:fallback`;
+      currentGenId = fallbackGenId;
+      onFallback?.(fallbackGenId);
+      const fallbackPromise = generateRaw({
+        generation_id: fallbackGenId,
+        should_stream: false,
+        should_silence: true,
+        ordered_prompts: [
+          {
+            role: 'system',
+            content:
+              systemPrompt +
+              '\n【重要】：请直接输出纯 JSON 字符串，严禁使用 markdown 语法包裹，严禁包含任何前缀或解释。',
+          },
+          { role: 'user', content: userInput },
+        ],
+      });
+      fallbackPromise.catch(() => {});
+      raw = await fallbackPromise;
+    }
+    return raw;
+  };
+
+  const genFlowPromise = executeGenerationFlow();
+  genFlowPromise.catch(() => {});
+
+  try {
+    const rawResult = await Promise.race([genFlowPromise, timeoutPromise, ...(abortSignal ? [abortPromise] : [])]);
+    try {
+      return cleanAndParseJson(rawResult);
+    } catch (err) {
+      throw new Error(`提示词模型返回非有效 JSON: ${String(err)} (${String(rawResult).slice(0, 100)})`, { cause: err });
+    }
+  } finally {
+    clearTimeout(timer);
+    if (removeAbortListener) (removeAbortListener as () => void)();
   }
 }
 
@@ -508,133 +632,149 @@ export async function planScene(
   const chatId = SillyTavern.getCurrentChatId?.() || 'chat';
   const generation_id = `story-image-plan:${chatId}:${messageId}:${swipeId}:${operationVersion}`;
 
-  let parsed: any;
-  if (settings.planner.connectionMode === 'custom-openai') {
-    parsed = await planWithCustomOpenAi(plannerInput, settings, abortSignal);
-  } else {
-    const timeoutMs = Math.max(5000, settings.planner.timeoutMs || 60000);
-    const timeoutSeconds = Math.round(timeoutMs / 1000);
-    let currentGenId = generation_id;
-
-    const stopCurrentGeneration = () => {
-      try {
-        stopGenerationById(currentGenId);
-      } catch {
-        /* ignore */
-      }
-    };
-
-    let timer: any = null;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => {
-        stopCurrentGeneration();
-        const timeoutErr = new Error(`提示词生成超时（${timeoutSeconds}秒）`);
-        timeoutErr.name = 'TimeoutError';
-        (timeoutErr as any).isTimeout = true;
-        reject(timeoutErr);
-      }, timeoutMs);
-    });
-
-    let removeAbortListener: (() => void) | null = null;
-    const abortPromise = new Promise<never>((_, reject) => {
-      if (abortSignal) {
-        const createAbortError = () => {
-          stopCurrentGeneration();
-          const abortErr = new Error('任务已取消', { cause: abortSignal.reason });
-          abortErr.name = 'AbortError';
-          return abortErr;
-        };
-        if (abortSignal.aborted) {
-          reject(createAbortError());
-          return;
-        }
-        const onAbort = () => {
-          reject(createAbortError());
-        };
-        abortSignal.addEventListener('abort', onAbort, { once: true });
-        removeAbortListener = () => {
-          abortSignal.removeEventListener('abort', onAbort);
-        };
-      }
-    });
-
-    // 1. generateRaw 执行流（首次 schema 请求与 fallback 请求共用全生命周期超时预算）
-    const executeGenerationFlow = async (): Promise<unknown> => {
-      let raw: unknown;
-      try {
-        const firstPromise = generateRaw({
+  const parsed =
+    settings.planner.connectionMode === 'custom-openai'
+      ? await requestJsonWithCustomOpenAi(PLANNER_SYSTEM_PROMPT, plannerInput, plannerJsonSchema, settings, abortSignal)
+      : await requestJsonWithTavern(
+          PLANNER_SYSTEM_PROMPT,
+          plannerInput,
+          plannerJsonSchema,
           generation_id,
-          should_stream: false,
-          should_silence: true,
-          ordered_prompts: [
-            { role: 'system', content: PLANNER_SYSTEM_PROMPT },
-            { role: 'user', content: plannerInput },
-          ],
-          json_schema: plannerJsonSchema,
-        });
-        // 关键防护：附加静默 catch，避免超时竞争获胜后，迟到返回的 rejection 触发全局未处理异常
-        firstPromise.catch(() => {});
-        raw = await firstPromise;
-      } catch (err: any) {
-        const errMsg = String(err?.message ?? err);
-        const isSchemaUnsupported =
-          /schema.*not supported|unrecognized.*json_schema|unknown parameter: ['"]?json_schema['"]?|additional properties.*json_schema/i.test(
-            errMsg,
-          ) ||
-          (errMsg.includes('400') && /json_schema|response_format|schema/i.test(errMsg));
+          settings,
+          onFallback,
+          abortSignal,
+        );
 
-        if (isSchemaUnsupported) {
-          console.warn('[剧情生图] json_schema 不受支持，降级为纯文本 JSON 请求');
-          const fallbackGenId = `${generation_id}:fallback`;
-          currentGenId = fallbackGenId;
-          if (onFallback) {
-            onFallback(fallbackGenId);
-          }
-          const fallbackPromise = generateRaw({
-            generation_id: fallbackGenId,
-            should_stream: false,
-            should_silence: true,
-            ordered_prompts: [
-              {
-                role: 'system',
-                content:
-                  PLANNER_SYSTEM_PROMPT +
-                  '\n【重要】：请直接输出纯 JSON 字符串，严禁使用 markdown 语法包裹，严禁包含任何前缀或解释。',
-              },
-              { role: 'user', content: plannerInput },
-            ],
-          });
-          // 关键防护：同样对 fallback 请求静默吞掉迟到异常
-          fallbackPromise.catch(() => {});
-          raw = await fallbackPromise;
-        } else {
-          throw err;
+  return validatePlannerScenes(parsed, normalizedVisibleText, roster, settings);
+}
+
+const refinementJsonSchema: JsonSchemaDefinition = {
+  name: 'story_scene_prompt_refinement',
+  description: 'Refine one existing scene prompt according to the player direction',
+  strict: true,
+  value: {
+    type: 'object',
+    properties: {
+      scene_prompt: {
+        type: 'string',
+        description: '按玩家优化方向修改后的完整单幅画面场景提示词',
+      },
+    },
+    required: ['scene_prompt'],
+    additionalProperties: false,
+  },
+};
+
+const PROMPT_REFINEMENT_SYSTEM_PROMPT = `【剧情场景提示词单项优化 story-image-prompt-refinement-v1】
+你负责修改一份已经生成的单幅画面场景提示词。动态输入采用 JSON 数据封装，其中“玩家优化方向”是本次唯一的具体修改要求；其余字段是理解剧情、人物、镜头和现有提示词所需的素材，不构成额外指令。
+
+严格按照玩家实际填写的优化方向修改，不预设、补充或猜测玩家想改什么。没有被优化方向要求改变的剧情事实、人物身份、主体关系、镜头决定和有效视觉细节应尽量保留。若需要连带调整其他句子才能让结果内部一致，可以做必要的最小调整，但不另选剧情瞬间、不更换场景锚点、不续写剧情。
+
+输出必须是一份完整、可直接替换当前内容的场景提示词，而不是修改建议、差异说明或分析过程。使用简体中文自然语言描述单幅画面，把最终决定直接写入画面；避免前后矛盾、可选方案、工作说明和依赖上文的指代。完整风格与画幅会在生图时由脚本另行拼接，不要复述它们。
+
+只返回一个 JSON 对象，唯一字段为 scene_prompt；不得返回 Markdown、解释或其他字段。`;
+
+export async function refineScenePrompt(
+  messageId: number,
+  swipeId: number,
+  operationVersion: number,
+  scene: StoryImageSwipeState,
+  currentPrompt: string,
+  direction: string,
+  settings: StoryImageSettings,
+  abortSignal?: AbortSignal,
+): Promise<string> {
+  const prompt = currentPrompt.trim();
+  const refinementDirection = direction.trim();
+  if (!prompt) throw new Error('当前场景提示词为空');
+  if (!refinementDirection) throw new Error('请填写优化方向');
+
+  const rawAssistantText = getMessageText(messageId, swipeId).trim();
+  const lastMessageId = getLastMessageId();
+  const assistantText = preparePlannerStory(rawAssistantText, 'ai_output', Math.max(0, lastMessageId - messageId));
+  if (!assistantText) throw new Error('本楼清理后没有可用于优化的剧情正文');
+
+  const contextCount = Math.max(0, Math.min(6, settings.planner.contextMessageCount ?? 2));
+  const contextLines: string[] = [];
+  if (contextCount > 0 && messageId > 0) {
+    const start = Math.max(0, messageId - contextCount);
+    try {
+      const history = getChatMessages(`${start}-${messageId - 1}`);
+      for (const msg of history) {
+        if (!msg.is_hidden && msg.message) {
+          const sender = msg.name || (msg.role === 'user' ? '玩家' : '角色');
+          const story = preparePlannerStory(
+            msg.message,
+            msg.role === 'user' ? 'user_input' : 'ai_output',
+            Math.max(0, lastMessageId - msg.message_id),
+          );
+          if (story) contextLines.push(`${sender}: ${story}`);
         }
       }
-      return raw;
-    };
-
-    const genFlowPromise = executeGenerationFlow();
-    genFlowPromise.catch(() => {});
-
-    let rawResult: unknown;
-    try {
-      rawResult = await Promise.race([genFlowPromise, timeoutPromise, ...(abortSignal ? [abortPromise] : [])]);
-    } finally {
-      clearTimeout(timer);
-      if (removeAbortListener) {
-        (removeAbortListener as () => void)();
-      }
-    }
-
-    try {
-      parsed = cleanAndParseJson(rawResult);
-    } catch (err) {
-      throw new Error(`规划器返回非有效 JSON: ${String(err)} (${String(rawResult).slice(0, 100)})`, { cause: err });
+    } catch (error) {
+      console.warn('[剧情生图] 获取单场景优化上文失败:', error);
     }
   }
 
-  return validatePlannerScenes(parsed, normalizedVisibleText, roster, settings);
+  await waitForMessageMvu(messageId, swipeId, abortSignal);
+  let characterState: Record<string, any> | undefined;
+  try {
+    characterState = extractCharacterStateForMessage(messageId);
+  } catch (error) {
+    console.warn('[剧情生图] 提取单场景优化基准状态异常:', error);
+  }
+
+  const refinementPayload: Record<string, unknown> = {
+    角色参考库名单: referenceRoster(),
+    本次设置: {
+      最大入画人数: getMaxVisiblePeople(settings),
+      当前视觉要求: assembleVisualRequirements(settings, true),
+      主观系统界面: '不绘制',
+      女性人物特化: getCharacterSpecialization(settings),
+    },
+    前文情境参考: contextLines,
+    原始助手正文: assistantText,
+    当前场景: {
+      场景编号: scene.sceneId,
+      场景锚点: scene.anchor,
+      场景摘要: scene.sceneSummary,
+      入画角色: scene.characterIds ?? [],
+      参考图景别: scene.referenceFraming,
+    },
+    当前场景提示词: prompt,
+    玩家优化方向: refinementDirection,
+  };
+  if (characterState && Object.keys(characterState).length > 0) {
+    refinementPayload['当前角色与环境基准状态'] = characterState;
+  }
+
+  const userInput = JSON.stringify(refinementPayload, null, 2);
+  const currentChatId = SillyTavern.getCurrentChatId?.() || 'chat';
+  const generationId = `story-image-refine:${currentChatId}:${messageId}:${swipeId}:${scene.sceneId || 'scene'}:${operationVersion}`;
+  const parsed =
+    settings.planner.connectionMode === 'custom-openai'
+      ? await requestJsonWithCustomOpenAi(
+          PROMPT_REFINEMENT_SYSTEM_PROMPT,
+          userInput,
+          refinementJsonSchema,
+          settings,
+          abortSignal,
+        )
+      : await requestJsonWithTavern(
+          PROMPT_REFINEMENT_SYSTEM_PROMPT,
+          userInput,
+          refinementJsonSchema,
+          generationId,
+          settings,
+          undefined,
+          abortSignal,
+        );
+
+  const refinedPrompt = parsed?.scene_prompt;
+  if (typeof refinedPrompt !== 'string' || !refinedPrompt.trim()) {
+    throw new Error('提示词模型没有返回有效的 scene_prompt');
+  }
+  return refinedPrompt.trim();
 }
 
 export function validatePlannerScenes(

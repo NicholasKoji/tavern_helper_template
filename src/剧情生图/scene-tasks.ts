@@ -8,11 +8,11 @@ import {
   getMessageCurrentSwipeId,
 } from './message-state';
 import { renderSlot } from './renderer';
-import { assembleFinalPrompt } from './planner';
+import { assembleFinalPrompt, refineScenePrompt } from './planner';
 import { requestImageGeneration } from './providers';
 import { selectCharacterReferences } from './reference-library';
 import { uploadImageToTavern } from './storage';
-import type { StoryImageSwipeState, SlotAction } from './types';
+import type { PromptRefinementPayload, SlotAction, SlotActionPayload, StoryImageSwipeState } from './types';
 
 type Job = {
   chat: string;
@@ -24,6 +24,7 @@ type Job = {
   controller: AbortController;
 };
 const jobs = new Map<string, Job>();
+const refinementJobs = new Map<string, Job>();
 let tail: Promise<unknown> = Promise.resolve();
 const chatId = () => SillyTavern.getCurrentChatId?.() || 'chat';
 const keyOf = (chat: string, message: number, swipe: number, id: string) => JSON.stringify([chat, message, swipe, id]);
@@ -45,6 +46,17 @@ async function interruptible<T>(request: Promise<T>, signal: AbortSignal): Promi
 
 function valid(job: Job) {
   if (job.chat !== chatId() || job.controller.signal.aborted || jobs.get(key(job)) !== job) return false;
+  if (getMessageCurrentSwipeId(job.message) !== job.swipe) return false;
+  const root = getSwipeState(job.message, job.swipe);
+  return (
+    root?.sourceFingerprint === job.source &&
+    createSourceFingerprint(getMessageText(job.message, job.swipe)) === job.source &&
+    root.scenes?.some(s => s.sceneId === job.id && s.operationVersion === job.version)
+  );
+}
+
+function validRefinement(job: Job) {
+  if (job.chat !== chatId() || job.controller.signal.aborted || refinementJobs.get(key(job)) !== job) return false;
   if (getMessageCurrentSwipeId(job.message) !== job.swipe) return false;
   const root = getSwipeState(job.message, job.swipe);
   return (
@@ -82,33 +94,86 @@ export function renderScenes(message: number, swipe: number, root: StoryImageSwi
   }
   for (const scene of root.scenes ?? []) {
     renderSlot(message, swipe, scene, (action, payload) => {
-      void sceneAction(message, swipe, scene.sceneId!, action, payload).catch(e =>
-        toastr.error(String(e?.message ?? e), '场景操作失败'),
-      );
+      const task = sceneAction(message, swipe, scene.sceneId!, action, payload);
+      if (action === 'refine-prompt' || action === 'cancel-refine') return task;
+      void task.catch(e => toastr.error(String(e?.message ?? e), '场景操作失败'));
+      return undefined;
     });
   }
 }
 
-async function sceneAction(message: number, swipe: number, id: string, action: SlotAction, payload?: string) {
+async function sceneAction(
+  message: number,
+  swipe: number,
+  id: string,
+  action: SlotAction,
+  payload?: SlotActionPayload,
+): Promise<string | void> {
   const chat = chatId();
   const root = getSwipeState(message, swipe);
   const scene = root?.scenes?.find(s => s.sceneId === id);
-  if (!scene || (!useStoryImageSettingsStore().settings.enabled && action !== 'cancel')) return;
+  if (!scene || (!useStoryImageSettingsStore().settings.enabled && !['cancel', 'cancel-refine'].includes(action)))
+    return;
   if (action === 'anchor-resolved' && !scene.anchorWarning) return;
   if (action === 'anchor-failed' && scene.anchorWarning) return;
   if (['generate', 'retry-gen', 'regenerate'].includes(action)) {
     await enqueueScene(message, swipe, id, action === 'regenerate');
     return;
   }
+  if (action === 'cancel-refine') {
+    const existing = refinementJobs.get(keyOf(chat, message, swipe, id));
+    if (existing) {
+      existing.controller.abort();
+      refinementJobs.delete(key(existing));
+    }
+    return;
+  }
+  if (action === 'refine-prompt') {
+    if (!payload || typeof payload === 'string') return;
+    const request = payload as PromptRefinementPayload;
+    if (!request.scenePrompt.trim() || !request.direction.trim()) return;
+    const taskKey = keyOf(chat, message, swipe, id);
+    if (refinementJobs.has(taskKey)) return;
+    const job: Job = {
+      chat,
+      message,
+      swipe,
+      id,
+      version: scene.operationVersion,
+      source: scene.sourceFingerprint,
+      controller: new AbortController(),
+    };
+    refinementJobs.set(taskKey, job);
+    try {
+      const refinedPrompt = await refineScenePrompt(
+        message,
+        swipe,
+        scene.operationVersion,
+        scene,
+        request.scenePrompt,
+        request.direction,
+        klona(useStoryImageSettingsStore().settings),
+        job.controller.signal,
+      );
+      return validRefinement(job) ? refinedPrompt : undefined;
+    } finally {
+      if (refinementJobs.get(taskKey) === job) refinementJobs.delete(taskKey);
+    }
+  }
   if (action === 'retry-plan') {
     toastr.info('请使用本楼快捷菜单重新规划场景；已有图片会保留在历史中');
     return;
   }
-  if (action === 'save-prompt' && !payload?.trim()) return;
+  if (action === 'save-prompt' && (typeof payload !== 'string' || !payload.trim())) return;
   const existing = jobs.get(keyOf(chat, message, swipe, id));
   if (existing && ['cancel', 'save-prompt'].includes(action)) {
     existing.controller.abort();
     jobs.delete(key(existing));
+  }
+  const existingRefinement = refinementJobs.get(keyOf(chat, message, swipe, id));
+  if (existingRefinement && ['cancel', 'save-prompt'].includes(action)) {
+    existingRefinement.controller.abort();
+    refinementJobs.delete(key(existingRefinement));
   }
   const job: Job = {
     chat,
@@ -140,7 +205,7 @@ async function sceneAction(message: number, swipe: number, id: string, action: S
       if (action === 'save-prompt')
         return {
           ...s,
-          scenePrompt: payload!.trim(),
+          scenePrompt: (payload as string).trim(),
           operationVersion: s.operationVersion + 1,
           promptEditedByUser: true,
           characterIds: [],
@@ -264,15 +329,17 @@ export async function generateScenes(message: number, swipe: number, regenerate 
 }
 
 export function cancelSceneJobs(message?: number, swipe?: number, chat?: string) {
-  for (const [id, job] of jobs) {
-    if (
-      (message !== undefined && job.message !== message) ||
-      (swipe !== undefined && job.swipe !== swipe) ||
-      (chat && job.chat !== chat)
-    )
-      continue;
-    job.controller.abort();
-    jobs.delete(id);
+  for (const registry of [jobs, refinementJobs]) {
+    for (const [id, job] of registry) {
+      if (
+        (message !== undefined && job.message !== message) ||
+        (swipe !== undefined && job.swipe !== swipe) ||
+        (chat && job.chat !== chat)
+      )
+        continue;
+      job.controller.abort();
+      registry.delete(id);
+    }
   }
 }
 

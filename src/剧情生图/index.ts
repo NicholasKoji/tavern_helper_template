@@ -20,6 +20,7 @@ import { clearTavernSelection, initTavernDom, tavernDocument } from './tavern-do
 import type {
   PlanPostAction,
   SlotAction,
+  SlotActionPayload,
   StoryImageErrorStage,
   StoryImageSettings,
   StoryImageSwipeState,
@@ -306,7 +307,7 @@ async function handleSlotAction(
   messageId: number,
   swipeId: number,
   action: SlotAction,
-  payload?: string,
+  payload?: SlotActionPayload,
   stateHint?: StoryImageSwipeState,
 ): Promise<void> {
   if (getSwipeState(messageId, swipeId)?.scenes?.length && ['generate', 'retry-gen', 'regenerate'].includes(action)) {
@@ -473,7 +474,7 @@ async function handleSlotAction(
     }
 
     case 'save-prompt': {
-      const newPrompt = (payload ?? '').trim();
+      const newPrompt = typeof payload === 'string' ? payload.trim() : '';
       if (!newPrompt) {
         return;
       }
