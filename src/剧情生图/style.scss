@@ -2,6 +2,195 @@
    剧情生图 (V1) - 核心样式表
 ------------------------------------------------------------------------- */
 
+.story-image-slot img.story-image-img,
+.story-image-root .reference-library img {
+  cursor: zoom-in;
+  &:focus-visible {
+    outline: 2px solid var(--SmartThemeQuoteColor, #7ba0cd);
+    outline-offset: 3px;
+  }
+}
+
+dialog.story-image-preview {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: oklch(15% 0.012 260 / 0.97);
+  color: oklch(94% 0.008 260);
+  touch-action: none;
+  overscroll-behavior: contain;
+  user-select: none;
+  &::backdrop {
+    background: oklch(12% 0.012 260 / 0.85);
+  }
+  .story-image-preview-stage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: grab;
+    &:active {
+      cursor: grabbing;
+    }
+    img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: calc(100% - 32px);
+      max-height: calc(100% - 132px);
+      object-fit: contain;
+      flex: 0 0 auto;
+      transform-origin: center;
+      will-change: transform;
+      border: 0;
+      border-radius: 0;
+      pointer-events: none;
+    }
+  }
+  .story-image-preview-tools {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font:
+      14px/1.4 system-ui,
+      sans-serif;
+    button {
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 1px solid oklch(60% 0.01 260);
+      border-radius: 6px;
+      background: oklch(24% 0.015 260);
+      color: inherit;
+      cursor: pointer;
+      &:hover {
+        background: oklch(34% 0.015 260);
+      }
+      &:focus-visible {
+        outline: 2px solid oklch(85% 0.07 250);
+        outline-offset: 2px;
+      }
+    }
+  }
+  .story-image-preview-hint {
+    position: absolute;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    text-align: center;
+    font:
+      13px/1.5 system-ui,
+      sans-serif;
+    pointer-events: none;
+  }
+}
+
+.story-image-root .story-image-gallery {
+  font-size: 14px;
+  .story-image-gallery-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    label {
+      display: flex;
+      flex: 1 1 180px;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .story-image-btn {
+      width: auto;
+      min-height: 42px;
+      margin: 0;
+    }
+  }
+  .story-image-gallery-note {
+    opacity: 0.8;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .story-image-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .story-image-gallery-item {
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--SmartThemeBorderColor, #626978);
+    border-radius: 8px;
+    overflow: hidden;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: zoom-in;
+    font: inherit;
+    &:hover {
+      border-color: var(--SmartThemeQuoteColor, #7ba0cd);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--SmartThemeQuoteColor, #7ba0cd);
+      outline-offset: 2px;
+    }
+  }
+  .story-image-gallery-thumb {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: oklch(30% 0.015 260 / 0.3);
+    display: grid;
+    place-items: center;
+    img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+  .story-image-gallery-missing {
+    padding: 12px;
+    font-size: 13px;
+    text-align: center;
+  }
+  .story-image-gallery-meta {
+    display: block;
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .story-image-gallery-more {
+    display: block;
+    margin: 20px auto 0;
+    width: auto;
+    min-height: 44px;
+  }
+}
+@media (max-width: 540px) {
+  .story-image-root .story-image-gallery {
+    .story-image-gallery-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .story-image-gallery-filters label {
+      flex-basis: 100%;
+    }
+  }
+}
+
 // 1. 聊天正文插槽样式
 .story-image-slot {
   margin: 10px 0;

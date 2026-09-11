@@ -235,7 +235,7 @@ function renderHistoryHtml(state: StoryImageSwipeState): string {
             ${reasonBadge}
           </div>
           <div class="story-image-history-img-wrap">
-            <img src="${escapeHtml(img.path)}" class="story-image-img" alt="历史画面" loading="lazy" />
+            <img src="${escapeHtml(img.path)}" class="story-image-img" tabindex="0" role="button" title="点击放大预览" alt="历史画面" loading="lazy" />
           </div>
           ${img.finalPrompt ? `<div class="story-image-history-prompt">${escapeHtml(img.finalPrompt)}</div>` : ''}
         </div>
@@ -326,7 +326,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
         bodyHtml = `
           <div class="story-image-ready-container story-image-generating-state">
             <div class="story-image-img-box">
-              <img src="${escapeHtml(current.path || '')}" class="story-image-img" alt="剧情插画" loading="lazy" />
+              <img src="${escapeHtml(current.path || '')}" class="story-image-img" tabindex="0" role="button" title="点击放大预览" alt="剧情插画" loading="lazy" />
             </div>
             <div class="story-image-ready-footer">
               ${summary ? `<div class="story-image-ready-summary">${summary}</div>` : ''}
@@ -379,7 +379,7 @@ function buildSlotInnerHtml(slotKey: string, state: StoryImageSwipeState): strin
       bodyHtml = `
         <div class="story-image-ready-container">
           <div class="story-image-img-box">
-            <img src="${escapeHtml(current?.path || '')}" class="story-image-img" alt="剧情插画" loading="lazy" />
+            <img src="${escapeHtml(current?.path || '')}" class="story-image-img" tabindex="0" role="button" title="点击放大预览" alt="剧情插画" loading="lazy" />
           </div>
           <div class="story-image-ready-footer">
             ${summary ? `<div class="story-image-ready-summary">${summary}</div>` : ''}

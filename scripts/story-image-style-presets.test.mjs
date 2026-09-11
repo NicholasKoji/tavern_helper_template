@@ -73,6 +73,15 @@ assert.throws(
   /modelAdaptation/,
 );
 assert.deepEqual(
+  { ...settingsModule.deriveEndpoints('https://example.test/v1/images/edits', 'openai-images') },
+  {
+    baseUrl: 'https://example.test/v1',
+    endpoint: 'https://example.test/v1/images/generations',
+    modelsEndpoint: 'https://example.test/v1/models',
+    detectedProtocol: 'openai-images',
+  },
+);
+assert.deepEqual(
   { ...settingsModule.migrateLegacyStyleSelection('B2', '补充', 'nano-banana') },
   {
     presetId: 'refined-female-webtoon-nano-banana',
@@ -155,6 +164,7 @@ assert.match(styleOptionsBlock, /activeStylePresets/);
 assert.doesNotMatch(styleOptionsBlock, /电影感叙事插画|古典油画质感|赛博朋克科幻风|水墨国风意境/);
 
 const requestBodies = [];
+const requestUrls = [];
 const providers = loadTypeScript(
   'src/剧情生图/providers.ts',
   {
@@ -163,8 +173,15 @@ const providers = loadTypeScript(
     './types': {},
   },
   {
-    fetch: async (_url, init) => {
+    fetch: async (url, init) => {
+      requestUrls.push(String(url));
       requestBodies.push(JSON.parse(init.body));
+      if (String(url).includes('/images/')) {
+        return {
+          ok: true,
+          json: async () => ({ data: [{ b64_json: 'RESULT' }] }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({
@@ -228,6 +245,49 @@ await providers.requestImageGeneration('当前剧情', providerSettings, undefin
 const nanoContent = requestBodies.at(-1).messages[0].content;
 assert.equal(nanoContent.at(-1).type, 'image_url');
 
+providerSettings.provider.protocol = 'openai-images';
+providerSettings.provider.modelAdaptation = 'gpt-image';
+providerSettings.provider.endpoint = 'https://example.test/v1/images/generations';
+providerSettings.provider.model = 'gpt-image-2.5-sunburst';
+await providers.requestImageGeneration(
+  '当前剧情',
+  providerSettings,
+  undefined,
+  [
+    { label: '角色面部身份参考', url: 'data:image/png;base64,FACE' },
+    { label: '角色全身比例参考', url: 'data:image/png;base64,BODY' },
+  ],
+  { referencePromptMode: 'scene' },
+);
+const imagesEditBody = requestBodies.at(-1);
+assert.equal(requestUrls.at(-1), 'https://example.test/v1/images/edits');
+assert.deepEqual(
+  imagesEditBody.images.map(image => image.image_url),
+  ['data:image/png;base64,FACE', 'data:image/png;base64,BODY'],
+);
+assert.match(imagesEditBody.prompt, /参考图1：角色面部身份参考/);
+assert.match(imagesEditBody.prompt, /参考图2：角色全身比例参考/);
+assert.match(imagesEditBody.prompt, /剧情面部重绘协议/);
+assert.equal('messages' in imagesEditBody, false);
+
+await providers.requestImageGeneration('无参考图剧情', providerSettings, undefined, []);
+const imagesGenerationBody = requestBodies.at(-1);
+assert.equal(requestUrls.at(-1), 'https://example.test/v1/images/generations');
+assert.equal('images' in imagesGenerationBody, false);
+
+providerSettings.provider.modelAdaptation = 'nano-banana';
+providerSettings.provider.model = 'nano-banana-test';
+providerSettings.visual.styleByModel['nano-banana'].presetId = 'refined-female-webtoon-nano-banana';
+await providers.requestImageGeneration('画风参考测试', providerSettings, undefined, []);
+const styleEditBody = requestBodies.at(-1);
+assert.equal(requestUrls.at(-1), 'https://example.test/v1/images/edits');
+assert.deepEqual(
+  styleEditBody.images.map(image => image.image_url),
+  ['data:image/png;base64,STYLE'],
+);
+assert.match(styleEditBody.prompt, /参考图1：下一张是精致女性韩漫的画法参考/);
+assert.doesNotMatch(styleEditBody.prompt, /剧情面部重绘协议/);
+
 const plannerSource = fs.readFileSync('src/剧情生图/planner.ts', 'utf8');
 assert.match(plannerSource, /无论是否绑定参考图，为每个面部可见的角色写出/);
 assert.match(plannerSource, /story-image-planner-v8-director-scenes/);
@@ -241,5 +301,6 @@ assert.doesNotMatch(plannerSource, /动作、场景大致成立即可|以大致�
 const referenceUiSource = fs.readFileSync('src/剧情生图/ReferenceLibrary.vue', 'utf8');
 assert.match(referenceUiSource, /这不是待扩展的原始画布/);
 assert.match(referenceUiSource, /referencePromptMode: kind === 'body' \? 'full-body-reference' : 'scene'/);
+assert.match(settingsUi, /带参考图自动走 \/images\/edits/);
 
 console.log('STORY_IMAGE_MODEL_ADAPTATION_AND_STYLE_PRESETS_OK');

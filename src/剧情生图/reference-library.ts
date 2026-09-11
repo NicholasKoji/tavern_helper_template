@@ -153,7 +153,7 @@ export function selectCharacterReferences(
           '）面部身份参考：只保持脸型、五官关系与辨识度。参考图中的表情、嘴型、目光、头部朝向、姿势、衣服和背景都是旧拍摄状态，当前画面必须按剧情重新设计这些动态内容。女性特化可调整精致程度，但不重塑为另一张脸。',
         url: c.face,
       });
-    if (framing !== 'portrait' && c.body && c.bodyFace === c.face)
+    if (framing !== 'portrait' && c.body)
       result.push({
         label:
           c.name +

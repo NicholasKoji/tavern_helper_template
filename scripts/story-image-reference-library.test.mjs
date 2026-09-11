@@ -74,7 +74,7 @@ function loadReferenceLibraryFixture() {
         description: '稳定身份',
         face: 'face.png',
         body: 'body.png',
-        bodyFace: 'face.png',
+        bodyFace: 'old-face.png',
       },
     ],
   });

@@ -66,6 +66,8 @@ async function callOpenAIImages(
   finalPrompt: string,
   settings: StoryImageSettings,
   signal?: AbortSignal,
+  references: ImageReference[] = [],
+  options: ImageGenerationRequestOptions = {},
 ): Promise<GeneratedImagePayload> {
   const { endpoint, apiKey, model } = settings.provider;
   if (!endpoint.trim()) {
@@ -78,14 +80,40 @@ async function callOpenAIImages(
   }
 
   const size = resolveSize(settings);
+  const styleSelection = settings.visual.styleByModel[settings.provider.modelAdaptation];
+  const styleReference = getStylePreset(settings.provider.modelAdaptation, styleSelection.presetId)?.styleReference;
+  const imageInputs: ImageReference[] = [
+    ...(styleReference ? [{ label: styleReference.label, url: styleReference.imageUrl }] : []),
+    ...references,
+  ];
+  const useEdits = imageInputs.length > 0;
+  const promptSections = [finalPrompt];
+  if (useEdits) {
+    promptSections.push(
+      `【参考图顺序与用途】\n${imageInputs.map((input, index) => `参考图${index + 1}：${input.label}`).join('\n')}`,
+    );
+  }
+  if (settings.provider.modelAdaptation === 'gpt-image' && references.length > 0) {
+    promptSections.push(buildGptPostReferenceInstruction(options.referencePromptMode ?? 'scene'));
+  }
   const body: Record<string, any> = {
     model: modelName,
-    prompt: finalPrompt,
+    prompt: promptSections.join('\n\n'),
     n: 1,
     size,
   };
 
-  const response = await fetch(endpoint.trim(), {
+  if (useEdits) {
+    body.images = await Promise.all(
+      imageInputs.map(async input => ({ image_url: await referenceDataUrl(input.url, signal) })),
+    );
+  }
+
+  const requestEndpoint = useEdits
+    ? endpoint.trim().replace(/\/images\/generations\/?$/i, '/images/edits')
+    : endpoint.trim();
+
+  const response = await fetch(requestEndpoint, {
     method: 'POST',
     headers: createHeaders(apiKey),
     body: JSON.stringify(body),
@@ -341,17 +369,9 @@ export async function requestImageGeneration(
   references: ImageReference[] = [],
   options: ImageGenerationRequestOptions = {},
 ): Promise<GeneratedImagePayload> {
-  const styleSelection = settings.visual.styleByModel[settings.provider.modelAdaptation];
-  const hasStyleReference = Boolean(
-    getStylePreset(settings.provider.modelAdaptation, styleSelection.presetId)?.styleReference,
-  );
-  if ((references.length > 0 || hasStyleReference) && settings.provider.protocol !== 'chat-completions') {
-    const reason = hasStyleReference ? (references.length ? '画风参考图和角色参考图' : '画风参考图') : '角色参考图';
-    throw new Error(`当前请求包含${reason}，请将生图协议切换为 Chat Completions，并使用支持图片输入的模型。`);
-  }
   if (settings.provider.protocol === 'chat-completions') {
     return await callChatCompletions(finalPrompt, settings, signal, references, options);
   } else {
-    return await callOpenAIImages(finalPrompt, settings, signal);
+    return await callOpenAIImages(finalPrompt, settings, signal, references, options);
   }
 }

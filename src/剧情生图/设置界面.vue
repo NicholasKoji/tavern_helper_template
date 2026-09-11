@@ -105,10 +105,21 @@
             >
               角色参考库
             </button>
+            <button
+              type="button"
+              class="story-image-tab-btn"
+              role="tab"
+              :aria-selected="currentTab === 'gallery'"
+              :class="{ active: currentTab === 'gallery' }"
+              @click="currentTab = 'gallery'"
+            >
+              图库
+            </button>
           </div>
 
           <!-- 内容区 -->
           <div class="story-image-modal-body">
+            <ImageGallery v-if="currentTab === 'gallery' && isModalOpen" />
             <!-- TAB 1: 连接与模型 -->
             <div v-show="currentTab === 'connection'" class="story-image-tab-pane">
               <!-- A. 提示词模型 -->
@@ -344,7 +355,7 @@
                       @click="handleProtocolChange('openai-images')"
                     >
                       <span class="proto-card-title">OpenAI Images 兼容</span>
-                      <span class="proto-card-desc">/v1/images/generations 标准生图接口</span>
+                      <span class="proto-card-desc">无参考图走 /images/generations，带参考图自动走 /images/edits</span>
                     </button>
                     <button
                       type="button"
@@ -363,8 +374,8 @@
                 <div class="story-image-form-group">
                   <label>生图服务地址 (Base URL)</label>
                   <div class="story-image-desc">
-                    支持输入服务根路径（如
-                    http://127.0.0.1:8000/v1），失焦或按回车时自动推导；亦可直接粘贴完整接口地址。
+                    支持输入服务根路径（如 http://127.0.0.1:8000/v1），失焦或按回车时自动推导；OpenAI Images
+                    模式带参考图时自动改用 /images/edits。
                   </div>
                   <div class="story-image-input-wrap">
                     <input
@@ -515,7 +526,7 @@
                     </label>
 
                     <div class="story-image-form-group">
-                      <label>完整生图接口 (Endpoint)</label>
+                      <label>完整基础生图接口 (Endpoint)</label>
                       <input
                         v-model="settings.provider.endpoint"
                         type="text"
@@ -1150,6 +1161,7 @@ import { closeActionPopover, closeModal, isModalOpen, popoverState, triggerPopov
 import { getSwipeState } from './message-state';
 import MvuTreeNodeItem from './MvuTreeNodeItem.vue';
 import ReferenceLibrary from './ReferenceLibrary.vue';
+import ImageGallery from './ImageGallery.vue';
 import { referenceOwner } from './reference-library';
 import {
   buildMvuTree,
@@ -1200,7 +1212,7 @@ const activeReferenceOwner = ref(referenceOwner());
 eventOn(tavern_events.CHAT_CHANGED, () => {
   activeReferenceOwner.value = referenceOwner();
 });
-const currentTab = ref<'connection' | 'canvas' | 'behavior' | 'mvu' | 'references'>('connection');
+const currentTab = ref<'connection' | 'canvas' | 'behavior' | 'mvu' | 'references' | 'gallery'>('connection');
 
 // --- 提示词模型 (Prompt Planner) ---
 const plannerShowApiKey = ref(false);
@@ -1396,7 +1408,12 @@ function commitBaseUrl() {
 
 function onBaseUrlPaste(e: ClipboardEvent) {
   const pasted = e.clipboardData?.getData('text') ?? '';
-  if (pasted.includes('/chat/completions') || pasted.includes('/images/generations') || pasted.includes('/models')) {
+  if (
+    pasted.includes('/chat/completions') ||
+    pasted.includes('/images/generations') ||
+    pasted.includes('/images/edits') ||
+    pasted.includes('/models')
+  ) {
     nextTick(() => {
       commitBaseUrl();
     });

@@ -1,5 +1,6 @@
 import { renderScenes, generateScenes, cancelSceneJobs, recoverScenes } from './scene-tasks';
 import { bindChatTextGestures } from './chat-text-gestures';
+import { bindImagePreviews } from './image-preview';
 import { selectCharacterReferences } from './reference-library';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
@@ -1484,6 +1485,7 @@ $(() => {
   // 挂载独立模态面板到 body
   const $app = createScriptIdDiv().appendTo('body');
   initTavernDom($app[0]);
+  const unbindImagePreviews = bindImagePreviews(tavernDocument);
   app.mount($app[0]);
 
   const { destroy } = teleportStyle();
@@ -1889,6 +1891,7 @@ $(() => {
       onExtensionMenuBtnClick,
     );
     unbindTextDoubleTap();
+    unbindImagePreviews();
     $(tavernDocument).off('keydown', onTavernKeyDown);
 
     cancelAllTasks();

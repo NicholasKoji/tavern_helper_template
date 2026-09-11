@@ -97,10 +97,17 @@
     <div class="ref-grid">
       <section v-for="kind in kinds" :key="kind.id">
         <h4>{{ kind.label }}</h4>
-        <img v-if="draft[kind.id]" :src="draft[kind.id]" :alt="kind.label + '已采用'" />
+        <img
+          v-if="draft[kind.id]"
+          :src="draft[kind.id]"
+          :alt="kind.label + '已采用'"
+          tabindex="0"
+          role="button"
+          title="点击放大预览"
+        />
         <p v-else>尚未采用参考</p>
         <p v-if="kind.id === 'body' && draft.body && draft.bodyFace !== draft.face">
-          面部参考已变化，全身图暂停自动使用，请重新生成或上传并确认。
+          面部参考已变化，当前仍会继续使用这张全身图；后续可按需更新。
         </p>
         <button
           class="story-image-btn ref-button"
@@ -118,7 +125,7 @@
         /></label>
         <template v-if="candidates[kind.id]">
           <h4>待确认候选</h4>
-          <img :src="candidates[kind.id]" :alt="kind.label + '候选'" />
+          <img :src="candidates[kind.id]" :alt="kind.label + '候选'" tabindex="0" role="button" title="点击放大预览" />
           <button class="story-image-btn ref-button" :disabled="busy" @click="adopt(kind.id)">
             确认采用{{ draft[kind.id] ? '并替换' : '' }}
           </button>

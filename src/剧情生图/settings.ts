@@ -72,8 +72,8 @@ export function deriveEndpoints(
   if (/\/chat\/completions\/?$/i.test(trimmed)) {
     baseUrl = trimmed.replace(/\/chat\/completions\/?$/i, '');
     detectedProtocol = 'chat-completions';
-  } else if (/\/images\/generations\/?$/i.test(trimmed)) {
-    baseUrl = trimmed.replace(/\/images\/generations\/?$/i, '');
+  } else if (/\/images\/(?:generations|edits)\/?$/i.test(trimmed)) {
+    baseUrl = trimmed.replace(/\/images\/(?:generations|edits)\/?$/i, '');
     detectedProtocol = 'openai-images';
   } else if (/\/models\/?$/i.test(trimmed)) {
     baseUrl = trimmed.replace(/\/models\/?$/i, '');
