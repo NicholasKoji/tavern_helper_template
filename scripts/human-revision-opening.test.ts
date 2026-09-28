@@ -347,6 +347,13 @@ async function testChatLoreTransactionRollback() {
   assert.match(appSource, /getChatMessages\('0-\{\{lastMessageId\}\}'\)/);
   assert.match(appSource, /await SillyTavern\.saveChat\(\);/);
   assert.match(appSource, /新消息写后回读已确认/);
+  // New messages must render immediately; rollback must also remove the rendered floor.
+  assert.match(
+    appSource,
+    /await createChatMessages\(\[\{ role: 'assistant', message, data: parsed \}\], \{ refresh: 'affected' \}\);/,
+  );
+  assert.match(appSource, /await deleteChatMessages\(\[createdMessageId\], \{ refresh: 'affected' \}\);/);
+
   assert.doesNotMatch(appSource, /const afterMessageId = getLastMessageId\(\)/);
 }
 

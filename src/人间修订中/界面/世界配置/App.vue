@@ -1943,7 +1943,7 @@ async function confirmOpening() {
       roots: Object.keys(parsed.stat_data),
       updateVariablePresent: message.includes('<UpdateVariable>'),
     });
-    await createChatMessages([{ role: 'assistant', message, data: parsed }], { refresh: 'none' });
+    await createChatMessages([{ role: 'assistant', message, data: parsed }], { refresh: 'affected' });
     const createdMessage = await waitForCreatedOpeningMessage(message, parsed, beforeMessageIds);
     createdMessageId = createdMessage.message_id;
     if (!createdMessage.message.includes('<UpdateVariable>')) {
@@ -1970,7 +1970,7 @@ async function confirmOpening() {
     const rollbackErrors: string[] = [];
     if (createdMessageId !== undefined) {
       try {
-        await deleteChatMessages([createdMessageId], { refresh: 'none' });
+        await deleteChatMessages([createdMessageId], { refresh: 'affected' });
         await SillyTavern.saveChat();
       } catch (rollbackError) {
         rollbackErrors.push(
