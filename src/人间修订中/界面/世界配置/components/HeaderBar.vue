@@ -7,7 +7,7 @@
           <span class="eyebrow-text">世界设定 · 开场配置</span>
         </div>
         <h1 class="dossier-title">人间修订中</h1>
-        <p class="dossier-subtitle">想去怎样的世界，遇见什么样的人？从这里开始。</p>
+        <p class="dossier-subtitle">设定世界现实基底，装配角色档案与开局情境。</p>
       </div>
 
       <div class="masthead-controls">
@@ -34,9 +34,9 @@
           <Globe :size="15" stroke-width="1.8" />
         </span>
         <div class="integrator-text">
-          <strong class="integrator-title">这个世界原本就有现实编辑器吗？</strong>
-          <p v-if="modelValue" class="integrator-hint">会。设计世界时，也会考虑它留下的影响和传闻。</p>
-          <p v-else class="integrator-hint">不会。先写一个与它无关的世界，再让它作为意外闯入故事。</p>
+          <strong class="integrator-title">现实编辑器是否内嵌于世界观</strong>
+          <p v-if="modelValue" class="integrator-hint">已开启：世界设定将包含编辑器的存在、既往传闻或规则异动痕迹。</p>
+          <p v-else class="integrator-hint">默认关闭：世界原本按固有规律运转，编辑器作为外来未知变数介入故事。</p>
         </div>
       </div>
       <label class="switch-toggle" aria-label="切换现实编辑器参与世界观生成">
@@ -69,7 +69,7 @@
           </button>
         </header>
 
-        <p class="settings-lead">选一个看着舒服的样式，填写内容不会变。</p>
+        <p class="settings-lead">切换视觉排版与色调氛围，已填写的内容不受影响。</p>
 
         <div class="theme-grid" role="radiogroup" aria-label="选择主题">
           <button

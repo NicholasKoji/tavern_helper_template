@@ -24,25 +24,25 @@
 
         <div v-if="isStale" class="modal-stale-alert">
           <CircleAlert :size="14" />
-          <span>你刚改过设定，这份建议需要重新生成。</span>
+          <span>前置设定已发生变更，建议重新生成以保持内容自洽。</span>
         </div>
 
         <div class="modal-body-scroll">
           <!-- 结论与摘要 -->
           <div class="summary-box">
-            <h4 class="section-label">这次的想法</h4>
+            <h4 class="section-label">推演结论与摘要</h4>
             <p class="summary-text">{{ aiPreview.summary }}</p>
           </div>
 
           <!-- 理由阐述 -->
           <div v-if="aiPreview.rationale" class="rationale-box">
-            <h4 class="section-label">为什么这样写</h4>
+            <h4 class="section-label">推演逻辑与理由</h4>
             <p class="rationale-text">{{ aiPreview.rationale }}</p>
           </div>
 
           <!-- 可执行约束 -->
           <div v-if="aiPreview.constraints && aiPreview.constraints.length" class="constraints-box">
-            <h4 class="section-label">可以留意的细节</h4>
+            <h4 class="section-label">可执行设定约束</h4>
             <ul class="constraints-list">
               <li v-for="(item, idx) in aiPreview.constraints" :key="idx">{{ item }}</li>
             </ul>
@@ -56,11 +56,21 @@
           <!-- 建议内容明细 -->
           <div v-if="hasValues" class="values-box">
             <h4 class="section-label">
-              {{ aiPreview.kind === 'private-status' ? '拟创建或补充的动态部位' : '看看要填入的内容' }}
+              {{ aiPreview.kind === 'private-status' ? '拟创建或补充的动态部位' : '拟写入的字段内容' }}
             </h4>
             <div class="values-grid">
-              <div v-for="(val, key) in aiPreview.values" :key="key" class="value-item">
-                <span class="value-key">{{ formatKey(key) }}</span>
+              <div
+                v-for="(val, key) in aiPreview.values"
+                :key="key"
+                class="value-item"
+                :class="{ 'is-single': isSingleValue && aiPreview.kind !== 'private-status' }"
+              >
+                <span
+                  v-if="!isSingleValue || aiPreview.kind === 'private-status'"
+                  class="value-key"
+                >
+                  {{ formatKey(key) }}
+                </span>
                 <span v-if="aiPreview.kind === 'private-status'" class="value-val">{{ val }}</span>
                 <textarea
                   v-else
@@ -118,6 +128,7 @@ defineEmits<{
 const modalElement = ref<HTMLElement | null>(null);
 
 const hasValues = computed(() => props.aiPreview && Object.keys(props.aiPreview.values || {}).length > 0);
+const isSingleValue = computed(() => Object.keys(props.aiPreview?.values || {}).length === 1);
 
 function formatKey(key: string): string {
   const worldField = worldFields.find(field => field.id === key);
@@ -285,28 +296,36 @@ onMounted(() => {
 .values-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .value-item {
   display: flex;
-  gap: 8px;
-  padding: 6px 10px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
   font-size: 12px;
 }
 
+.value-item.is-single {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .value-key {
   font-weight: 600;
-  color: var(--ink-muted);
-  min-width: 80px;
-  flex-shrink: 0;
+  color: var(--ink-heading);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .value-val {
   color: var(--ink-body);
+  line-height: 1.5;
 }
 
 .modal-footer {
@@ -386,6 +405,8 @@ onMounted(() => {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
   background: var(--paper-base);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);

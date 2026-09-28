@@ -3,7 +3,7 @@
     <div class="layer-banner">
       <div class="banner-badge">04 · 角色与关系</div>
       <h2 class="banner-title">主角与重要登场人物</h2>
-      <p class="banner-desc">先聊聊你扮演的人，再添上想在故事里遇见的角色。</p>
+      <p class="banner-desc">设定主角与关键人物的身份定位、性格反差与核心动机。</p>
     </div>
 
     <!-- 主角档案卡 -->
@@ -39,7 +39,7 @@
 
       <div v-if="!form.主角.启用" class="disabled-notice">
         <CircleAlert :size="15" />
-        <span>这次不以主角身份进入故事，下方的主角资料不会带入。</span>
+        <span>已停用主角设定：本次将以无预设身份或纯观察者视角展开，下方主角档案不写入。</span>
       </div>
 
       <div v-else class="card-form-grid">
@@ -60,7 +60,7 @@
             />
           </div>
           <div class="form-item">
-            <label class="form-label">身份</label>
+            <label class="form-label">身份阶层</label>
             <input
               v-model="form.主角.身份与位置"
               type="text"
@@ -72,42 +72,42 @@
 
         <div class="field-row-2">
           <div class="form-item">
-            <label class="form-label">最想做成的事</label>
+            <label class="form-label">核心诉求 / 目标</label>
             <input
               v-model="form.主角.追求"
               type="text"
               class="dossier-input"
-              placeholder="有什么想实现的愿望？还没想好可以留空。"
+              placeholder="例如：追查失踪亲属的下落 / 在城区边缘站稳脚跟"
             />
           </div>
           <div class="form-item">
-            <label class="form-label">压力下的另一面</label>
+            <label class="form-label">性格底色 / 反差特质</label>
             <input
               v-model="form.主角.性格主色"
               type="text"
               class="dossier-input"
-              placeholder="例如：压力下会迅速转为尖锐、控制欲强"
+              placeholder="例如：外表温和克制，涉及底线时极度执拗且具控制欲"
             />
           </div>
         </div>
 
         <div class="field-row-2">
           <div class="form-item">
-            <label class="form-label">平时的性格与说话方式</label>
+            <label class="form-label">表层性格与言行举止</label>
             <input
               v-model="form.主角.性格与声音"
               type="text"
               class="dossier-input"
-              placeholder="例如：克制冷静、习惯用简短反问回应他人，不轻易动怒"
+              placeholder="例如：说话习惯简洁，语气克制冷静，鲜少表露情绪波动"
             />
           </div>
           <div class="form-item">
-            <label class="form-label">还有什么想补充的？</label>
+            <label class="form-label">补充背景与细节特征</label>
             <input
               v-model="form.主角.补充设定"
               type="text"
               class="dossier-input"
-              placeholder="例如：左手食指有旧墨水烫伤痕迹；从不在雨天出门"
+              placeholder="例如：左手食指有陈旧伤痕；随身携带一枚无字铜质怀表"
             />
           </div>
         </div>
@@ -187,7 +187,7 @@
     <div class="npc-section-header">
       <div class="npc-header-copy">
         <h3 class="npc-section-title">重要登场角色 (NPC)</h3>
-        <p class="npc-section-desc">把想遇见的人写在这里，随时可以增删。记得给他们起个名字，才会带进故事。</p>
+        <p class="npc-section-desc">登记第一幕的核心互动人物；未填写姓名的空卡将不会导入正文。</p>
       </div>
       <button class="add-role-btn" type="button" @click="$emit('addCharacter')">
         <Plus :size="14" stroke-width="2.2" />
@@ -199,7 +199,7 @@
       <Users :size="20" class="empty-icon" />
       <div>
         <strong class="empty-title">尚未登记特定重要角色</strong>
-        <p class="empty-desc">想好了就添加一个角色，也可以先跳过，之后在故事里自然相遇。</p>
+        <p class="empty-desc">可预设特定的羁绊或对立角色；若不预设，将由世界观背景按需自然登场。</p>
       </div>
     </div>
 
@@ -227,7 +227,7 @@
               @click="$emit('assistCharacter', index)"
             >
               <Sparkles :size="13" />
-              <span>{{ aiBusyKey === `character:${index}` ? '正在想…' : 'AI 建议' }}</span>
+              <span>{{ aiBusyKey === `character:${index}` ? '生成中…' : 'AI 补全' }}</span>
             </button>
             <button
               class="del-role-btn"
@@ -295,16 +295,16 @@
 
           <div class="field-row-2">
             <div class="form-item">
-              <label class="form-label">压力下的另一面</label>
+              <label class="form-label">性格底色 / 反差特质</label>
               <input
                 v-model="character.性格主色"
                 type="text"
                 class="dossier-input"
-                placeholder="如：压力下显露出冒险和攻击性"
+                placeholder="例如：外表冷淡疏离，独处或涉及利益时极具攻击性"
               />
             </div>
             <div class="form-item">
-              <label class="form-label">性格底色与说话方式</label>
+              <label class="form-label">表层性格与言行举止</label>
               <input
                 v-model="character.性格与声音"
                 type="text"

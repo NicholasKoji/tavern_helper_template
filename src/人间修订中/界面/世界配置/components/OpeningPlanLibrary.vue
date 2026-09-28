@@ -3,8 +3,8 @@
     <div class="plan-library-head">
       <div class="plan-heading">
         <span class="plan-kicker">OPENING CONFIGURATION ARCHIVE</span>
-        <h2 id="opening-plan-library-title" class="plan-title">已有方案 / 复用已有方案</h2>
-        <p class="plan-description">把这次的设定保存在当前浏览器，下次还能接着用。保存方案不会开始故事。</p>
+        <h2 id="opening-plan-library-title" class="plan-title">开场预设方案库</h2>
+        <p class="plan-description">将当前全量配置快照保存在本地浏览器，便于快速复用或导出备份。</p>
       </div>
 
       <div class="plan-import-wrap">
@@ -44,7 +44,7 @@
           <button class="plan-action primary" type="button" @click="emit('apply', plan)">套用</button>
           <button class="plan-action forward" type="button" @click="emit('apply-and-forward', plan)">
             <ArrowRight :size="13" />
-            <span>套用并准备开场</span>
+            <span>套用并直达开局层</span>
           </button>
           <button
             class="plan-icon-action"
@@ -70,7 +70,7 @@
 
     <div v-else class="plan-empty">
       <Bookmark :size="16" />
-      <span>还没有本地方案。完成第六层后，可在底部保存第一份。</span>
+      <span>暂无已保存方案。配置完成后可在底部操作栏保存快照。</span>
     </div>
 
     <p class="plan-footnote">单方案导出保留 schemaVersion、表单快照与时间信息，后续字段迁移集中处理。</p>

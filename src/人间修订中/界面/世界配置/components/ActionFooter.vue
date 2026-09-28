@@ -20,7 +20,7 @@
           @click="$emit('completeRemaining')"
         >
           <WandSparkles :size="14" />
-          <span>{{ isAiBusy === 'bulk' ? '正在补全空白…' : '帮我补全这一页' }}</span>
+          <span>{{ isAiBusy === 'bulk' ? '正在推演补全…' : 'AI 补全当前层未填项' }}</span>
         </button>
       </div>
 

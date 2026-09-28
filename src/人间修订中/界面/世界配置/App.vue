@@ -260,7 +260,7 @@ const layers = [
     kicker: '第一层',
     order: '01',
     title: '世界基础',
-    description: '世界原本的条件与规律',
+    description: '世界的底层法则、物质条件与科技能力',
     icon: Globe,
   },
   {
@@ -268,7 +268,7 @@ const layers = [
     kicker: '第二层',
     order: '02',
     title: '社会生活',
-    description: '社会怎样运行，人们怎样生活',
+    description: '社会阶层、制度运行、生计与风俗禁忌',
     icon: BookOpen,
   },
   {
@@ -276,7 +276,7 @@ const layers = [
     kicker: '第三层',
     order: '03',
     title: '历史与现状',
-    description: '过去的影响与今天的格局',
+    description: '重大历史沉淀、当前局势与主要势力博弈',
     icon: Feather,
   },
   {
@@ -284,16 +284,23 @@ const layers = [
     kicker: '第四层',
     order: '04',
     title: '主角与重要角色',
-    description: '人物身份、关系与个人诉求',
+    description: '主角与登场NPC设定、性格反差与关系定位',
     icon: UsersRound,
   },
-  { id: 'editor', kicker: '第五层', order: '05', title: '现实编辑器', description: '改变世界的手段与边界', icon: Cpu },
+  {
+    id: 'editor',
+    kicker: '第五层',
+    order: '05',
+    title: '现实编辑器',
+    description: '编辑器的显现形态、干涉范围与限制代价',
+    icon: Cpu,
+  },
   {
     id: 'opening',
     kicker: '第六层',
     order: '06',
     title: '开局与生成',
-    description: '选择进入世界的瞬间',
+    description: '设定开场时间、地点、在场人物并生成正文',
     icon: ListChecks,
   },
 ] as const;
@@ -302,16 +309,16 @@ const editorFormOptions = ['悬浮面板', '文字提示与弹窗', '绑定设�
 const editorSyncOptions = ['立即同步', '渐进同步', '只对受影响对象同步'];
 const editorMemoryOptions = ['只有主角保留', '所有人保留', '只有编辑器保留', '修改前后都不保留'];
 const editorAutonomyOptions = [
-  { value: 'D-完全禁止', label: '不自主执行，只按玩家确认' },
-  { value: 'A-完全随机', label: '可以自主执行，变化不设倾向' },
-  { value: 'B-倾向色色', label: '可以自主执行，偏向亲密变化' },
-  { value: 'C-不涉及物理', label: '可以自主执行，但避开物理层' },
-  { value: 'E-玩家插件伪装', label: '只在外部触发时执行' },
+  { value: 'D-完全禁止', label: '完全被动（仅依玩家指令执行）' },
+  { value: 'A-完全随机', label: '自主随机（可能脱离指令产生无倾向变化）' },
+  { value: 'B-倾向色色', label: '自主亲密（可能自主诱发亲密或欲望变动）' },
+  { value: 'C-不涉及物理', label: '概念自主（允许自主变动，但不涉及物理层现实）' },
+  { value: 'E-玩家插件伪装', label: '伪装响应（仅在外部特定事件触发时响应）' },
 ];
 const editorScopes: Array<{ value: EditorScope; label: string; description: string }> = [
-  { value: '世界', label: '整个世界', description: '让整个世界一起改变' },
-  { value: '区域', label: '指定区域', description: '只改变你选中的地方' },
-  { value: '个人', label: '指定个人', description: '只影响你选中的人' },
+  { value: '世界', label: '全域现实', description: '作用于整个世界的普遍常理与物理法则' },
+  { value: '区域', label: '区域划界', description: '仅影响划定的城邦、国家或特定场所' },
+  { value: '个人', label: '定向个体', description: '仅作用于指定个体，不波及外界旁人' },
 ];
 
 function createClothing(): ClothingDraft {
@@ -1620,12 +1627,12 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
   const allowedDescriptors = bulkPendingDescriptors(requestLayer);
   const allowedKeys = allowedDescriptors.map(descriptor => descriptor.id);
   if (!allowedKeys.length) {
-    setStatus('这一页已经填好了。');
+    setStatus('当前层所有字段均已填写，无需补全。');
     return;
   }
   const revision = contextRevision.value;
   aiBusyKey.value = 'bulk';
-  setStatus('正在为这一页想些点子…', 'working');
+  setStatus('正在结合前置设定推演补全未填项…', 'working');
   try {
     const payload = await requestJson(
       buildBulkPrompt(requestLayer),
@@ -1636,14 +1643,14 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
       target: 'bulk',
       title: `${layers.find(layer => layer.id === requestLayer)?.title ?? '本层'} · AI 补全预览`,
       layer: requestLayer,
-      summary: payload.结论 || '已根据已有想法补出一组可采用的空白回答。',
+      summary: payload.结论 || '已结合当前设定推演生成待填字段建议。',
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
       contextRevision: revision,
       bulkAllowedKeys: allowedKeys,
     };
-    setStatus('建议已经准备好。采用后只填入空白处，你写过的内容会保留。', 'success');
+    setStatus('AI 补全建议已就绪，采用后仅写入空白项，已有内容不受影响。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] AI 批量补全失败', error);
     setStatus(`AI 整理失败：${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -1749,7 +1756,7 @@ function applyAiPreview() {
     const keys = ['一级区域', '二级区域', '三级地点'] as const;
     const parts = keys.map((_, index) => (values[`opening.location.${index + 1}`] ?? '').trim());
     if (parts.some(value => !value)) {
-      setStatus('请把三个地点都填好，再一起采用。', 'error');
+      setStatus('请完整填写一级区域、二级区域和三级地点后再采用。', 'error');
       return;
     }
     form.开局.起始地点 = { 一级区域: parts[0], 二级区域: parts[1], 三级地点: parts[2] };
@@ -1785,7 +1792,7 @@ function applyAiPreview() {
     if (descriptor && value.trim()) descriptor.write(value.trim());
   }
   aiPreview.value = null;
-  setStatus('已采用，你还可以继续修改。', 'success');
+  setStatus('AI 建议已采用写入表单。', 'success');
 }
 
 function closeAiPreview() {
@@ -1892,13 +1899,13 @@ function validateOpeningCoordinates(): boolean {
 async function generateOpeningDraft(note = '') {
   if (openingGenerating.value || starting.value || !validateOpeningCoordinates()) return;
   openingGenerating.value = true;
-  setStatus(note ? '正在按你的想法修改开场…' : '正在写故事的开场…', 'working');
+  setStatus(note ? '正在依据修改意见重写开场…' : '正在生成开场正文…', 'working');
   const revision = contextRevision.value;
   try {
     const prompt = `${buildOpeningPrompt()}${note ? `\n\n【针对上一份开场的修改意见】\n${note}\n只修改这份开场，不生成第二份候选。` : ''}`;
     openingPreview.value = await requestOpening(prompt, note || '请生成唯一的正式开场。');
     openingContextRevision.value = revision;
-    setStatus('开场写好了。先读一读，满意就开始故事吧。', 'success');
+    setStatus('开场正文已生成，请在下方预览；满意即可确认开局。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] 开场生成失败', error);
     setStatus(`开场生成失败：${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -1911,7 +1918,7 @@ async function confirmOpening() {
   if (!openingPreview.value || openingPreviewStale.value || starting.value) return;
   if (!validateOpeningCoordinates()) return;
   starting.value = true;
-  setStatus('正在保存设定，开启故事…', 'working');
+  setStatus('正在保存设定并载入开局…', 'working');
   const snapshot = buildOpeningSnapshot();
   const oldData = normalizeOpeningMvuData(Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() }));
   const beforeMessages = openingMessages();
@@ -1953,9 +1960,9 @@ async function confirmOpening() {
       updateVariablePresent: persistedMessage.message.includes('<UpdateVariable>'),
       statDataRoots: Object.keys(persistedMessage.data?.stat_data ?? {}),
     });
-    setStatus('故事开始了，往下翻就能继续。', 'success');
+    setStatus('开局已载入，向下滑动即可开始剧情。', 'success');
   } catch (error) {
-    console.error('[人间修订中·世界配置] 开场签发失败', error);
+    console.error('[人间修订中·世界配置] 开局载入失败', error);
     if (createdMessageId === undefined) {
       const candidate = findCreatedOpeningMessage(message, {}, beforeMessageIds);
       if (candidate) createdMessageId = candidate.message_id;

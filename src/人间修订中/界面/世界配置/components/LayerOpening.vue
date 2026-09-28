@@ -2,8 +2,8 @@
   <div class="layer-container">
     <div class="layer-banner">
       <div class="banner-badge">06 · 开局与生成</div>
-      <h2 class="banner-title">选择进入世界的瞬间</h2>
-      <p class="banner-desc">定好故事的日期和地点就能开始。其他内容随你，平静的一天也可以是个好开场。</p>
+      <h2 class="banner-title">开场设定与正文生成</h2>
+      <p class="banner-desc">设定故事开始的时间、地点与登场人物，生成并确认开局内容。</p>
     </div>
     <section class="coordinate-fields">
       <h3 class="coordinate-title">开场日期 · 必填</h3>
@@ -20,21 +20,21 @@
           />
         </label>
       </div>
-      <p class="coordinate-hint">故事发生在哪一天？这里填写的是故事里的日期。</p>
+      <p class="coordinate-hint">故事开始时的年份、月份与日期。</p>
     </section>
     <section class="coordinate-fields">
       <div class="location-heading">
-        <h3 class="coordinate-title">故事从哪里开始？ · 必填</h3>
+        <h3 class="coordinate-title">起始地点 · 必填</h3>
         <button
           class="generate-preview-btn location-ai-btn"
           type="button"
           :disabled="Boolean(aiBusyKey)"
           @click="$emit('assist', 'opening.location')"
         >
-          <Sparkles :size="14" />{{ aiBusyKey === 'opening.location' ? '正在想…' : 'AI 建议' }}
+          <Sparkles :size="14" />{{ aiBusyKey === 'opening.location' ? '生成中…' : 'AI 建议' }}
         </button>
       </div>
-      <p class="coordinate-hint">从大区域到具体落脚点，一起定好。AI 会沿用你已经填好的地点。</p>
+      <p class="coordinate-hint">从大区域逐步细化到具体场所，AI 建议会参考已填内容。</p>
       <div class="location-grid">
         <label v-for="(key, index) in locationKeys" :key="key">
           {{ locationHints[index] }}
@@ -63,23 +63,23 @@
           />
         </label>
       </div>
-      <p class="coordinate-hint">可全部留空；指定时间时，同时填写时和分。</p>
+      <p class="coordinate-hint">可留空；填写时需同时指定时和分。</p>
     </section>
     <section class="coordinate-fields">
       <h3 class="coordinate-title">在场人物 · 选填</h3>
-      <p class="coordinate-hint">你之前添加的人物里，有谁会在开场时出现？</p>
+      <p class="coordinate-hint">选择开场时已在现场的角色（选填）。</p>
       <div class="presence-options">
         <label v-for="character in namedCharacters" :key="character.index">
           <input v-model="form.开局.在场角色" type="checkbox" :value="character.index" /> {{ character.name }}
         </label>
-        <span v-if="!namedCharacters.length" class="coordinate-hint">还没添加人物，可以先跳过。</span>
+        <span v-if="!namedCharacters.length" class="coordinate-hint">暂无已登记的重要角色，开场将由主角或场景自然展开。</span>
       </div>
     </section>
     <QuestionField
       v-model="form.开局.初始情境"
       title="初始情境"
-      hint="开场这一刻，人物正在做什么？只描述眼前情境，不必安排危机或任务。"
-      placeholder="选填"
+      hint="开场第一瞬间的环境或事件，留空则由 AI 自由发挥。"
+      placeholder="例如：刚推开店门，柜台上放着一封未拆封的信件…"
       ai-key="opening.situation"
       :is-ai-busy="aiBusyKey === 'opening.situation'"
       :is-any-ai-busy="Boolean(aiBusyKey)"
@@ -87,7 +87,7 @@
     />
     <details class="coordinate-fields">
       <summary>叙事偏好 · 选填</summary>
-      <p class="coordinate-hint">喜欢怎样的讲述方式？可以留下一点偏好。</p>
+      <p class="coordinate-hint">控制正文的视角、文风与节奏倾向。</p>
       <div class="layer-fields">
         <QuestionField
           v-for="key in narrativeKeys"
@@ -102,12 +102,12 @@
         />
       </div>
     </details>
-    <!-- 开场预览与签发模块 -->
+    <!-- 开场预览与确认模块 -->
     <section class="signing-section">
       <header class="signing-head">
         <div class="signing-title-wrap">
-          <span class="signing-kicker">准备开始</span>
-          <h3 class="signing-title">看看故事怎样开始</h3>
+          <span class="signing-kicker">开场生成</span>
+          <h3 class="signing-title">开场正文预览</h3>
         </div>
         <div class="signing-head-actions">
           <button
@@ -118,7 +118,7 @@
             @click="$emit('generateOpening')"
           >
             <Sparkles :size="14" />
-            <span>{{ openingGenerating ? '正在生成第一幕…' : openingPreview ? '重新生成' : '生成开场' }}</span>
+            <span>{{ openingGenerating ? '正在生成…' : openingPreview ? '重新生成' : '生成开场' }}</span>
           </button>
         </div>
       </header>
@@ -127,7 +127,7 @@
         <div class="skeleton-line full"></div>
         <div class="skeleton-line three-quarter"></div>
         <div class="skeleton-line half"></div>
-        <p class="skeleton-text">正在把你的想法写成故事，稍等一下…</p>
+        <p class="skeleton-text">正在根据前文设定生成开场正文…</p>
       </div>
 
       <div v-else-if="openingPreview" class="opening-preview-box">
@@ -167,13 +167,13 @@
             @click="$emit('confirmOpening')"
           >
             <Stamp :size="16" class="stamp-icon" />
-            <span>{{ starting ? '正在开启故事…' : '确认开场，开始故事' }}</span>
+            <span>{{ starting ? '正在载入…' : '确认开局' }}</span>
           </button>
         </div>
       </div>
 
       <div v-else class="signing-placeholder">
-        <p>点击上方<strong>「生成开场」</strong>，先看看故事会怎样开始。满意后再确认，也可以提出想改的地方。</p>
+        <p>点击上方<strong>「生成开场」</strong>，先预览开篇正文；满意后点击确认即可开始。</p>
       </div>
     </section>
   </div>
@@ -203,10 +203,10 @@ const locationKeys = ['一级区域', '二级区域', '三级地点'] as const;
 const locationHints = ['国家、城市或大区域', '其中的城区、聚落或片区', '其中的建筑、房间或具体场所'];
 const locationExamples = ['例如：临海市', '例如：老港区', '例如：灯塔街的咖啡馆'];
 const narrativeCopy = {
-  叙事视角: { title: '用谁的视角讲故事？', placeholder: '例如：用第二人称，像在对我讲述眼前发生的事。' },
-  文风: { title: '喜欢怎样的文字？', placeholder: '例如：自然细腻，多一些对话，少一些华丽的比喻。' },
-  节奏: { title: '故事走得快些，还是慢些？', placeholder: '例如：慢慢展开，留时间闲聊和观察周围。' },
-  体验倾向: { title: '这次最想体验什么？', placeholder: '例如：轻松日常、结识朋友，偶尔来一点小冒险。' },
+  叙事视角: { title: '叙事视角', placeholder: '例如：第二人称（你），贴近当下感受与即时互动' },
+  文风: { title: '文字风格', placeholder: '例如：注重现场细节与对话，少用华丽比喻' },
+  节奏: { title: '叙事节奏', placeholder: '例如：节奏适中，留出充分的日常交流与环境观察空间' },
+  体验倾向: { title: '核心体验', placeholder: '例如：日常探索、悬疑推进，偶尔带有轻松互动' },
 };
 const narrativeKeys = ['叙事视角', '文风', '节奏', '体验倾向'] as const;
 const namedCharacters = computed(() =>

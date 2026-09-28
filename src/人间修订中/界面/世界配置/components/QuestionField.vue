@@ -16,7 +16,7 @@
         @click="$emit('assist', aiKey)"
       >
         <Sparkles :size="13" class="sparkle-icon" />
-        <span>{{ isAiBusy ? '正在想…' : 'AI 建议' }}</span>
+        <span>{{ isAiBusy ? '生成中…' : 'AI 建议' }}</span>
       </button>
     </div>
 

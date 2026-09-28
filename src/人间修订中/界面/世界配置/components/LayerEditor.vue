@@ -2,8 +2,8 @@
   <div class="layer-container">
     <div class="layer-banner">
       <div class="banner-badge">05 · 现实编辑器</div>
-      <h2 class="banner-title">你想怎样改变现实？</h2>
-      <p class="banner-desc">它长什么样，能改变什么，又会留下什么影响？在这里按你的想法决定。</p>
+      <h2 class="banner-title">现实编辑器的运行法则与干涉边界</h2>
+      <p class="banner-desc">设定编辑器的显现形态、作用范围、常识同步机制与限制代价。</p>
     </div>
 
     <div class="layer-fields">
@@ -11,10 +11,10 @@
       <div class="grid-2-col">
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">编辑器会以什么样子出现？</h3>
+            <h3 class="choice-title">显现表现形式</h3>
             <span class="choice-tag">{{ form.现实编辑器.表现形式 }}</span>
           </div>
-          <p class="choice-hint">是一块浮在眼前的面板，还是身边的一件物品？</p>
+          <p class="choice-hint">现实编辑器在情境中以何种形态被感知或操作：</p>
           <div class="pill-group">
             <button
               v-for="opt in editorFormOptions"
@@ -30,10 +30,10 @@
         </div>
 
         <QuestionField
-          title="谁能看见或使用它？"
-          hint="谁能看见、使用现实编辑器？他人是否会察觉异常？"
+          title="感知知晓与权限边界"
+          hint="谁能感知并使用现实编辑器？他人是否会察觉异常现象？"
           :model-value="form.现实编辑器.可见与知晓"
-          placeholder="例如：只有主角可见并能操作；NPC 无法感知界面的存在，但能感受规则生效后的结果…"
+          placeholder="例如：仅主角可见并可操作；NPC 无法感知界面，但能感知到世界发生变化后的结果…"
           ai-key="editor.visibility"
           :is-ai-busy="aiBusyKey === 'editor.visibility'"
           :is-any-ai-busy="Boolean(aiBusyKey)"
@@ -47,10 +47,10 @@
       <div class="grid-3-col">
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">能修改哪些东西？</h3>
+            <h3 class="choice-title">生效范围 (作用域)</h3>
             <span class="choice-tag">{{ form.现实编辑器.可修改范围.join('、') || '无' }}</span>
           </div>
-          <p class="choice-hint">可以影响整个世界、一片区域，或某个人。可以多选。</p>
+          <p class="choice-hint">允许编辑器作用的规则层级（可多选）：</p>
           <div class="checkbox-group">
             <label
               v-for="scope in editorScopes"
@@ -73,10 +73,10 @@
 
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">修改后，人们会怎样接受？</h3>
+            <h3 class="choice-title">常识同步机制</h3>
             <span class="choice-tag">{{ optionLabel(form.现实编辑器.常识同步) }}</span>
           </div>
-          <p class="choice-hint">规则修改后，世人如何接受新常识？</p>
+          <p class="choice-hint">规则修改后，世人如何认知并合理化现实变动：</p>
           <div class="pill-group vertical-pills">
             <button
               v-for="opt in editorSyncOptions"
@@ -93,10 +93,10 @@
 
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">谁还记得原来的世界？</h3>
+            <h3 class="choice-title">记忆保留策略</h3>
             <span class="choice-tag">{{ form.现实编辑器.记忆保留 }}</span>
           </div>
-          <p class="choice-hint">规则修改前后，谁保留旧记忆？</p>
+          <p class="choice-hint">规则修改后，旧世界的记忆与认知由谁保留：</p>
           <div class="pill-group vertical-pills">
             <button
               v-for="opt in editorMemoryOptions"
@@ -116,10 +116,10 @@
       <div class="grid-2-col">
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">主角也会受影响吗？</h3>
+            <h3 class="choice-title">主角是否受规则约束</h3>
             <span class="choice-tag">{{ form.现实编辑器.主角受影响 }}</span>
           </div>
-          <p class="choice-hint">世界改变时，主角会和其他人一起受影响吗？</p>
+          <p class="choice-hint">新规则生效时，是否同等强制约束主角自身：</p>
           <div class="pill-group">
             <button
               type="button"
@@ -127,7 +127,7 @@
               :class="{ active: form.现实编辑器.主角受影响 === '是' }"
               @click="form.现实编辑器.主角受影响 = '是'"
             >
-              是（主角也受新常识/规则约束）
+              是（主角亦受新规则与常识同化）
             </button>
             <button
               type="button"
@@ -135,17 +135,17 @@
               :class="{ active: form.现实编辑器.主角受影响 === '否' }"
               @click="form.现实编辑器.主角受影响 = '否'"
             >
-              否（主角保持绝对豁免与清醒）
+              否（主角保持独立清醒与绝对豁免）
             </button>
           </div>
         </div>
 
         <div class="choice-card">
           <div class="choice-head">
-            <h3 class="choice-title">它会自己动手修改吗？</h3>
+            <h3 class="choice-title">自主执行倾向</h3>
             <span class="choice-tag">{{ autonomyLabel }}</span>
           </div>
-          <p class="choice-hint">编辑器是否会脱离玩家意志自主变动规则？</p>
+          <p class="choice-hint">编辑器是否会脱离玩家直接指令自行演化变动规则：</p>
           <div class="pill-group vertical-pills">
             <button
               v-for="opt in editorAutonomyOptions"
@@ -163,10 +163,10 @@
 
       <div class="grid-2-col">
         <QuestionField
-          title="使用它有什么限制或代价？"
-          hint="它可以随意使用，还是有次数、条件或副作用？"
+          title="使用限制与干涉代价"
+          hint="修改现实需承受的副作用、冷却条件或能量负荷。"
           :model-value="form.现实编辑器.限制与代价"
-          placeholder="例如：每天只能修改三次，用完后需要睡一觉才能恢复。"
+          placeholder="例如：单日修改不得超过三次；不可直接无中生有创造违背物理法则的实体"
           ai-key="editor.limit"
           :is-ai-busy="aiBusyKey === 'editor.limit'"
           :is-any-ai-busy="Boolean(aiBusyKey)"
@@ -176,8 +176,8 @@
         />
 
         <QuestionField
-          title="你想怎样告诉它要改什么？"
-          hint="玩家在正文中如何向编辑器发出修改指令？"
+          title="自然语言指令约定"
+          hint="玩家在正文中向编辑器下达指令与确认修改的约定形式。"
           :model-value="form.现实编辑器.自然语言修改"
           placeholder="例如：玩家在对话中说出明确诉求后，编辑器以悬浮面板形式提供修改确认草案…"
           ai-key="editor.language"
@@ -212,10 +212,10 @@ defineEmits<{
 
 function optionLabel(value: string): string {
   const labels: Record<string, string> = {
-    立即同步: '立刻觉得本来就该如此',
-    渐进同步: '慢慢接受新的常识',
-    只对受影响对象同步: '只有受影响的人接受新常识',
-    '由 AI 结合前文整理': '让 AI 根据世界设定来想',
+    立即同步: '即时覆写（所有人视新规则为理所当然）',
+    渐进同步: '渐进认知（世人逐渐接受变动，初期有违和感）',
+    只对受影响对象同步: '仅受众生效（仅目标认知改变，旁观者觉察异常）',
+    '由 AI 结合前文整理': '依据情境推演生成',
   };
   return labels[value] ?? value;
 }
