@@ -1,7 +1,7 @@
 <template>
   <div class="layer-container">
     <div class="layer-banner">
-      <div class="banner-badge">03 · 角色与关系</div>
+      <div class="banner-badge">04 · 角色与关系</div>
       <h2 class="banner-title">主角与重要登场人物</h2>
       <p class="banner-desc">为核心人物赋予明确的身份、性格与关系位置，让场面因人物的碰撞而生动起来。</p>
     </div>
@@ -77,7 +77,7 @@
               v-model="form.主角.追求"
               type="text"
               class="dossier-input"
-              placeholder="留空则签发为空，不从第一层主角处境后备填入"
+              placeholder="留空则签发为空，不从其他字段后备填入"
             />
           </div>
           <div class="form-item">

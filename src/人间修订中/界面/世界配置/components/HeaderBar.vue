@@ -4,10 +4,10 @@
       <div class="masthead-brand">
         <div class="eyebrow-badge">
           <span class="eyebrow-seal">受理</span>
-          <span class="eyebrow-text">创作访谈 · 开场配置</span>
+          <span class="eyebrow-text">世界设定 · 开场配置</span>
         </div>
         <h1 class="dossier-title">人间修订中</h1>
-        <p class="dossier-subtitle">先说想经历什么，再让世界长出能够开始游玩的形状。</p>
+        <p class="dossier-subtitle">先建立世界，再放入人物，选择故事开始的瞬间。</p>
       </div>
 
       <div class="masthead-controls">
@@ -35,11 +35,9 @@
         </span>
         <div class="integrator-text">
           <strong class="integrator-title">让现实编辑器参与世界观生成</strong>
-          <p v-if="modelValue" class="integrator-hint">
-            已开启：世界骨架会将编辑器的存在、传闻或规则异动纳入设计。
-          </p>
+          <p v-if="modelValue" class="integrator-hint">已开启：世界设定会将编辑器的存在、传闻或规则异动纳入设计。</p>
           <p v-else class="integrator-hint">
-            默认关闭：世界骨架完全不提及也不围绕它设计；它会在之后作为突发外来事物进入。
+            默认关闭：世界设定完全不提及也不围绕它设计；它会在之后作为突发外来事物进入。
           </p>
         </div>
       </div>
@@ -136,7 +134,9 @@ function selectTheme(theme: ThemeId) {
   padding: 20px 24px 18px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 16px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .masthead-top {
@@ -485,7 +485,9 @@ function selectTheme(theme: ThemeId) {
 /* Animations */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-slide-enter-from,

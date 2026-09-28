@@ -188,93 +188,12 @@
           @assist="$emit('assist', $event)"
         />
       </div>
-
-      <!-- 开场预览与签发模块 -->
-      <section class="signing-section">
-        <header class="signing-head">
-          <div class="signing-title-wrap">
-            <span class="signing-kicker">FINAL REVISION & SIGNING</span>
-            <h3 class="signing-title">签发卷宗 · 第一幕生成</h3>
-          </div>
-          <div class="signing-head-actions">
-            <button
-              class="generate-preview-btn"
-              type="button"
-              :class="{ 'is-busy': openingGenerating }"
-              :disabled="openingGenerating || starting"
-              @click="$emit('generateOpening')"
-            >
-              <Sparkles :size="14" />
-              <span>{{
-                openingGenerating ? '正在生成第一幕…' : openingPreview ? '重新生成' : '生成唯一开场预览'
-              }}</span>
-            </button>
-          </div>
-        </header>
-
-        <div v-if="openingGenerating" class="opening-loading-skeleton">
-          <div class="skeleton-line full"></div>
-          <div class="skeleton-line three-quarter"></div>
-          <div class="skeleton-line half"></div>
-          <p class="skeleton-text">正在依据 5 层访谈设定生成唯一正式开局正文，请稍候…</p>
-        </div>
-
-        <div v-else-if="openingPreview" class="opening-preview-box">
-          <div v-if="openingPreviewStale" class="stale-warning">
-            <CircleAlert :size="14" />
-            <span>前文访谈设定已被修改，当前开场草稿可能已过时，建议重新生成。</span>
-          </div>
-
-          <div class="preview-text-scroll">
-            <pre class="preview-text">{{ openingPreview }}</pre>
-          </div>
-
-          <!-- 修改意见输入 -->
-          <div class="revision-input-row">
-            <input
-              v-model="localRevisionNote"
-              type="text"
-              class="dossier-input revision-input"
-              placeholder="如有微调要求可在此补充（如：增加雨夜细节、强化对白压迫感等）…"
-              @keydown.enter="$emit('generateOpeningWithNote', localRevisionNote)"
-            />
-            <button
-              class="revision-btn"
-              type="button"
-              :disabled="openingGenerating || !localRevisionNote.trim()"
-              @click="$emit('generateOpeningWithNote', localRevisionNote)"
-            >
-              按意见修改
-            </button>
-          </div>
-
-          <div class="signing-actions">
-            <button
-              class="confirm-signing-btn"
-              type="button"
-              :disabled="starting || openingPreviewStale"
-              @click="$emit('confirmOpening')"
-            >
-              <Stamp :size="16" class="stamp-icon" />
-              <span>{{ starting ? '正在签发写入…' : '签发卷宗 · 开启第一幕' }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="signing-placeholder">
-          <p>
-            点击上方<strong>「生成唯一开场预览」</strong>，AI 将根据你已配置的 5
-            层世界观、主角和重要角色生成第一幕正文。
-          </p>
-        </div>
-      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { CircleAlert, Sparkles, Stamp } from '@lucide/vue';
+import { computed } from 'vue';
 import QuestionField from './QuestionField.vue';
 
 const props = defineProps<{
@@ -285,20 +204,11 @@ const props = defineProps<{
   editorSyncOptions: string[];
   editorMemoryOptions: string[];
   editorAutonomyOptions: Array<{ value: string; label: string }>;
-  openingGenerating: boolean;
-  openingPreview: string;
-  openingPreviewStale: boolean;
-  starting: boolean;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'assist', key: string): void;
-  (e: 'generateOpening'): void;
-  (e: 'generateOpeningWithNote', note: string): void;
-  (e: 'confirmOpening'): void;
 }>();
-
-const localRevisionNote = ref('');
 
 const autonomyLabel = computed(() => {
   const match = props.editorAutonomyOptions.find(opt => opt.value === props.form.现实编辑器.自主执行);
@@ -514,230 +424,9 @@ function toggleScope(scopeVal: string) {
   color: var(--ink-muted);
 }
 
-/* 签发与第一幕生成板块 */
-.signing-section {
-  margin-top: 10px;
-  background: var(--paper-elevated);
-  border: 1px solid var(--brass-border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  box-shadow: var(--shadow-md);
-}
-
-.signing-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.signing-head-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  min-width: 0;
-}
-
-.signing-kicker {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--brass);
-  letter-spacing: 0.08em;
-}
-
-.signing-title {
-  margin: 2px 0 0;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--ink-heading);
-}
-
-.generate-preview-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: var(--paper-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cinnabar);
-  transition: all 0.18s ease;
-}
-
-.generate-preview-btn:hover:not(:disabled) {
-  background: var(--cinnabar-soft);
-  border-color: var(--cinnabar);
-}
-
-.generate-preview-btn.is-busy {
-  background: var(--cinnabar-soft);
-  border-color: var(--cinnabar);
-}
-
-.signing-placeholder {
-  padding: 24px;
-  text-align: center;
-  color: var(--ink-muted);
-  font-size: 13px;
-  background: var(--paper-base);
-  border-radius: var(--radius-md);
-}
-
-.opening-loading-skeleton {
-  padding: 20px;
-  background: var(--paper-base);
-  border-radius: var(--radius-md);
-}
-
-.skeleton-line {
-  height: 12px;
-  background: var(--border-subtle);
-  border-radius: 4px;
-  margin-bottom: 10px;
-  animation: pulse 1.5s infinite ease-in-out;
-}
-.skeleton-line.full {
-  width: 100%;
-}
-.skeleton-line.three-quarter {
-  width: 75%;
-}
-.skeleton-line.half {
-  width: 50%;
-}
-.skeleton-text {
-  font-size: 12px;
-  color: var(--ink-muted);
-  margin-top: 14px;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-.opening-preview-box {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.stale-warning {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: var(--brass-soft);
-  border: 1px solid var(--brass-border);
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
-  color: var(--brass);
-}
-
-.preview-text-scroll {
-  max-height: 320px;
-  overflow-y: auto;
-  background: var(--paper-base);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  padding: 16px;
-}
-
-.preview-text {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--ink-body);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.revision-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.revision-input {
-  flex: 1;
-}
-
-.revision-btn {
-  padding: 6px 14px;
-  background: var(--paper-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--ink-heading);
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.revision-btn:hover:not(:disabled) {
-  background: var(--paper-elevated);
-  border-color: var(--brass-border);
-}
-
-.signing-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
-
-.confirm-signing-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 24px;
-  background: var(--cinnabar);
-  border: 1px solid var(--cinnabar-hover);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  box-shadow: 0 2px 10px var(--cinnabar-glow);
-  transition: all 0.2s ease;
-}
-
-.confirm-signing-btn:hover:not(:disabled) {
-  background: var(--cinnabar-hover);
-  box-shadow: 0 4px 16px var(--cinnabar-glow);
-  transform: translateY(-1px);
-}
-
-.confirm-signing-btn:disabled {
-  opacity: 0.5;
-  transform: none;
-}
-
-.stamp-icon {
-  color: #fff;
-}
-
 @media (max-width: 768px) {
-  .grid-2-col,
-  .grid-3-col {
+  .grid-2-col {
     grid-template-columns: 1fr;
-  }
-  .signing-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .signing-head-actions {
-    align-items: flex-start;
   }
 }
 </style>

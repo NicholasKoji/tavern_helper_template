@@ -1,0 +1,107 @@
+import type { OpeningFormSnapshot } from './opening';
+export type WorldSection = '世界基础' | '社会生活' | '历史与现状';
+export const worldFields = [
+  {
+    id: 'foundation.overview',
+    layer: 'foundation',
+    section: '世界基础',
+    field: '世界概况',
+    title: '世界概况',
+    hint: '说明现实或架空、时代定位，以及世界的一句话特征。只写总览，不展开地理、制度和剧情。',
+  },
+  {
+    id: 'foundation.laws',
+    layer: 'foundation',
+    section: '世界基础',
+    field: '底层规律',
+    title: '底层规律',
+    hint: '描述自然、生命、时空等底层规律及边界；不写国家法律、科技清单或编辑器机制。普通现实规律无需逐条复述。',
+  },
+  {
+    id: 'foundation.geography',
+    layer: 'foundation',
+    section: '世界基础',
+    field: '地理生态与资源',
+    title: '地理生态与资源',
+    hint: '描述主要地域、气候、生态、关键资源与分布，以及环境的实际限制；不指定开场落脚点，不展开经济制度。',
+  },
+  {
+    id: 'foundation.inhabitants',
+    layer: 'foundation',
+    section: '世界基础',
+    field: '居民与族群',
+    title: '居民与族群',
+    hint: '描述居民、族群的生理或寿命差异、分布与生存需求；不创造具体 NPC 档案，不把同一族群写成同一种性格。',
+  },
+  {
+    id: 'foundation.technology',
+    layer: 'foundation',
+    section: '世界基础',
+    field: '技术与特殊力量',
+    title: '技术与特殊力量',
+    hint: '描述原有技术或力量能做什么、谁可获得、普及程度与代价；不写现实编辑器，不重复自然公理或制度全文。',
+  },
+  {
+    id: 'society.institutions',
+    layer: 'society',
+    section: '社会生活',
+    field: '权力与制度',
+    title: '权力与制度',
+    hint: '描述治理、法律、身份、阶层、权利和义务；不列具体势力的目标和联盟，不以主角遭遇代替制度。',
+  },
+  {
+    id: 'society.economy',
+    layer: 'society',
+    section: '社会生活',
+    field: '经济与基础设施',
+    title: '经济与基础设施',
+    hint: '描述生产、生计、交易、分配、交通、通信与公共服务；可以推导技术的生产影响，但不重复技术原理或文化信条。',
+  },
+  {
+    id: 'society.culture',
+    layer: 'society',
+    section: '社会生活',
+    field: '文化信仰与价值观',
+    title: '文化信仰与价值观',
+    hint: '描述居民相信、重视与忌讳什么，以及群体间的观念差异；不重复作息生活清单，不把信仰自动写成客观真相。',
+  },
+  {
+    id: 'society.daily',
+    layer: 'society',
+    section: '社会生活',
+    field: '日常生活',
+    title: '日常生活',
+    hint: '描述普通人的居住、饮食、教育、工作、家庭、娱乐及人生路径；写实际生活，不重复文化价值观或开场事件。',
+  },
+  {
+    id: 'history.past',
+    layer: 'history',
+    section: '历史与现状',
+    field: '关键历史',
+    title: '关键历史',
+    hint: '选择形成当下格局的少数关键事件，说明先后与遗留影响；不必从创世起写，不预定未来主线。',
+  },
+  {
+    id: 'history.present',
+    layer: 'history',
+    section: '历史与现状',
+    field: '当下局势',
+    title: '当下局势',
+    hint: '描述现在的发展阶段、稳定状态或正在发生的变化；不重复历史，不强加危机、主角使命或开场事件。',
+  },
+  {
+    id: 'history.factions',
+    layer: 'history',
+    section: '历史与现状',
+    field: '主要势力与关系',
+    title: '主要势力与关系',
+    hint: '描述重要国家、组织或群体的目标、资源、立场及合作竞争；与已有制度一致但不重写制度，不限于第一幕参与者。',
+  },
+] as const;
+export function emptyWorldSections(): Pick<OpeningFormSnapshot, WorldSection> {
+  return {
+    世界基础: { 世界概况: '', 底层规律: '', 地理生态与资源: '', 居民与族群: '', 技术与特殊力量: '' },
+    社会生活: { 权力与制度: '', 经济与基础设施: '', 文化信仰与价值观: '', 日常生活: '' },
+    历史与现状: { 关键历史: '', 当下局势: '', 主要势力与关系: '' },
+  };
+}

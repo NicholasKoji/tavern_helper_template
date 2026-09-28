@@ -8,7 +8,7 @@
       @select-theme="setTheme"
     />
 
-    <!-- 5 层步骤指示轨 -->
+    <!-- 六层配置导航 -->
     <StepNav
       :layers="layers"
       :current-layer="currentLayer"
@@ -16,7 +16,7 @@
       @go-to-layer="goToLayer"
     />
 
-    <!-- 双栏工作台主体 -->
+    <!-- 单栏配置工作台 -->
     <div class="dossier-workspace">
       <!-- 左侧主表单区 -->
       <section class="dossier-form-column" role="region" :aria-label="currentLayerMeta.title">
@@ -32,17 +32,14 @@
         />
 
         <transition name="layer-fade" mode="out-in">
-          <LayerExperience
-            v-if="currentLayerMeta.id === 'experience'"
-            :form="form"
-            :ai-busy-key="aiBusyKey"
-            :pov-options="povOptions"
-            :style-options="styleOptions"
-            @assist="requestAi"
-          />
-
-          <LayerSkeleton
-            v-else-if="currentLayerMeta.id === 'world'"
+          <LayerWorldSection
+            v-if="
+              currentLayerMeta.id === 'foundation' ||
+              currentLayerMeta.id === 'society' ||
+              currentLayerMeta.id === 'history'
+            "
+            :key="currentLayerMeta.id"
+            :layer="currentLayerMeta.id"
             :form="form"
             :ai-busy-key="aiBusyKey"
             @assist="requestAi"
@@ -61,13 +58,6 @@
             @remove-character="removeCharacter"
           />
 
-          <LayerLanding
-            v-else-if="currentLayerMeta.id === 'grounding'"
-            :form="form"
-            :ai-busy-key="aiBusyKey"
-            @assist="requestAi"
-          />
-
           <LayerEditor
             v-else-if="currentLayerMeta.id === 'editor'"
             :form="form"
@@ -77,6 +67,12 @@
             :editor-sync-options="editorSyncOptions"
             :editor-memory-options="editorMemoryOptions"
             :editor-autonomy-options="editorAutonomyOptions"
+            @assist="requestAi"
+          />
+          <LayerOpening
+            v-else-if="currentLayerMeta.id === 'opening'"
+            :form="form"
+            :ai-busy-key="aiBusyKey"
             :opening-generating="openingGenerating"
             :opening-preview="openingPreview"
             :opening-preview-stale="openingPreviewStale"
@@ -103,16 +99,6 @@
           @save-new-plan="saveNewOpeningPlan"
           @update-current-plan="updateCurrentOpeningPlan"
           @save-as-plan="saveAsOpeningPlan"
-        />
-      </section>
-
-      <!-- 右侧已录入卷宗简报（大屏固定/小屏折叠） -->
-      <section class="dossier-summary-column" aria-label="已录入卷宗简报">
-        <ConfirmedDrawer
-          :context-rows="contextRows"
-          :completed-count="completedLayerCount"
-          :current-layer="currentLayer"
-          @go-to-layer="goToLayer"
         />
       </section>
     </div>
@@ -145,6 +131,9 @@ import {
   appendOpeningUpdateVariable,
   buildOpeningUpdateVariable,
   isOpeningDateComplete,
+  isOpeningLocationComplete,
+  isOpeningTimeValid,
+  filledSnapshot,
   normalizeOpeningMvuData,
   type ClothingSnapshot,
   type OpeningDateSnapshot,
@@ -160,6 +149,7 @@ import {
 import {
   OPENING_PLAN_STORAGE_KEY,
   LEGACY_OPENING_PLAN_STORAGE_KEY,
+  PREVIOUS_OPENING_PLAN_STORAGE_KEY,
   cloneOpeningPlanWithNewId,
   createOpeningPlan,
   findOpeningPlanById,
@@ -177,21 +167,20 @@ import {
 // 子组件导入
 import HeaderBar from './components/HeaderBar.vue';
 import StepNav from './components/StepNav.vue';
-import LayerExperience from './components/LayerExperience.vue';
-import LayerSkeleton from './components/LayerSkeleton.vue';
+import LayerWorldSection from './components/LayerWorldSection.vue';
 import LayerCharacters from './components/LayerCharacters.vue';
-import LayerLanding from './components/LayerLanding.vue';
+import LayerOpening from './components/LayerOpening.vue';
 import LayerEditor from './components/LayerEditor.vue';
 import AiAssistModal from './components/AiAssistModal.vue';
-import ConfirmedDrawer from './components/ConfirmedDrawer.vue';
 import ActionFooter from './components/ActionFooter.vue';
 import OpeningPlanLibrary from './components/OpeningPlanLibrary.vue';
+import { emptyWorldSections, worldFields } from './world-fields';
 import { privateStatusPartsForGender } from '../private-status';
 
 const HUMAN_REVISION_BUILD_MARKER = 'human-revision-world-config-v3';
 const OPENING_READBACK_CHECKS = 8;
 
-type LayerId = 'experience' | 'world' | 'characters' | 'grounding' | 'editor';
+type LayerId = 'foundation' | 'society' | 'history' | 'characters' | 'editor' | 'opening';
 type StatusType = '' | 'working' | 'success' | 'error';
 type EditorScope = '世界' | '区域' | '个人';
 type AppearanceDraft = { 身高: string; 体型: string; 面容气质: string; 身体特征: string };
@@ -217,44 +206,7 @@ type CharacterDraft = {
   私密状态: PrivateStatusDraft;
 };
 
-type StoryForm = {
-  让现实编辑器参与世界观生成: boolean;
-  故事起始日期: OpeningDateSnapshot;
-  体验与叙事方向: { 故事体验: string; 主角处境: string; 冲突与成长: string; 叙事视角: string; 文风: string };
-  世界与故事骨架: { 世界规则: string; 时代与舞台: string; 社会后果: string; 核心矛盾与推进: string };
-  主角: {
-    启用: boolean;
-    性别: string;
-    年龄: string;
-    外貌: AppearanceDraft;
-    身份与位置: string;
-    追求: string;
-    性格主色: string;
-    性格与声音: string;
-    补充设定: string;
-    穿着: ClothingDraft;
-    私密状态: PrivateStatusDraft;
-  };
-  重要角色: CharacterDraft[];
-  世界落地与开场准备: {
-    起始地点: string;
-    日常秩序: string;
-    组织势力: string;
-    必要规则: string;
-    当前矛盾与开场: string;
-  };
-  现实编辑器: {
-    表现形式: string;
-    可见与知晓: string;
-    可修改范围: EditorScope[];
-    常识同步: string;
-    记忆保留: string;
-    主角受影响: string;
-    自主执行: string;
-    限制与代价: string;
-    自然语言修改: string;
-  };
-};
+type StoryForm = Omit<OpeningFormSnapshot, '重要角色'> & { 重要角色: CharacterDraft[] };
 
 type AiFieldDescriptor = {
   id: string;
@@ -304,63 +256,47 @@ let injectedThemeFontStyle: HTMLStyleElement | null = null;
 
 const layers = [
   {
-    id: 'experience' as const,
+    id: 'foundation',
     kicker: '第一层',
     order: '01',
-    title: '体验与叙事方向',
-    description: '先说你想经历的故事，再决定镜头如何靠近它。',
-    icon: Feather,
+    title: '世界基础',
+    description: '世界原本的条件与规律',
+    icon: Globe,
   },
   {
-    id: 'world' as const,
+    id: 'society',
     kicker: '第二层',
     order: '02',
-    title: '世界与故事骨架',
-    description: '只留下会影响选择的世界事实，让舞台服务于故事。',
+    title: '社会生活',
+    description: '社会怎样运行，人们怎样生活',
     icon: BookOpen,
   },
   {
-    id: 'characters' as const,
+    id: 'history',
     kicker: '第三层',
     order: '03',
-    title: '主角与重要角色',
-    description: '让角色拥有愿望、压力和能够改变场面的关系位置。',
-    icon: UsersRound,
+    title: '历史与现状',
+    description: '过去的影响与今天的格局',
+    icon: Feather,
   },
   {
-    id: 'grounding' as const,
+    id: 'characters',
     kicker: '第四层',
     order: '04',
-    title: '世界落地与开场准备',
-    description: '把前面的想法落成当前 RP 立刻会用到的生活与开场。',
+    title: '主角与重要角色',
+    description: '人物身份、关系与个人诉求',
+    icon: UsersRound,
+  },
+  { id: 'editor', kicker: '第六层', order: '05', title: '现实编辑器', description: '改变世界的手段与边界', icon: Cpu },
+  {
+    id: 'opening',
+    kicker: '第六层',
+    order: '06',
+    title: '开局与生成',
+    description: '选择进入世界的瞬间',
     icon: ListChecks,
   },
-  {
-    id: 'editor' as const,
-    kicker: '第五层',
-    order: '05',
-    title: '现实编辑器',
-    description: '最后单独决定它如何出现、如何工作，以及边界在哪里。',
-    icon: Cpu,
-  },
 ] as const;
-
-const povOptions = [
-  { value: '第二人称', label: '第二人称「你」' },
-  { value: '第三人称限定', label: '第三人称限定' },
-  { value: '第三人称上帝', label: '第三人称全景' },
-  { value: '第一人称玩家', label: '第一人称「我」' },
-  { value: '第一人称角色', label: '第一人称角色' },
-];
-
-const styleOptions = [
-  { value: '细腻写实', label: '细腻写实' },
-  { value: '通用白描', label: '通用白描' },
-  { value: '轻小说', label: '轻小说' },
-  { value: '古风', label: '古风' },
-  { value: '西幻', label: '西幻' },
-  { value: '漫画分镜', label: '漫画分镜' },
-];
 
 const editorFormOptions = ['悬浮面板', '文字提示与弹窗', '绑定设备界面', '可感知的异常现象', '由 AI 结合前文整理'];
 const editorSyncOptions = ['立即同步', '渐进同步', '只对受影响对象同步'];
@@ -411,8 +347,8 @@ function createDefaultForm(): StoryForm {
   return {
     让现实编辑器参与世界观生成: false,
     故事起始日期: { 年: '', 月: '', 日: '' },
-    体验与叙事方向: { 故事体验: '', 主角处境: '', 冲突与成长: '', 叙事视角: '第三人称限定', 文风: '通用白描' },
-    世界与故事骨架: { 世界规则: '', 时代与舞台: '', 社会后果: '', 核心矛盾与推进: '' },
+    ...emptyWorldSections(),
+    叙事偏好: { 叙事视角: '', 文风: '', 节奏: '', 体验倾向: '' },
     主角: {
       启用: true,
       性别: '',
@@ -427,7 +363,12 @@ function createDefaultForm(): StoryForm {
       私密状态: createPrivateStatus(),
     },
     重要角色: [],
-    世界落地与开场准备: { 起始地点: '', 日常秩序: '', 组织势力: '', 必要规则: '', 当前矛盾与开场: '' },
+    开局: {
+      起始地点: { 一级区域: '', 二级区域: '', 三级地点: '' },
+      时间: { 时: '', 分: '' },
+      在场角色: [],
+      初始情境: '',
+    },
     现实编辑器: {
       表现形式: '由 AI 结合前文整理',
       可见与知晓: '',
@@ -549,16 +490,18 @@ function hydrateFromMvu() {
   const protagonist = data.value.主角;
   const editor = data.value.现实编辑器;
   const npcEntries = Object.values(data.value.NPC序列 ?? {});
-  const location = [scene.地点.一级区域, scene.地点.二级区域, scene.地点.三级地点]
-    .map(value => trimValue(value))
-    .filter(value => value && value !== '待生成');
-  if (location.length) form.世界落地与开场准备.起始地点 = location.join(' / ');
+  for (const key of ['一级区域', '二级区域', '三级地点'] as const) {
+    const value = trimValue(scene.地点[key]);
+    form.开局.起始地点[key] = value === '待生成' ? '' : value;
+  }
+  form.开局.时间.时 = scene.时间.时 == null ? '' : String(scene.时间.时);
+  form.开局.时间.分 = scene.时间.分 == null ? '' : String(scene.时间.分);
   form.故事起始日期.年 = draftDatePartFromStored(scene.日期.年);
   form.故事起始日期.月 = draftDatePartFromStored(scene.日期.月);
   form.故事起始日期.日 = draftDatePartFromStored(scene.日期.日);
   const sceneSummary = trimValue(scene.摘要);
   if (sceneSummary && sceneSummary !== '等待玩家完成开场签发') {
-    form.世界落地与开场准备.当前矛盾与开场 = sceneSummary;
+    form.开局.初始情境 = sceneSummary;
   }
   form.主角.启用 = protagonist.启用;
   form.主角.性别 = trimValue(protagonist.基础信息.性别, '');
@@ -604,33 +547,16 @@ function setStatus(message: string, type: StatusType = '') {
 }
 
 function hasOpeningDraft(): boolean {
-  return Boolean(
-    form.让现实编辑器参与世界观生成 ||
-    Object.values(form.故事起始日期).some(value => value.trim()) ||
-    Object.values(form.体验与叙事方向).some(value => value.trim()) ||
-    Object.values(form.世界与故事骨架).some(value => value.trim()) ||
-    form.主角.启用 !== true ||
-    form.主角.性别 ||
-    form.主角.年龄 ||
-    Object.values(form.主角.外貌).some(value => value.trim()) ||
-    form.主角.身份与位置 ||
-    form.主角.追求 ||
-    form.主角.性格主色 ||
-    form.主角.性格与声音 ||
-    form.主角.补充设定 ||
-    Object.values(form.主角.穿着).some(value => value.trim() && value.trim() !== '无') ||
-    Object.keys(form.主角.私密状态).length > 0 ||
-    form.重要角色.some(hasCharacterDraft) ||
-    Object.values(form.世界落地与开场准备).some(value => value.trim()) ||
-    hasEditorDraft(),
-  );
+  return JSON.stringify(buildOpeningSnapshot()) !== JSON.stringify(createDefaultForm());
 }
 
 function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
   form.让现实编辑器参与世界观生成 = snapshot.让现实编辑器参与世界观生成;
   Object.assign(form.故事起始日期, snapshot.故事起始日期);
-  Object.assign(form.体验与叙事方向, snapshot.体验与叙事方向);
-  Object.assign(form.世界与故事骨架, snapshot.世界与故事骨架);
+  Object.assign(form.世界基础, snapshot.世界基础);
+  Object.assign(form.社会生活, snapshot.社会生活);
+  Object.assign(form.历史与现状, snapshot.历史与现状);
+  Object.assign(form.叙事偏好, snapshot.叙事偏好);
   Object.assign(form.主角, {
     ...snapshot.主角,
     外貌: { ...snapshot.主角.外貌 },
@@ -647,7 +573,12 @@ function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
       私密状态: hydratePrivateStatus(character.私密状态),
     })),
   );
-  Object.assign(form.世界落地与开场准备, snapshot.世界落地与开场准备);
+  form.开局 = {
+    ...snapshot.开局,
+    起始地点: { ...snapshot.开局.起始地点 },
+    时间: { ...snapshot.开局.时间 },
+    在场角色: [...snapshot.开局.在场角色],
+  };
   Object.assign(form.现实编辑器, {
     ...snapshot.现实编辑器,
     可修改范围: [...snapshot.现实编辑器.可修改范围],
@@ -659,7 +590,7 @@ function applyOpeningSnapshot(snapshot: OpeningFormSnapshot) {
 
 function applyOpeningPlan(plan: OpeningPlan, jumpToFinal = false) {
   if (hasOpeningDraft()) {
-    const confirmed = window.confirm(`套用“${plan.名称}”会覆盖当前五层草稿，是否继续？`);
+    const confirmed = window.confirm(`套用“${plan.名称}”会覆盖当前六层草稿，是否继续？`);
     if (!confirmed) {
       setStatus('已取消套用，当前草稿保持不变。');
       return;
@@ -671,7 +602,7 @@ function applyOpeningPlan(plan: OpeningPlan, jumpToFinal = false) {
     maxVisitedLayer.value = layers.length - 1;
     currentLayer.value = layers.length - 1;
     scrollToTop();
-    setStatus(`已套用“${plan.名称}”，前四层已标记为已访问。`, 'success');
+    setStatus(`已套用“${plan.名称}”，前五层已标记为已访问。`, 'success');
   } else {
     currentLayer.value = 0;
     setStatus(`已套用“${plan.名称}”，可从第一层继续检查或修改。`, 'success');
@@ -829,7 +760,12 @@ function refreshOpeningPlans() {
 }
 
 function onOpeningPlanStorageChange(event: StorageEvent) {
-  if (event.key === OPENING_PLAN_STORAGE_KEY || event.key === LEGACY_OPENING_PLAN_STORAGE_KEY) refreshOpeningPlans();
+  if (
+    event.key === OPENING_PLAN_STORAGE_KEY ||
+    event.key === LEGACY_OPENING_PLAN_STORAGE_KEY ||
+    event.key === PREVIOUS_OPENING_PLAN_STORAGE_KEY
+  )
+    refreshOpeningPlans();
 }
 
 function openingMessages() {
@@ -891,6 +827,7 @@ function addCharacter() {
 
 function removeCharacter(index: number) {
   form.重要角色.splice(index, 1);
+  form.开局.在场角色 = form.开局.在场角色.filter(item => item !== index).map(item => (item > index ? item - 1 : item));
 }
 
 function clearPrivateStatus(target: string) {
@@ -914,292 +851,83 @@ function buildOpeningPlanSummary(): string {
   return compact(
     [
       formatOpeningDate(form.故事起始日期),
-      form.体验与叙事方向.故事体验,
-      form.世界与故事骨架.时代与舞台,
+      form.世界基础.世界概况,
       form.主角.身份与位置,
-      form.世界落地与开场准备.起始地点,
-      form.世界落地与开场准备.当前矛盾与开场,
+      Object.values(form.开局.起始地点).filter(Boolean).join(' / '),
+      form.开局.初始情境,
     ]
       .filter(Boolean)
       .join(' · '),
-    '五层开场配置方案',
+    '六层开场配置方案',
   );
 }
-
-function hasCharacterDraft(character: CharacterDraft): boolean {
-  return (
-    [
-      character.姓名,
-      character.性别,
-      character.年龄,
-      character.身高,
-      character.体型,
-      character.面容气质,
-      character.身体特征,
-      character.身份,
-      character.关系定位,
-      character.性格主色,
-      character.性格与声音,
-      ...Object.values(character.穿着),
-    ].some(value => value.trim() && value.trim() !== '无') ||
-    character.好感度 !== 0 ||
-    Object.keys(character.私密状态).length > 0
-  );
-}
-
-function hasEditorDraft(): boolean {
-  return Boolean(
-    form.现实编辑器.可见与知晓 ||
-    form.现实编辑器.限制与代价 ||
-    form.现实编辑器.自然语言修改 ||
-    form.现实编辑器.表现形式 !== '由 AI 结合前文整理' ||
-    form.现实编辑器.可修改范围.join(',') !== '世界,区域,个人' ||
-    form.现实编辑器.常识同步 !== '立即同步' ||
-    form.现实编辑器.记忆保留 !== '只有主角保留' ||
-    form.现实编辑器.主角受影响 !== '是' ||
-    form.现实编辑器.自主执行 !== 'D-完全禁止',
-  );
-}
-
-function layerComplete(layer: LayerId): boolean {
-  if (layer === 'experience')
-    return Boolean(
-      isOpeningDateComplete(form.故事起始日期) ||
-      form.体验与叙事方向.故事体验 ||
-      form.体验与叙事方向.主角处境 ||
-      form.体验与叙事方向.冲突与成长,
-    );
-  if (layer === 'world')
-    return Boolean(
-      form.世界与故事骨架.世界规则 || form.世界与故事骨架.时代与舞台 || form.世界与故事骨架.核心矛盾与推进,
-    );
-  if (layer === 'characters')
-    return Boolean(
-      !form.主角.启用 ||
-      form.主角.性别 ||
-      form.主角.年龄 ||
-      form.主角.外貌.身高 ||
-      form.主角.外貌.体型 ||
-      form.主角.外貌.面容气质 ||
-      form.主角.外貌.身体特征 ||
-      form.主角.身份与位置 ||
-      form.主角.追求 ||
-      form.主角.性格主色 ||
-      form.主角.性格与声音 ||
-      form.主角.补充设定 ||
-      form.重要角色.some(hasCharacterDraft),
-    );
-  if (layer === 'grounding') return Boolean(form.世界落地与开场准备.起始地点 || form.世界落地与开场准备.当前矛盾与开场);
-  return hasEditorDraft();
-}
-
-const completedLayerCount = computed(() => layers.filter(layer => layerComplete(layer.id)).length);
-
-const contextRows = computed(() => [
-  {
-    id: 'experience',
-    index: 0,
-    order: '01',
-    title: '体验与叙事方向',
-    summary: compact(
-      [
-        formatOpeningDate(form.故事起始日期),
-        form.体验与叙事方向.故事体验,
-        form.体验与叙事方向.主角处境,
-        form.体验与叙事方向.冲突与成长,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      '尚未填写',
-    ),
-    complete: layerComplete('experience'),
-  },
-  {
-    id: 'world',
-    index: 1,
-    order: '02',
-    title: '世界与故事骨架',
-    summary: compact(
-      [
-        form.世界与故事骨架.世界规则,
-        form.世界与故事骨架.时代与舞台,
-        form.世界与故事骨架.社会后果,
-        form.世界与故事骨架.核心矛盾与推进,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      '尚未填写',
-    ),
-    complete: layerComplete('world'),
-  },
-  {
-    id: 'characters',
-    index: 2,
-    order: '03',
-    title: '主角与重要角色',
-    summary: compact(
-      [
-        form.主角.身份与位置,
-        form.主角.追求,
-        form.主角.性格主色,
-        ...form.重要角色.filter(hasCharacterDraft).map(character => character.姓名 || character.关系定位),
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      '尚未填写',
-    ),
-    complete: layerComplete('characters'),
-  },
-  {
-    id: 'grounding',
-    index: 3,
-    order: '04',
-    title: '世界落地与开场准备',
-    summary: compact(
-      [
-        form.世界落地与开场准备.起始地点,
-        form.世界落地与开场准备.日常秩序,
-        form.世界落地与开场准备.组织势力,
-        form.世界落地与开场准备.必要规则,
-        form.世界落地与开场准备.当前矛盾与开场,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      '尚未填写',
-    ),
-    complete: layerComplete('grounding'),
-  },
-  {
-    id: 'editor',
-    index: 4,
-    order: '05',
-    title: '现实编辑器',
-    summary: compact(
-      [
-        form.现实编辑器.可见与知晓,
-        form.现实编辑器.可修改范围.join('、') !== '世界、区域、个人' ? form.现实编辑器.可修改范围.join('、') : '',
-        form.现实编辑器.常识同步 !== '立即同步' ? form.现实编辑器.常识同步 : '',
-        form.现实编辑器.记忆保留 !== '只有主角保留' ? form.现实编辑器.记忆保留 : '',
-        form.现实编辑器.限制与代价,
-        form.现实编辑器.自然语言修改,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      '尚未填写',
-    ),
-    complete: layerComplete('editor'),
-  },
-]);
 
 function markContextChange() {
   if (!hydrated.value) return;
   contextRevision.value += 1;
 }
 
-watch(() => ({ ...form.体验与叙事方向 }), markContextChange, { deep: true });
-watch(() => ({ ...form.故事起始日期 }), markContextChange, { deep: true });
-watch(() => ({ ...form.世界与故事骨架, 参与: form.让现实编辑器参与世界观生成 }), markContextChange, { deep: true });
-watch(() => ({ 主角: form.主角, 角色: form.重要角色.map(c => ({ ...c })) }), markContextChange, { deep: true });
-watch(() => ({ ...form.世界落地与开场准备 }), markContextChange, { deep: true });
-watch(() => ({ ...form.现实编辑器 }), markContextChange, { deep: true });
+watch(form, markContextChange, { deep: true, flush: 'sync' });
 
-// AI 字段映射
-const aiFieldMap: Record<string, AiFieldDescriptor> = {
-  'experience.story': {
-    id: 'experience.story',
-    title: '故事体验',
-    layer: 'experience',
-    question: '玩家想从这段故事中获得怎样的体验？',
-    read: () => form.体验与叙事方向.故事体验,
-    write: value => (form.体验与叙事方向.故事体验 = value),
-  },
-  'experience.situation': {
-    id: 'experience.situation',
-    title: '主角处境',
-    layer: 'experience',
-    question: '主角此刻处在什么处境，正在追求什么？',
-    read: () => form.体验与叙事方向.主角处境,
-    write: value => (form.体验与叙事方向.主角处境 = value),
-  },
-  'experience.conflict': {
-    id: 'experience.conflict',
-    title: '冲突与成长',
-    layer: 'experience',
-    question: '玩家偏好哪一种冲突或成长感？',
-    read: () => form.体验与叙事方向.冲突与成长,
-    write: value => (form.体验与叙事方向.冲突与成长 = value),
-  },
-  'world.rules': {
-    id: 'world.rules',
-    title: '世界规则',
-    layer: 'world',
-    question: '哪些简明世界事实会改变人物的日常选择？',
-    read: () => form.世界与故事骨架.世界规则,
-    write: value => (form.世界与故事骨架.世界规则 = value),
-  },
-  'world.stage': {
-    id: 'world.stage',
-    title: '时代与舞台',
-    layer: 'world',
-    question: '故事从什么时代与舞台开始？',
-    read: () => form.世界与故事骨架.时代与舞台,
-    write: value => (form.世界与故事骨架.时代与舞台 = value),
-  },
-  'world.consequence': {
-    id: 'world.consequence',
-    title: '社会后果',
-    layer: 'world',
-    question: '世界规则会造成哪些社会后果与日常习惯？',
-    read: () => form.世界与故事骨架.社会后果,
-    write: value => (form.世界与故事骨架.社会后果 = value),
-  },
-  'world.conflict': {
-    id: 'world.conflict',
-    title: '核心矛盾与推进',
-    layer: 'world',
-    question: '核心矛盾是什么，故事可以怎样推进？',
-    read: () => form.世界与故事骨架.核心矛盾与推进,
-    write: value => (form.世界与故事骨架.核心矛盾与推进 = value),
-  },
-  'grounding.place': {
-    id: 'grounding.place',
-    title: '起始地点',
-    layer: 'grounding',
-    question: '第一幕从哪里开始，那里正在发生什么日常活动？',
-    read: () => form.世界落地与开场准备.起始地点,
-    write: value => (form.世界落地与开场准备.起始地点 = value),
-  },
-  'grounding.order': {
-    id: 'grounding.order',
-    title: '日常秩序',
-    layer: 'grounding',
-    question: '这个地点的人如何按默认常识生活？',
-    read: () => form.世界落地与开场准备.日常秩序,
-    write: value => (form.世界落地与开场准备.日常秩序 = value),
-  },
-  'grounding.factions': {
-    id: 'grounding.factions',
-    title: '组织与势力',
-    layer: 'grounding',
-    question: '当前开局真正会接触到哪些组织或势力？',
-    read: () => form.世界落地与开场准备.组织势力,
-    write: value => (form.世界落地与开场准备.组织势力 = value),
-  },
-  'grounding.rules': {
-    id: 'grounding.rules',
-    title: '必要历史、力量或经济规则',
-    layer: 'grounding',
-    question: '为了让这次开局成立，必须保留哪些背景规则？',
-    read: () => form.世界落地与开场准备.必要规则,
-    write: value => (form.世界落地与开场准备.必要规则 = value),
-  },
-  'grounding.opening': {
-    id: 'grounding.opening',
-    title: '当前矛盾与唯一开场',
-    layer: 'grounding',
-    question: '开场时已经发生了什么，画面停在哪里？',
-    read: () => form.世界落地与开场准备.当前矛盾与开场,
-    write: value => (form.世界落地与开场准备.当前矛盾与开场 = value),
+// 每个字段独立提示词；共享已填上下文，不共享生成结果。
+const aiFieldMap: Record<string, AiFieldDescriptor> = Object.fromEntries(
+  worldFields.map(field => [
+    field.id,
+    {
+      id: field.id,
+      title: field.title,
+      layer: field.layer,
+      question: field.hint,
+      read: () => (form[field.section] as Record<string, string>)[field.field],
+      write: (value: string) => {
+        (form[field.section] as Record<string, string>)[field.field] = value;
+      },
+    },
+  ]),
+);
+for (const [index, key] of (['一级区域', '二级区域', '三级地点'] as const).entries()) {
+  const id = `opening.location.${index + 1}`;
+  aiFieldMap[id] = {
+    id,
+    title: key,
+    layer: 'opening',
+    question: `只给出起始地点的${key}名称。${index === 0 ? '填写国家、城市或大区域。' : index === 1 ? '填写所属一级区域内的城区、聚落或片区。' : '填写所属二级区域内的具体建筑、房间或场所。'}参考其他两级与世界地理，只返回本级名称，不返回三级路径，不新增世界背景。`,
+    read: () => form.开局.起始地点[key],
+    write: value => {
+      form.开局.起始地点[key] = value;
+    },
+  };
+}
+for (const [key, question] of Object.entries({
+  叙事视角: '只建议人称和信息知晓边界，不写世界事实或开场剧情。',
+  文风: '只建议语言质感和描写侧重，不改变世界设定或人物身份。',
+  节奏: '只建议叙事节奏、详略与推进速度，不预定事件和结局。',
+  体验倾向: '只描述希望获得的游玩体验与氛围，不强制主角使命、成长弧或世界危机。',
+})) {
+  const field = key as keyof OpeningFormSnapshot['叙事偏好'];
+  const id = `narrative.${field}`;
+  aiFieldMap[id] = {
+    id,
+    title: field,
+    layer: 'opening',
+    question,
+    read: () => form.叙事偏好[field],
+    write: value => {
+      form.叙事偏好[field] = value;
+    },
+  };
+}
+Object.assign(aiFieldMap, {
+  'opening.situation': {
+    id: 'opening.situation',
+    title: '初始情境',
+    layer: 'opening',
+    question:
+      '只写开场这一刻人物在哪里、正在做什么。遵循三级地点和在场人物；可以平静开始，不强制危机，不复述世界观、人物档案或编辑器说明。',
+    read: () => form.开局.初始情境,
+    write: (value: string) => {
+      form.开局.初始情境 = value;
+    },
   },
   'editor.visibility': {
     id: 'editor.visibility',
@@ -1207,7 +935,7 @@ const aiFieldMap: Record<string, AiFieldDescriptor> = {
     layer: 'editor',
     question: '谁能看见、使用或知晓现实编辑器？',
     read: () => form.现实编辑器.可见与知晓,
-    write: value => (form.现实编辑器.可见与知晓 = value),
+    write: (value: string) => (form.现实编辑器.可见与知晓 = value),
   },
   'editor.limit': {
     id: 'editor.limit',
@@ -1215,7 +943,7 @@ const aiFieldMap: Record<string, AiFieldDescriptor> = {
     layer: 'editor',
     question: '编辑器的限制、代价和异常反馈是什么？',
     read: () => form.现实编辑器.限制与代价,
-    write: value => (form.现实编辑器.限制与代价 = value),
+    write: (value: string) => (form.现实编辑器.限制与代价 = value),
   },
   'editor.language': {
     id: 'editor.language',
@@ -1223,9 +951,9 @@ const aiFieldMap: Record<string, AiFieldDescriptor> = {
     layer: 'editor',
     question: '玩家如何用自然语言提出修改？',
     read: () => form.现实编辑器.自然语言修改,
-    write: value => (form.现实编辑器.自然语言修改 = value),
+    write: (value: string) => (form.现实编辑器.自然语言修改 = value),
   },
-};
+});
 
 type CharacterField =
   | '姓名'
@@ -1393,86 +1121,26 @@ function protagonistFieldDescriptor(field: ProtagonistField): AiFieldDescriptor 
 }
 
 function contextSnapshot(includeEditor: boolean): Record<string, unknown> {
-  const snapshot: Record<string, unknown> = {
-    故事起始日期: form.故事起始日期,
-    体验与叙事方向: form.体验与叙事方向,
-    世界与故事骨架: form.世界与故事骨架,
-    主角与重要角色: { 主角: form.主角, 重要角色: form.重要角色 },
-    世界落地与开场准备: form.世界落地与开场准备,
-  };
-  if (includeEditor) snapshot.现实编辑器 = form.现实编辑器;
-  return snapshot;
-}
-
-const layerSequence: LayerId[] = ['experience', 'world', 'characters', 'grounding', 'editor'];
-
-function filledSnapshot(value: unknown): unknown {
-  if (typeof value === 'string') {
-    const text = value.trim();
-    return text || undefined;
-  }
-  if (Array.isArray(value)) {
-    const items = value.map(filledSnapshot).filter(item => item !== undefined);
-    return items.length ? items : undefined;
-  }
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => [key, filledSnapshot(item)] as const)
-      .filter(([, item]) => item !== undefined);
-    return entries.length ? Object.fromEntries(entries) : undefined;
-  }
-  return value;
+  const snapshot = buildOpeningSnapshot();
+  const { 现实编辑器, 让现实编辑器参与世界观生成: _include, ...rest } = snapshot;
+  return (
+    filledSnapshot({
+      ...rest,
+      开局: { ...rest.开局, 在场角色: rest.开局.在场角色.map(index => rest.重要角色[index]?.姓名).filter(Boolean) },
+      ...(includeEditor ? { 现实编辑器 } : {}),
+    }) ?? {}
+  );
 }
 
 function protagonistPromptContext(): Record<string, unknown> {
   return {
-    当前人设: {
-      名称: protagonistName.value,
-      完整说明: protagonistDescription.value,
-    },
-    前两层已确认内容: {
-      体验与叙事方向: filledSnapshot(form.体验与叙事方向),
-      故事起始日期: filledSnapshot(form.故事起始日期),
-      世界与故事骨架: filledSnapshot(form.世界与故事骨架),
-    },
-    当前第三层已填写内容:
-      filledSnapshot({
-        主角: form.主角,
-        重要角色: form.重要角色.map(character =>
-          Object.fromEntries(Object.entries(character).filter(([key]) => key !== 'localId')),
-        ),
-      }) ?? {},
+    当前人设: { 名称: protagonistName.value, 完整说明: protagonistDescription.value },
+    已填写设定: contextSnapshot(form.让现实编辑器参与世界观生成),
   };
 }
 
 function bulkLayerContext(layer: LayerId): Record<string, unknown> {
-  const roleDrafts = form.重要角色.map(character =>
-    Object.fromEntries(Object.entries(character).filter(([key]) => key !== 'localId')),
-  );
-  const sections: Record<LayerId, unknown> = {
-    experience: { 故事起始日期: form.故事起始日期, ...form.体验与叙事方向 },
-    world: form.世界与故事骨架,
-    characters: { 主角: form.主角, 重要角色: roleDrafts },
-    grounding: form.世界落地与开场准备,
-    editor: form.现实编辑器,
-  };
-  const currentIndex = layerSequence.indexOf(layer);
-  return Object.fromEntries(
-    layerSequence
-      .slice(0, currentIndex + 1)
-      .map(layerId => [
-        layerId === 'experience'
-          ? '体验与叙事方向'
-          : layerId === 'world'
-            ? '世界与故事骨架'
-            : layerId === 'characters'
-              ? '主角与重要角色'
-              : layerId === 'grounding'
-                ? '世界落地与开场准备'
-                : '现实编辑器',
-        filledSnapshot(sections[layerId]),
-      ]),
-  );
+  return contextSnapshot(layer === 'editor' || form.让现实编辑器参与世界观生成);
 }
 
 function bulkDescriptorsForLayer(layer: LayerId): AiFieldDescriptor[] {
@@ -1491,11 +1159,11 @@ function bulkPendingDescriptors(layer: LayerId): AiFieldDescriptor[] {
 
 function isAiFieldBlank(descriptor: AiFieldDescriptor): boolean {
   const value = descriptor.read().trim();
-  return !value || value === '无' || value === '不适用' || value === '0';
+  return !value || (descriptor.layer === 'characters' && ['无', '不适用', '0'].includes(value));
 }
 
 function worldGenerationBoundary(layer: LayerId): string {
-  if (layer !== 'world' && layer !== 'grounding') return '';
+  if (!['foundation', 'society', 'history'].includes(layer)) return '';
   return form.让现实编辑器参与世界观生成
     ? '世界观生成开关：已开启。允许把现实编辑器的存在、传闻或影响纳入世界骨架，但仍需服务于玩家想体验的故事。'
     : '世界观生成开关：关闭。此次世界观内容必须明确排除现实编辑器：不得提及、暗示、预设或围绕它设计任何世界规则、社会后果、组织、历史和矛盾。现实编辑器只在之后作为突然出现的外来事物进入。';
@@ -1620,8 +1288,9 @@ async function requestJson(prompt: string, userInput: string, generationId: stri
 function buildFieldPrompt(descriptor: AiFieldDescriptor, currentValue: string): string {
   const includeEditor =
     descriptor.layer === 'editor' ||
-    (form.让现实编辑器参与世界观生成 && (descriptor.layer === 'world' || descriptor.layer === 'grounding'));
-  return `【任务】\n你是创作访谈整理引擎。请围绕“${descriptor.title}”给出一份能直接用于文字 RPG 的建议。\n问题：${descriptor.question}\n目标字段 ID：${descriptor.id}\n${worldGenerationBoundary(descriptor.layer)}\n\n【已确认上下文】\n${JSON.stringify(contextSnapshot(includeEditor), null, 2)}\n\n【玩家当前回答】\n${currentValue || '（空白，请基于已确认上下文提出可采用的起点）'}\n\n【整理要求】\n- 空白时给出一个有明确选择和可玩后果的推荐，不要要求玩家先补更多资料。\n- 有零散内容时，补足因果、人物行动和叙事限制；不要只做辞藻润色。\n- 已填写内容要整理成可执行的叙事约束，保留玩家原意。\n- 只在“可采用”中返回与目标字段 ID 对应的内容；不要静默改变其他字段。\n- 结论简明，理由说明它会如何影响当前 RP；可执行约束不超过 4 条。\n【输出】\n只输出 JSON。字段为：结论、理由、可执行约束、可采用。可采用是对象，键必须包含“${descriptor.id}”，值为玩家确认后可直接写入字段的中文内容。`;
+    descriptor.layer === 'opening' ||
+    (form.让现实编辑器参与世界观生成 && ['foundation', 'society', 'history'].includes(descriptor.layer));
+  return `【任务】\n你是创作访谈整理引擎。请围绕“${descriptor.title}”给出一份能直接用于文字 RPG 的建议。\n问题：${descriptor.question}\n目标字段 ID：${descriptor.id}\n${worldGenerationBoundary(descriptor.layer)}\n\n【已确认上下文】\n${JSON.stringify(contextSnapshot(includeEditor), null, 2)}\n\n【玩家当前回答】\n${currentValue || '（空白，请基于已确认上下文提出可采用的起点）'}\n\n【整理要求】\n- 空白时仅为目标字段提出一份可采用建议，不要求先补其他字段。\n- 遵循本字段的问题边界。参考其他字段保持因果一致，但不复述它们；相关影响可以写，其他字段的原理和全文不搬运。\n- 保留玩家原意；不要默认悬疑、档案、监管或规则怪谈风格，不强制危机、人物成长和第一幕使命。未被请求的空项保持未设定。\n- 只在“可采用”中返回与目标字段 ID 对应的内容；不要静默改变其他字段。\n- 结论简明，理由说明它会如何影响当前 RP；可执行约束不超过 4 条。\n【输出】\n只输出 JSON。字段为：结论、理由、可执行约束、可采用。可采用是对象，键必须包含“${descriptor.id}”，值为玩家确认后可直接写入字段的中文内容。`;
 }
 
 function buildCompositePrompt(
@@ -1635,7 +1304,7 @@ function buildCompositePrompt(
 }
 
 function buildProtagonistPrompt(fields: string[]): string {
-  return `【任务】\n根据酒馆当前人设与已确认访谈内容，生成一份可直接用于文字 RPG 的完整主角档案整理结果。结果先供玩家预览，不直接覆盖表单。\n\n【当前人设】\n${JSON.stringify(protagonistPromptContext().当前人设, null, 2)}\n\n【前两层上下文与当前第三层草稿】\n${JSON.stringify(protagonistPromptContext(), null, 2)}\n\n【必须覆盖的主角字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n【信息优先级】\n1. 玩家在当前页面手写的明确内容最高；这些非空字段不得被改写、扩写或替换。\n2. 人设说明中的明确事实其次；不得把没有依据的推测写成事实。\n3. 第一、二层已确认内容用于推断能影响当前 RP 的身份、追求、处境与声音；故事起始日期只读取玩家填写值，不得自行生成。\n4. 没有依据的字段保持空白，不为了完整而编造。\n\n【输出约束】\n- 只返回上面列出的字段名，不返回姓名字段；姓名使用当前酒馆人设名称，不新增重复输入。\n- 可采用对象的键只能是这些字段名；空字段可以省略，但有依据时应给出完整档案建议。\n- 每个值都应是能执行的角色设定，不要只堆形容词；外貌四项分别写面容气质、身高、体型、身体特征。穿着字段分别填写上装、下装、内衣、袜子、鞋子、配饰。\n- 不要返回私密状态；私密状态只能通过专用按钮单独生成。\n- 只输出 JSON：结论、理由、可执行约束、可采用。`;
+  return `【任务】\n根据酒馆当前人设与已确认访谈内容，生成一份可直接用于文字 RPG 的完整主角档案整理结果。结果先供玩家预览，不直接覆盖表单。\n\n【当前人设】\n${JSON.stringify(protagonistPromptContext().当前人设, null, 2)}\n\n【世界上下文与当前人物草稿】\n${JSON.stringify(protagonistPromptContext(), null, 2)}\n\n【必须覆盖的主角字段】\n${fields.map(field => `- ${field}`).join('\n')}\n\n【信息优先级】\n1. 玩家在当前页面手写的明确内容最高；这些非空字段不得被改写、扩写或替换。\n2. 人设说明中的明确事实其次；不得把没有依据的推测写成事实。\n3. 前三层已确认内容用于推断能影响当前 RP 的身份、追求、处境与声音；故事起始日期只读取玩家填写值，不得自行生成。\n4. 没有依据的字段保持空白，不为了完整而编造。\n\n【输出约束】\n- 只返回上面列出的字段名，不返回姓名字段；姓名使用当前酒馆人设名称，不新增重复输入。\n- 可采用对象的键只能是这些字段名；空字段可以省略，但有依据时应给出完整档案建议。\n- 每个值都应是能执行的角色设定，不要只堆形容词；外貌四项分别写面容气质、身高、体型、身体特征。穿着字段分别填写上装、下装、内衣、袜子、鞋子、配饰。\n- 不要返回私密状态；私密状态只能通过专用按钮单独生成。\n- 只输出 JSON：结论、理由、可执行约束、可采用。`;
 }
 
 function buildBulkPrompt(layer: LayerId) {
@@ -1644,14 +1313,14 @@ function buildBulkPrompt(layer: LayerId) {
     question: descriptor.question,
   }));
   const layerMeta = layers.find(item => item.id === layer) ?? layers[0];
-  const boundary = layer === 'world' || layer === 'grounding' ? worldGenerationBoundary(layer) : '';
+  const boundary = worldGenerationBoundary(layer);
   return `【任务】\n根据已确认的创作访谈，提出一份“补全本层空白项”草稿。当前层是“${layerMeta.title}”，只处理当前层的空白字段。\n\n${
     boundary ? `【当前层世界边界】\n${boundary}\n` : ''
   }【当前层允许返回的字段】\n${JSON.stringify(pendingDescriptors, null, 2)}\n【已确认上下文】\n${JSON.stringify(
     bulkLayerContext(layer),
     null,
     2,
-  )}\n\n【整理要求】\n- 只补全上面列出的空白字段，不覆盖已有回答。\n- 可采用对象只能使用“当前层允许返回的字段”中的 ID；不要返回前层、后层或未列出的键。\n- 上下文只包含已经确认的前面层，以及当前层已经填写的内容；不要据此生成后续层内容。\n- 每一项都要形成能直接执行的叙事约束，不写百科资料、秘密或后续扩展钩子。\n\n只输出 JSON：结论、理由、可执行约束、可采用。可采用对象的键只能使用上面列出的 ID。`;
+  )}\n\n【整理要求】\n- 只补全上面列出的空白字段，不覆盖已有回答。\n- 可采用对象只能使用“当前层允许返回的字段”中的 ID；不要返回前层、后层或未列出的键。\n- 读取所有已填上下文以保持一致，但只生成当前允许字段。每项遵循自己的问题边界，不在不同字段复述相同内容。\n- 世界信息可以独立于主角和第一幕成立；不强制危机、成长或异常，不擅自补齐未列出的空项。\n\n只输出 JSON：结论、理由、可执行约束、可采用。可采用对象的键只能使用上面列出的 ID。`;
 }
 
 async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
@@ -1672,8 +1341,8 @@ async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
       summary: payload.结论 || '已根据当前上下文整理出一份可采用草稿。',
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
-      values: payload.可采用 ?? {},
-      contextRevision: contextRevision.value,
+      values: payload.可采用?.[descriptor.id] ? { [descriptor.id]: payload.可采用[descriptor.id] } : {},
+      contextRevision: revision,
     };
     setStatus('AI 结果已放入预览，确认后才会写入回答。', 'success');
   } catch (error) {
@@ -1691,6 +1360,7 @@ async function requestAi(descriptorId: string) {
 
 async function requestProtagonistAi() {
   if (aiBusyKey.value) return;
+  const revision = contextRevision.value;
   aiBusyKey.value = 'protagonist';
   setStatus('正在根据当前人设生成主角档案…', 'working');
   const fields = [
@@ -1726,7 +1396,7 @@ async function requestProtagonistAi() {
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: contextRevision.value,
+      contextRevision: revision,
     };
     setStatus('主角整理结果已进入预览。', 'success');
   } catch (error) {
@@ -1742,6 +1412,7 @@ async function requestCharacterAi(index: number) {
   const descriptor = characterDescriptor(index);
   aiBusyKey.value = descriptor.id;
   setStatus(`正在整理“${descriptor.title}”…`, 'working');
+  const revision = contextRevision.value;
   const fields = characterFieldNames;
   try {
     const payload = await requestJson(
@@ -1757,7 +1428,7 @@ async function requestCharacterAi(index: number) {
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: contextRevision.value,
+      contextRevision: revision,
     };
     setStatus('角色整理结果已进入预览。', 'success');
   } catch (error) {
@@ -1909,6 +1580,11 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
   if (aiBusyKey.value) return;
   const allowedDescriptors = bulkPendingDescriptors(requestLayer);
   const allowedKeys = allowedDescriptors.map(descriptor => descriptor.id);
+  if (!allowedKeys.length) {
+    setStatus('本层没有需要补全的空白文本项。');
+    return;
+  }
+  const revision = contextRevision.value;
   aiBusyKey.value = 'bulk';
   setStatus('正在补全本层空白项…', 'working');
   try {
@@ -1925,7 +1601,7 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
       rationale: payload.理由 || '',
       constraints: payload.可执行约束 ?? [],
       values: payload.可采用 ?? {},
-      contextRevision: contextRevision.value,
+      contextRevision: revision,
       bulkAllowedKeys: allowedKeys,
     };
     setStatus('本层补全结果已进入预览，确认后才会写入空白回答。', 'success');
@@ -2028,7 +1704,7 @@ function applyPrivateStatusPreview(preview: AiPreview): void {
 
 function applyAiPreview() {
   const preview = aiPreview.value;
-  if (!preview) return;
+  if (!preview || aiPreviewStale.value) return;
   const values = preview.values;
   if (preview.target === 'bulk') {
     const allowedKeys = new Set(preview.bulkAllowedKeys ?? []);
@@ -2049,11 +1725,11 @@ function applyAiPreview() {
   } else if (preview.target === 'protagonist' || preview.target.startsWith('character:')) {
     if (preview.target.includes('.')) {
       const descriptor = resolveAiDescriptor(preview.target);
-      if (descriptor) descriptor.write(values[preview.target] ?? preview.summary);
+      if (descriptor) descriptor.write(values[preview.target] ?? '');
     } else applyCompositeValues(preview.target, values);
   } else {
     const descriptor = resolveAiDescriptor(preview.target);
-    const value = descriptor ? (values[descriptor.id] ?? preview.summary) : '';
+    const value = descriptor ? (values[descriptor.id] ?? '') : '';
     if (descriptor && value.trim()) descriptor.write(value.trim());
   }
   aiPreview.value = null;
@@ -2081,8 +1757,10 @@ function buildOpeningSnapshot(): OpeningFormSnapshot {
   return {
     让现实编辑器参与世界观生成: form.让现实编辑器参与世界观生成,
     故事起始日期: { ...form.故事起始日期 },
-    体验与叙事方向: { ...form.体验与叙事方向 },
-    世界与故事骨架: { ...form.世界与故事骨架 },
+    世界基础: { ...form.世界基础 },
+    社会生活: { ...form.社会生活 },
+    历史与现状: { ...form.历史与现状 },
+    叙事偏好: { ...form.叙事偏好 },
     主角: {
       ...form.主角,
       外貌: { ...form.主角.外貌 },
@@ -2094,7 +1772,12 @@ function buildOpeningSnapshot(): OpeningFormSnapshot {
       穿着: { ...character.穿着 },
       私密状态: hydratePrivateStatus(character.私密状态),
     })),
-    世界落地与开场准备: { ...form.世界落地与开场准备 },
+    开局: {
+      ...form.开局,
+      起始地点: { ...form.开局.起始地点 },
+      时间: { ...form.开局.时间 },
+      在场角色: [...form.开局.在场角色],
+    },
     现实编辑器: {
       ...form.现实编辑器,
       可修改范围: [...form.现实编辑器.可修改范围],
@@ -2104,12 +1787,8 @@ function buildOpeningSnapshot(): OpeningFormSnapshot {
 
 function buildOpeningConfig() {
   return {
-    故事起始日期: form.故事起始日期,
-    体验与叙事方向: form.体验与叙事方向,
-    世界与故事骨架: form.世界与故事骨架,
-    主角与重要角色: { 主角: form.主角, 重要角色: form.重要角色 },
-    世界落地与开场准备: form.世界落地与开场准备,
-    现实编辑器: form.现实编辑器,
+    ...contextSnapshot(true),
+    当前玩家姓名: protagonistName.value,
     现实编辑器参与世界观生成: form.让现实编辑器参与世界观生成,
   };
 }
@@ -2118,7 +1797,7 @@ function buildOpeningPrompt() {
   const editorEntry = form.让现实编辑器参与世界观生成
     ? '编辑器参与世界观生成已开启，可以将它与前文自然连接。'
     : '编辑器参与世界观生成关闭。世界骨架此前没有提及或暗示它；现在必须把它作为突然出现的外来事物引入，不得把它改写成世界原生制度。';
-  return `【本次任务】\n你是第一幕叙事引擎。请根据以下创作访谈生成唯一的一份正式开场，供玩家直接开始 RP。\n\n【创作授权】\n${buildAuthorizationLayer()}\n\n【已确认配置】\n${JSON.stringify(buildOpeningConfig(), null, 2)}\n\n【世界与编辑器边界】\n${editorEntry}\n\n【叙事执行】\n- 先从已填写的故事起始日期、具体地点、动作或正在发生的变化切入，不写欢迎词，不写配置说明。日期必须原样遵循玩家填写值，不得使用现实当前日期或自行改写。\n- 让世界规则通过人物的行动、对话、制度和环境显现，不把设定列成清单。\n- 主角启用时，不替玩家决定主角的关键行动、台词或心理；把选择停在可接续的位置。主角关闭时，玩家留在故事外，现实编辑器不作为正文人物。\n- 主线只使用已登记的主角和重要角色。没有登记重要角色时，允许必要的无名或低权重场景人物短暂出现、行动或说出承接场景的台词，但不得为其新增抢占主线的核心身份、长线关系或主线目标；环境、物件、制度和编辑器界面仍可承担主要开场信息。\n- 现实编辑器以配置的形式出现，可以有提示、面板、文字、设备或异常反馈，但不作为会说话的人格角色。\n- 结尾停在一个未完成动作、清晰选择或正在扩大的现场变化上，让玩家能立刻回应。\n- 全文只生成这一份开场，不列出候选，不输出备选事件，不解释你的写作过程。\n\n【输出格式】\n- 只输出正文和最后一行 <StatusPlaceHolderImpl/>。\n- 不输出 JSON、配置复述、标题、思考过程或作者说明。\n- 正文长度约 900~1500 字，具体服从文风与玩家已确认的体验。`;
+  return `【本次任务】\n你是第一幕叙事引擎。请根据以下创作访谈生成唯一的一份正式开场，供玩家直接开始 RP。\n\n【创作授权】\n${buildAuthorizationLayer()}\n\n【已确认配置】\n${JSON.stringify(buildOpeningConfig(), null, 2)}\n\n【世界与编辑器边界】\n${editorEntry}\n\n【叙事执行】\n- 先从已填写的故事起始日期、具体地点、动作或正在发生的变化切入，不写欢迎词，不写配置说明。日期必须原样遵循玩家填写值，不得使用现实当前日期或自行改写。\n- 只使用已填写的世界设定；未填写的类别不自动扩写成固定世界事实。可描写必要的现场细节，不强加主线、危机或成长任务。\n- 已选在场角色才在第一幕现场出现，其他已登记人物仅作背景；未选时不强制重要角色入场。\n- 让已有世界规则通过人物行动和环境显现，不把设定列成清单。\n- 主角启用时，不替玩家决定主角的关键行动、台词或心理；把选择停在可接续的位置。主角关闭时，玩家留在故事外，现实编辑器不作为正文人物。\n- 主线只使用已登记的主角和重要角色。没有登记重要角色时，允许必要的无名或低权重场景人物短暂出现、行动或说出承接场景的台词，但不得为其新增抢占主线的核心身份、长线关系或主线目标；环境、物件、制度和编辑器界面仍可承担主要开场信息。\n- 现实编辑器以配置的形式出现，可以有提示、面板、文字、设备或异常反馈，但不作为会说话的人格角色。\n- 结尾停在一个未完成动作、清晰选择或正在扩大的现场变化上，让玩家能立刻回应。\n- 全文只生成这一份开场，不列出候选，不输出备选事件，不解释你的写作过程。\n\n【输出格式】\n- 只输出正文和最后一行 <StatusPlaceHolderImpl/>。\n- 不输出 JSON、配置复述、标题、思考过程或作者说明。\n- 正文长度约 900~1500 字，具体服从文风与玩家已确认的体验。`;
 }
 
 async function requestOpening(prompt: string, userInput: string): Promise<string> {
@@ -2142,8 +1821,24 @@ async function requestOpening(prompt: string, userInput: string): Promise<string
   return text.replace(/<StatusPlaceHolderImpl\s*\/>/gi, '').trim();
 }
 
+function validateOpeningCoordinates(): boolean {
+  const error = !isOpeningDateComplete(form.故事起始日期)
+    ? '请填写有效的开场年月日。'
+    : !isOpeningLocationComplete(form.开局.起始地点)
+      ? '请分别填写一级区域、二级区域和三级地点。'
+      : !isOpeningTimeValid(form.开局.时间)
+        ? '时间可全部留空；填写时请同时填写 0–23 时、0–59 分。'
+        : '';
+  if (!error) return true;
+  currentLayer.value = layers.length - 1;
+  maxVisitedLayer.value = layers.length - 1;
+  setStatus(error, 'error');
+  scrollToTop();
+  return false;
+}
+
 async function generateOpeningDraft(note = '') {
-  if (openingGenerating.value) return;
+  if (openingGenerating.value || starting.value || !validateOpeningCoordinates()) return;
   openingGenerating.value = true;
   setStatus(note ? '正在按修改意见重新生成唯一开场…' : '正在生成唯一开场预览…', 'working');
   const revision = contextRevision.value;
@@ -2162,12 +1857,7 @@ async function generateOpeningDraft(note = '') {
 
 async function confirmOpening() {
   if (!openingPreview.value || openingPreviewStale.value || starting.value) return;
-  if (!isOpeningDateComplete(form.故事起始日期)) {
-    currentLayer.value = 0;
-    scrollToTop();
-    setStatus('故事起始日期尚未完整有效，请返回第一层填写 1–9999 年、1–12 月、1–31 日后再签发。', 'error');
-    return;
-  }
+  if (!validateOpeningCoordinates()) return;
   starting.value = true;
   setStatus('正在签发配置并创建开场楼层…', 'working');
   const snapshot = buildOpeningSnapshot();
@@ -2285,7 +1975,7 @@ onUnmounted(() => {
 
 .dossier-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   min-width: 0;
@@ -2297,11 +1987,6 @@ onUnmounted(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.dossier-summary-column {
-  position: sticky;
-  top: 12px;
 }
 
 /* Layer transition */
@@ -2325,10 +2010,6 @@ onUnmounted(() => {
 @media (max-width: 900px) {
   .dossier-workspace {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .dossier-summary-column {
-    position: static;
-    order: 2;
   }
 }
 </style>

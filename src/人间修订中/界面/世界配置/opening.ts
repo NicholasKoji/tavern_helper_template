@@ -44,19 +44,10 @@ export type OpeningCharacterSnapshot = {
 export type OpeningFormSnapshot = {
   让现实编辑器参与世界观生成: boolean;
   故事起始日期: OpeningDateSnapshot;
-  体验与叙事方向: {
-    故事体验: string;
-    主角处境: string;
-    冲突与成长: string;
-    叙事视角: string;
-    文风: string;
-  };
-  世界与故事骨架: {
-    世界规则: string;
-    时代与舞台: string;
-    社会后果: string;
-    核心矛盾与推进: string;
-  };
+  世界基础: { 世界概况: string; 底层规律: string; 地理生态与资源: string; 居民与族群: string; 技术与特殊力量: string };
+  社会生活: { 权力与制度: string; 经济与基础设施: string; 文化信仰与价值观: string; 日常生活: string };
+  历史与现状: { 关键历史: string; 当下局势: string; 主要势力与关系: string };
+  叙事偏好: { 叙事视角: string; 文风: string; 节奏: string; 体验倾向: string };
   主角: {
     启用: boolean;
     性别: string;
@@ -76,12 +67,11 @@ export type OpeningFormSnapshot = {
     私密状态: PrivateStatusSnapshot;
   };
   重要角色: OpeningCharacterSnapshot[];
-  世界落地与开场准备: {
-    起始地点: string;
-    日常秩序: string;
-    组织势力: string;
-    必要规则: string;
-    当前矛盾与开场: string;
+  开局: {
+    起始地点: { 一级区域: string; 二级区域: string; 三级地点: string };
+    时间: { 时: string; 分: string };
+    在场角色: number[];
+    初始情境: string;
   };
   现实编辑器: {
     表现形式: string;
@@ -125,20 +115,23 @@ export type OpeningPatchOptions = {
  */
 export const REALITY_EDITOR_ENABLED = true;
 
-const text = (value: unknown, fallback = '未填写'): string => {
+const text = (value: unknown, fallback = ''): string => {
   const normalized = String(value ?? '').trim();
   return normalized || fallback;
 };
 
 const optionalText = (value: unknown): string => String(value ?? '').trim();
 
-function list(value: unknown, fallback = '未填写'): string {
+function list(value: unknown, fallback = ''): string {
   if (!Array.isArray(value) || value.length === 0) return fallback;
   return value.map(item => text(item)).join('、');
 }
 
 function section(title: string, rows: Array<[string, unknown]>): string {
-  return [`## ${title}`, ...rows.map(([label, value]) => `- ${label}：${text(value)}`)].join('\n');
+  const filled = rows.filter(([, value]) => optionalText(value));
+  return filled.length
+    ? [`## ${title}`, ...filled.map(([label, value]) => `- ${label}：${text(value)}`)].join('\n')
+    : '';
 }
 
 export function shouldIncludeRealityEditorInWorldGeneration(snapshot: OpeningFormSnapshot): boolean {
@@ -146,38 +139,27 @@ export function shouldIncludeRealityEditorInWorldGeneration(snapshot: OpeningFor
 }
 
 export function buildWorldChatLoreContent(snapshot: OpeningFormSnapshot): string {
-  const narrative = snapshot.体验与叙事方向;
-  const world = snapshot.世界与故事骨架;
-  const grounding = snapshot.世界落地与开场准备;
-  const worldRows: Array<[string, unknown]> = [
-    ['世界规则', world.世界规则],
-    ['时代与舞台', world.时代与舞台],
-    ['社会后果', world.社会后果],
-    ['核心矛盾与推进', world.核心矛盾与推进],
-  ];
-  if (shouldIncludeRealityEditorInWorldGeneration(snapshot)) {
-    worldRows.push(['现实编辑器参与世界观生成', '开启']);
-  }
   return [
     '# 本会话世界与叙事设定',
-    '本条是当前聊天的玩家签发设定。它与角色卡 Character Lore 叠加；本聊天的具体内容优先于通用默认补全。',
-    section('叙事契约', [
-      ['故事体验', narrative.故事体验],
-      ['主角处境', narrative.主角处境],
-      ['冲突与成长', narrative.冲突与成长],
-      ['叙事视角', narrative.叙事视角],
-      ['叙事文风', narrative.文风],
+    '本条只记录玩家已填写并签发的设定。空项不构成事实，不自动补全为世界规则；本聊天的明确设定优先于通用默认。',
+    ...(['世界基础', '社会生活', '历史与现状', '叙事偏好'] as const).map(key =>
+      section(key, Object.entries(snapshot[key])),
+    ),
+    section('开局坐标', [
+      ...Object.entries(snapshot.开局.起始地点),
+      [
+        '在场角色',
+        snapshot.开局.在场角色
+          .map(index => snapshot.重要角色[index]?.姓名.trim())
+          .filter(Boolean)
+          .join('、'),
+      ],
+      ['初始情境', snapshot.开局.初始情境],
     ]),
-    section('世界骨架', worldRows),
-    section('开场落点', [
-      ['起始地点', grounding.起始地点],
-      ['日常秩序', grounding.日常秩序],
-      ['组织与势力', grounding.组织势力],
-      ['必要背景规则', grounding.必要规则],
-      ['当前矛盾与开场', grounding.当前矛盾与开场],
-    ]),
-    '执行边界：不把本条重新解释成变量树；后续剧情遵循本条设定，并通过当前聊天的 MVU 动态状态表现变化。',
-  ].join('\n\n');
+    '执行边界：本条不是变量树；开局坐标仅描述初始状态，后续地点、时间和人物动态以 MVU 为准。',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export function buildEditorChatLoreContent(snapshot: OpeningFormSnapshot): string {
@@ -199,7 +181,9 @@ export function buildEditorChatLoreContent(snapshot: OpeningFormSnapshot): strin
       ['自然语言修改', editor.自然语言修改],
     ]),
     '固定权限：玩家可以签发 /生效规则 中允许的世界、区域和个人规则；现实编辑器自身的权限与卸载边界不接受改写。',
-  ].join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export function buildChatLoreSpecs(snapshot: OpeningFormSnapshot): ChatLoreSpec[] {
@@ -228,16 +212,30 @@ export function isOpeningDateComplete(value: OpeningDateSnapshot): boolean {
   return parseOpeningDate(value) !== null;
 }
 
-function splitLocation(value: string): { 一级区域: string; 二级区域: string; 三级地点: string } {
-  const parts = optionalText(value)
-    .split(/\s*(?:\/|／|>|＞|｜|·)\s*/)
-    .map(item => item.trim())
-    .filter(Boolean);
-  if (parts.length >= 3) {
-    return { 一级区域: parts[parts.length - 3], 二级区域: parts[parts.length - 2], 三级地点: parts[parts.length - 1] };
+export function isOpeningLocationComplete(value: OpeningFormSnapshot['开局']['起始地点']): boolean {
+  return Object.values(value).every(part => Boolean(part.trim()));
+}
+
+export function isOpeningTimeValid(value: OpeningFormSnapshot['开局']['时间']): boolean {
+  if (!value.时.trim() && !value.分.trim()) return true;
+  return /^\d{1,2}$/.test(value.时) && /^\d{1,2}$/.test(value.分) && Number(value.时) <= 23 && Number(value.分) <= 59;
+}
+
+/** 仅移除空文本、空容器；false 和 0 是有效设定。 */
+export function filledSnapshot(value: unknown): any {
+  if (typeof value === 'string') return value.trim() || undefined;
+  if (Array.isArray(value)) {
+    const items = value.map(filledSnapshot).filter(item => item !== undefined);
+    return items.length ? items : undefined;
   }
-  if (parts.length === 2) return { 一级区域: '待生成', 二级区域: parts[0], 三级地点: parts[1] };
-  return { 一级区域: '待生成', 二级区域: '待生成', 三级地点: parts[0] ?? '待生成' };
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value)
+      .filter(([key]) => key !== 'localId')
+      .map(([key, item]) => [key, filledSnapshot(item)] as const)
+      .filter(([, item]) => item !== undefined);
+    return entries.length ? Object.fromEntries(entries) : undefined;
+  }
+  return value;
 }
 
 function emptyClothing(): ClothingSnapshot {
@@ -305,9 +303,7 @@ function buildProtagonistState(snapshot: OpeningFormSnapshot, options: OpeningPa
       身体特征: optionalText(protagonist.外貌.身体特征),
     },
     性格: { 底色: optionalText(protagonist.性格与声音), 主色调: optionalText(protagonist.性格主色) },
-    补充设定: [optionalText(snapshot.体验与叙事方向.主角处境), optionalText(protagonist.补充设定)]
-      .filter(Boolean)
-      .join('\n'),
+    补充设定: optionalText(protagonist.补充设定),
     当前状态: '',
     穿着: normalizeClothing(protagonist.穿着),
     私密状态: normalizePrivateStatus(protagonist.私密状态),
@@ -344,13 +340,16 @@ export function buildOpeningState(
   snapshot: OpeningFormSnapshot,
   options: OpeningPatchOptions = {},
 ): Record<string, unknown> {
-  const grounding = snapshot.世界落地与开场准备;
+  const grounding = snapshot.开局;
   return {
     当前场景: {
-      地点: splitLocation(grounding.起始地点),
+      地点: Object.fromEntries(Object.entries(grounding.起始地点).map(([key, value]) => [key, value.trim()])),
       日期: parseOpeningDate(snapshot.故事起始日期) ?? { 年: null, 月: null, 日: null },
-      时间: { 时: null, 分: null },
-      摘要: optionalText(grounding.当前矛盾与开场) || optionalText(snapshot.体验与叙事方向.故事体验),
+      时间: {
+        时: grounding.时间.时.trim() ? Number(grounding.时间.时) : null,
+        分: grounding.时间.分.trim() ? Number(grounding.时间.分) : null,
+      },
+      摘要: optionalText(grounding.初始情境),
     },
     主角: buildProtagonistState(snapshot, options),
     NPC序列: Object.fromEntries(

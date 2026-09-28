@@ -1,5 +1,5 @@
 <template>
-  <nav class="step-wizard-nav" aria-label="创作访谈分步导航">
+  <nav class="step-wizard-nav" aria-label="开场配置分步导航">
     <div class="step-track">
       <button
         v-for="(layer, index) in layers"
@@ -83,7 +83,7 @@ defineEmits<{
 
 .step-track {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   width: 100%;
   min-width: 0;
@@ -180,19 +180,17 @@ defineEmits<{
   line-height: 1.4;
 }
 
-@media (max-width: 680px) {
-  .step-wizard-nav {
-    padding: 6px;
-  }
+@media (max-width: 900px) {
   .step-track {
-    display: flex;
-    width: max-content;
-    padding-bottom: 2px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .step-item {
-    padding: 6px 10px;
-    gap: 8px;
-    flex-shrink: 0;
+    padding: 8px 6px;
+    gap: 6px;
+  }
+  .step-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 </style>

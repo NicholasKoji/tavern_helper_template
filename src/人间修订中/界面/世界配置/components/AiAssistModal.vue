@@ -61,7 +61,14 @@
             <div class="values-grid">
               <div v-for="(val, key) in aiPreview.values" :key="key" class="value-item">
                 <span class="value-key">{{ formatKey(key) }}</span>
-                <span class="value-val">{{ val }}</span>
+                <span v-if="aiPreview.kind === 'private-status'" class="value-val">{{ val }}</span>
+                <textarea
+                  v-else
+                  v-model="aiPreview.values[key]"
+                  class="dossier-textarea"
+                  rows="4"
+                  :aria-label="formatKey(String(key)) + '建议内容'"
+                />
               </div>
             </div>
           </div>
@@ -78,7 +85,7 @@
             <button
               class="action-btn primary"
               type="button"
-              :disabled="isAnyAiBusy || !hasValues"
+              :disabled="isAnyAiBusy || isStale || !hasValues"
               @click="$emit('apply')"
             >
               <Check :size="14" stroke-width="2.2" />
@@ -93,6 +100,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { worldFields } from '../world-fields';
 import { Check, CircleAlert, RefreshCw, Sparkles, X } from '@lucide/vue';
 
 const props = defineProps<{
@@ -112,6 +120,15 @@ const modalElement = ref<HTMLElement | null>(null);
 const hasValues = computed(() => props.aiPreview && Object.keys(props.aiPreview.values || {}).length > 0);
 
 function formatKey(key: string): string {
+  const worldField = worldFields.find(field => field.id === key);
+  if (worldField) return worldField.title;
+  const locationNames: Record<string, string> = {
+    'opening.location.1': '一级区域',
+    'opening.location.2': '二级区域',
+    'opening.location.3': '三级地点',
+    'opening.situation': '初始情境',
+  };
+  if (locationNames[key]) return locationNames[key];
   if (key.includes('.')) return key.split('.').pop() || key;
   return key;
 }
@@ -363,5 +380,23 @@ onMounted(() => {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+.dossier-textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--paper-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--ink-body);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.dossier-textarea:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 2px var(--brass-soft);
 }
 </style>

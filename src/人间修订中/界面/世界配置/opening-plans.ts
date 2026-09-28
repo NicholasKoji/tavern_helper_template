@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import type { OpeningFormSnapshot } from './opening';
+import { emptyWorldSections } from './world-fields';
 
-export const OPENING_PLAN_SCHEMA_VERSION = 2 as const;
-export const OPENING_PLAN_STORAGE_KEY = '人间修订中:开场配置方案库:v2';
+export const OPENING_PLAN_SCHEMA_VERSION = 3 as const;
+export const OPENING_PLAN_STORAGE_KEY = '人间修订中:开场配置方案库:v3';
 export const LEGACY_OPENING_PLAN_STORAGE_KEY = '人间修订中:开场配置方案库:v1';
+export const PREVIOUS_OPENING_PLAN_STORAGE_KEY = '人间修订中:开场配置方案库:v2';
 const MAX_PLANS = 100;
-const MAX_TEXT_LENGTH = 4000;
+const MAX_TEXT_LENGTH = 16000;
 
 const textField = z.string().max(MAX_TEXT_LENGTH);
 const editorScope = z.enum(['世界', '区域', '个人']);
@@ -59,23 +61,20 @@ export const openingFormSnapshotSchema = z
   .object({
     让现实编辑器参与世界观生成: z.boolean(),
     故事起始日期: openingDateSchema,
-    体验与叙事方向: z
+    世界基础: z
       .object({
-        故事体验: textField,
-        主角处境: textField,
-        冲突与成长: textField,
-        叙事视角: textField,
-        文风: textField,
+        世界概况: textField,
+        底层规律: textField,
+        地理生态与资源: textField,
+        居民与族群: textField,
+        技术与特殊力量: textField,
       })
       .strict(),
-    世界与故事骨架: z
-      .object({
-        世界规则: textField,
-        时代与舞台: textField,
-        社会后果: textField,
-        核心矛盾与推进: textField,
-      })
+    社会生活: z
+      .object({ 权力与制度: textField, 经济与基础设施: textField, 文化信仰与价值观: textField, 日常生活: textField })
       .strict(),
+    历史与现状: z.object({ 关键历史: textField, 当下局势: textField, 主要势力与关系: textField }).strict(),
+    叙事偏好: z.object({ 叙事视角: textField, 文风: textField, 节奏: textField, 体验倾向: textField }).strict(),
     主角: z
       .object({
         启用: z.boolean(),
@@ -99,13 +98,12 @@ export const openingFormSnapshotSchema = z
       })
       .strict(),
     重要角色: z.array(openingCharacterSchema).max(32),
-    世界落地与开场准备: z
+    开局: z
       .object({
-        起始地点: textField,
-        日常秩序: textField,
-        组织势力: textField,
-        必要规则: textField,
-        当前矛盾与开场: textField,
+        起始地点: z.object({ 一级区域: textField, 二级区域: textField, 三级地点: textField }).strict(),
+        时间: z.object({ 时: datePartField, 分: datePartField }).strict(),
+        在场角色: z.array(z.number().int().min(0).max(31)).max(32),
+        初始情境: textField,
       })
       .strict(),
     现实编辑器: z
@@ -214,7 +212,7 @@ function migrateOpeningFormSnapshotV1(value: unknown): RecordLike {
 function migrateOpeningPlanV1(value: RecordLike): RecordLike {
   return {
     ...value,
-    schemaVersion: OPENING_PLAN_SCHEMA_VERSION,
+    schemaVersion: 2,
     表单快照: migrateOpeningFormSnapshotV1(value.表单快照),
   };
 }
@@ -228,15 +226,64 @@ function asRecord(value: unknown, label: string): RecordLike {
  * 所有方案版本迁移集中在这里。新增 schemaVersion 时只扩展这张表，
  * 不把旧字段兼容逻辑散落到 UI 或 localStorage 读写路径。
  */
-const openingPlanMigrations: Record<number, Migration> = {
-  1: migrateOpeningPlanV1,
-};
+function migrateOpeningPlanV2(value: RecordLike): RecordLike {
+  const old = asRecord(value.表单快照, 'v2 表单快照');
+  const world = asRecord(old.世界与故事骨架, '旧世界骨架');
+  const grounding = asRecord(old.世界落地与开场准备, '旧开场');
+  const narrative = asRecord(old.体验与叙事方向, '旧叙事');
+  const protagonist = asRecord(old.主角, '主角');
+  const sections = emptyWorldSections();
+  const merge = (...values: unknown[]) => [...new Set(values.map(asText).filter(Boolean))].join('\n');
+  sections.世界基础.世界概况 = asText(world.时代与舞台);
+  sections.世界基础.底层规律 = merge(world.世界规则, grounding.必要规则);
+  sections.社会生活.日常生活 = merge(world.社会后果, grounding.日常秩序);
+  sections.历史与现状.当下局势 = asText(world.核心矛盾与推进);
+  sections.历史与现状.主要势力与关系 = asText(grounding.组织势力);
+  // 分隔只用于旧文件迁移；新版签发逐字段写入，绝不再次拆分名称。
+  const parts = asText(grounding.起始地点)
+    .split(/\s*(?:\/|／|>|＞|｜|·)\s*/)
+    .filter(Boolean);
+  const location =
+    parts.length > 3
+      ? [parts[0], parts[1], parts.slice(2).join(' / ')]
+      : [...Array(3 - parts.length).fill(''), ...parts];
+  return {
+    ...value,
+    schemaVersion: 3,
+    表单快照: {
+      让现实编辑器参与世界观生成: old.让现实编辑器参与世界观生成,
+      故事起始日期: old.故事起始日期,
+      ...sections,
+      叙事偏好: {
+        叙事视角: narrative.叙事视角,
+        文风: narrative.文风,
+        节奏: '',
+        体验倾向: merge(narrative.故事体验, narrative.冲突与成长),
+      },
+      主角: { ...protagonist, 补充设定: merge(protagonist.补充设定, narrative.主角处境) },
+      重要角色: old.重要角色,
+      开局: {
+        起始地点: { 一级区域: location[0], 二级区域: location[1], 三级地点: location[2] },
+        时间: { 时: '', 分: '' },
+        在场角色: [],
+        初始情境: asText(grounding.当前矛盾与开场),
+      },
+      现实编辑器: old.现实编辑器,
+    },
+  };
+}
 
+const openingPlanMigrations: Record<number, Migration> = { 1: migrateOpeningPlanV1, 2: migrateOpeningPlanV2 };
 const openingPlanLibraryMigrations: Record<number, Migration> = {
   1: value => ({
     ...value,
-    schemaVersion: OPENING_PLAN_SCHEMA_VERSION,
+    schemaVersion: 2,
     plans: (Array.isArray(value.plans) ? value.plans : []).map(plan => migrateOpeningPlanV1(asRecord(plan, 'v1 方案'))),
+  }),
+  2: value => ({
+    ...value,
+    schemaVersion: 3,
+    plans: (Array.isArray(value.plans) ? value.plans : []).map(plan => migrateOpeningPlanPayload(plan)),
   }),
 };
 
@@ -355,7 +402,7 @@ function writeOpeningPlanLibraryPayload(storage: Storage, plans: readonly Openin
 
 export function readOpeningPlans(storage: Storage | null = getBrowserStorage()): OpeningPlan[] {
   if (!storage) return [];
-  const keys = [OPENING_PLAN_STORAGE_KEY, LEGACY_OPENING_PLAN_STORAGE_KEY];
+  const keys = [OPENING_PLAN_STORAGE_KEY, PREVIOUS_OPENING_PLAN_STORAGE_KEY, LEGACY_OPENING_PLAN_STORAGE_KEY];
   for (const key of keys) {
     const raw = storage.getItem(key);
     if (!raw) continue;
@@ -365,7 +412,7 @@ export function readOpeningPlans(storage: Storage | null = getBrowserStorage()):
         try {
           writeOpeningPlanLibraryPayload(storage, plans);
         } catch (error) {
-          console.warn('[人间修订中·世界配置] v1 方案库迁移后写入 v2 失败，将继续使用已读取方案', error);
+          console.warn('[人间修订中·世界配置] 旧方案库迁移后写入 v3 失败，将继续使用已读取方案', error);
         }
       }
       return plans;

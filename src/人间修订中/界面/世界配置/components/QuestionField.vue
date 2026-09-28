@@ -25,6 +25,7 @@
         <textarea
           v-if="type === 'textarea'"
           :value="modelValue"
+          :aria-label="title"
           :placeholder="placeholder"
           :rows="rows || 3"
           class="dossier-textarea"
@@ -36,6 +37,7 @@
           v-else
           type="text"
           :value="modelValue"
+          :aria-label="title"
           :placeholder="placeholder"
           class="dossier-input"
           @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
@@ -214,7 +216,9 @@ const isFocused = ref(false);
   color: var(--ink-body);
   font-size: 13.5px;
   line-height: 1.55;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
   word-break: break-word;
   overflow-wrap: anywhere;
   white-space: pre-wrap;

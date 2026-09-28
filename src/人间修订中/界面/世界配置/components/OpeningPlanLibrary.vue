@@ -4,7 +4,7 @@
       <div class="plan-heading">
         <span class="plan-kicker">OPENING CONFIGURATION ARCHIVE</span>
         <h2 id="opening-plan-library-title" class="plan-title">已有方案 / 复用已有方案</h2>
-        <p class="plan-description">把五层创作表单存成可重复使用的本地方案，不会写入当前聊天的 MVU 状态。</p>
+        <p class="plan-description">把六层创作表单存成可重复使用的本地方案，不会写入当前聊天的 MVU 状态。</p>
       </div>
 
       <div class="plan-import-wrap">
@@ -37,14 +37,14 @@
             <span v-if="plan.id === currentPlanId" class="current-badge">当前方案</span>
             <time class="plan-time" :datetime="plan.updatedAt">更新于 {{ formatUpdatedAt(plan.updatedAt) }}</time>
           </div>
-          <p class="plan-summary">{{ plan.摘要 || '暂无摘要，将按当前五层内容套用。' }}</p>
+          <p class="plan-summary">{{ plan.摘要 || '暂无摘要，将按当前六层内容套用。' }}</p>
         </div>
 
         <div class="plan-actions">
           <button class="plan-action primary" type="button" @click="emit('apply', plan)">套用</button>
           <button class="plan-action forward" type="button" @click="emit('apply-and-forward', plan)">
             <ArrowRight :size="13" />
-            <span>套用并前往第五层</span>
+            <span>套用并前往第六层</span>
           </button>
           <button
             class="plan-icon-action"
@@ -70,7 +70,7 @@
 
     <div v-else class="plan-empty">
       <Bookmark :size="16" />
-      <span>还没有本地方案。完成第五层后，可在签发区保存第一份。</span>
+      <span>还没有本地方案。完成第六层后，可在底部保存第一份。</span>
     </div>
 
     <p class="plan-footnote">单方案导出保留 schemaVersion、表单快照与时间信息，后续字段迁移集中处理。</p>

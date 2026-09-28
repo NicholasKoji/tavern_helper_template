@@ -19,7 +19,18 @@ import {
   upsertChatLoreEntries,
 } from '../src/人间修订中/界面/世界配置/chat-lore';
 
-const snapshot: OpeningFormSnapshot = {
+import {
+  createOpeningPlan,
+  parseOpeningPlanJson,
+  serializeOpeningPlan,
+  readOpeningPlans,
+  OPENING_PLAN_STORAGE_KEY,
+  PREVIOUS_OPENING_PLAN_STORAGE_KEY,
+  LEGACY_OPENING_PLAN_STORAGE_KEY,
+  parseOpeningPlan,
+} from '../src/人间修订中/界面/世界配置/opening-plans';
+
+const legacySnapshot = {
   让现实编辑器参与世界观生成: true,
   体验与叙事方向: {
     故事体验: '在一座会记住每次选择的城市里调查失踪案',
@@ -79,6 +90,66 @@ const snapshot: OpeningFormSnapshot = {
     自然语言修改: '玩家说出明确目标后才提出规则草案',
   },
 };
+
+const snapshot: OpeningFormSnapshot = parseOpeningPlan({
+  schemaVersion: 1,
+  id: 'legacy-test',
+  名称: '旧方案',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  摘要: '',
+  表单快照: legacySnapshot,
+}).表单快照;
+
+// Six-layer contracts: blanks, structured locations, selection/time and migration.
+const sparse = structuredClone(snapshot);
+for (const key of ['世界基础', '社会生活', '历史与现状', '叙事偏好'] as const) {
+  for (const field of Object.keys(sparse[key])) (sparse[key] as Record<string, string>)[field] = '  ';
+}
+sparse.开局.初始情境 = '';
+sparse.开局.起始地点 = { 一级区域: ' A / B ', 二级区域: ' 东区·北侧 ', 三级地点: ' 房间 > 里间 ' };
+sparse.开局.时间 = { 时: '0', 分: '05' };
+sparse.开局.在场角色 = [0];
+const sparseLore = buildChatLoreSpecs(sparse)[0].content;
+assert.doesNotMatch(sparseLore, /未填写|未设定|## 世界基础|## 社会生活|## 历史与现状|## 叙事偏好/);
+assert.match(sparseLore, /在场角色：林澈/);
+const sparseState = buildOpeningState(sparse) as any;
+assert.deepEqual(sparseState.当前场景.地点, { 一级区域: 'A / B', 二级区域: '东区·北侧', 三级地点: '房间 > 里间' });
+assert.deepEqual(sparseState.当前场景.时间, { 时: 0, 分: 5 });
+assert.equal(sparseState.当前场景.摘要, '');
+const plan = createOpeningPlan('六层回读', '', sparse, new Date('2026-01-01T00:00:00Z'));
+assert.equal(plan.schemaVersion, 3);
+assert.deepEqual(parseOpeningPlanJson(serializeOpeningPlan(plan)), plan);
+const v2Snapshot = {
+  ...legacySnapshot,
+  主角: snapshot.主角,
+  重要角色: snapshot.重要角色,
+  故事起始日期: { 年: '1995', 月: '6', 日: '8' },
+};
+const v2Plan = { ...plan, schemaVersion: 2, 表单快照: v2Snapshot };
+const migrated = parseOpeningPlan(v2Plan);
+assert.deepEqual(migrated.表单快照.故事起始日期, v2Snapshot.故事起始日期);
+assert.equal(migrated.表单快照.世界基础.世界概况, legacySnapshot.世界与故事骨架.时代与舞台);
+assert.deepEqual(migrated.表单快照.开局.起始地点, { 一级区域: '东港', 二级区域: '旧城区', 三级地点: '雾灯旧书店' });
+assert.deepEqual(migrated.表单快照.现实编辑器, snapshot.现实编辑器);
+assert.deepEqual(migrated.表单快照.重要角色, snapshot.重要角色);
+assert.equal('体验与叙事方向' in migrated.表单快照, false);
+for (const [key, version, payload] of [
+  [PREVIOUS_OPENING_PLAN_STORAGE_KEY, 2, v2Plan],
+  [LEGACY_OPENING_PLAN_STORAGE_KEY, 1, { ...plan, schemaVersion: 1, 表单快照: legacySnapshot }],
+] as const) {
+  const entries = new Map<string, string>([[key, JSON.stringify({ schemaVersion: version, plans: [payload] })]]);
+  const storage = {
+    getItem: (name: string) => entries.get(name) ?? null,
+    setItem: (name: string, value: string) => entries.set(name, value),
+  } as Storage;
+  const loaded = readOpeningPlans(storage);
+  assert.equal(loaded[0].schemaVersion, 3);
+  assert.ok(entries.has(OPENING_PLAN_STORAGE_KEY));
+  assert.ok(entries.has(key), 'legacy storage remains recoverable');
+}
+assert.throws(() => parseOpeningPlan({ ...plan, schemaVersion: 99 }));
+console.log('six-layer blank/location/time/plan migration contracts: PASS');
 
 const specs = buildChatLoreSpecs(snapshot);
 assert.deepEqual(
@@ -255,10 +326,7 @@ async function testChatLoreTransactionRollback() {
     worldbooks.set(name, []);
     return true;
   };
-  await assert.rejects(
-    () => commitCurrentChatLore(snapshot),
-    /Chat Lore 写后校验失败/,
-  );
+  await assert.rejects(() => commitCurrentChatLore(snapshot), /Chat Lore 写后校验失败/);
   assert.equal(currentChatWorldbook, null);
   assert.equal(worldbooks.has('人间修订中·测试当前聊天世界书'), false);
   runtime.createOrReplaceWorldbook = failedWriteCreateOrReplace;
@@ -275,10 +343,7 @@ async function testChatLoreTransactionRollback() {
   assert.equal(currentChatWorldbook, originalWorldbookName);
   assert.deepEqual(worldbooks.get(originalWorldbookName), originalEntries);
 
-  const appSource = fs.readFileSync(
-    path.resolve(__dirname, '../src/人间修订中/界面/世界配置/App.vue'),
-    'utf8',
-  );
+  const appSource = fs.readFileSync(path.resolve(__dirname, '../src/人间修订中/界面/世界配置/App.vue'), 'utf8');
   assert.match(appSource, /getChatMessages\('0-\{\{lastMessageId\}\}'\)/);
   assert.match(appSource, /await SillyTavern\.saveChat\(\);/);
   assert.match(appSource, /新消息写后回读已确认/);
