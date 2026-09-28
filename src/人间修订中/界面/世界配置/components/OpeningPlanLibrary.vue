@@ -4,7 +4,7 @@
       <div class="plan-heading">
         <span class="plan-kicker">OPENING CONFIGURATION ARCHIVE</span>
         <h2 id="opening-plan-library-title" class="plan-title">已有方案 / 复用已有方案</h2>
-        <p class="plan-description">把六层创作表单存成可重复使用的本地方案，不会写入当前聊天的 MVU 状态。</p>
+        <p class="plan-description">把这次的设定保存在当前浏览器，下次还能接着用。保存方案不会开始故事。</p>
       </div>
 
       <div class="plan-import-wrap">
@@ -44,7 +44,7 @@
           <button class="plan-action primary" type="button" @click="emit('apply', plan)">套用</button>
           <button class="plan-action forward" type="button" @click="emit('apply-and-forward', plan)">
             <ArrowRight :size="13" />
-            <span>套用并前往第六层</span>
+            <span>套用并准备开场</span>
           </button>
           <button
             class="plan-icon-action"

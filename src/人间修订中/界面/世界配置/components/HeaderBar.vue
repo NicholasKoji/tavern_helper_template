@@ -7,7 +7,7 @@
           <span class="eyebrow-text">世界设定 · 开场配置</span>
         </div>
         <h1 class="dossier-title">人间修订中</h1>
-        <p class="dossier-subtitle">先建立世界，再放入人物，选择故事开始的瞬间。</p>
+        <p class="dossier-subtitle">想去怎样的世界，遇见什么样的人？从这里开始。</p>
       </div>
 
       <div class="masthead-controls">
@@ -34,11 +34,9 @@
           <Globe :size="15" stroke-width="1.8" />
         </span>
         <div class="integrator-text">
-          <strong class="integrator-title">让现实编辑器参与世界观生成</strong>
-          <p v-if="modelValue" class="integrator-hint">已开启：世界设定会将编辑器的存在、传闻或规则异动纳入设计。</p>
-          <p v-else class="integrator-hint">
-            默认关闭：世界设定完全不提及也不围绕它设计；它会在之后作为突发外来事物进入。
-          </p>
+          <strong class="integrator-title">这个世界原本就有现实编辑器吗？</strong>
+          <p v-if="modelValue" class="integrator-hint">会。设计世界时，也会考虑它留下的影响和传闻。</p>
+          <p v-else class="integrator-hint">不会。先写一个与它无关的世界，再让它作为意外闯入故事。</p>
         </div>
       </div>
       <label class="switch-toggle" aria-label="切换现实编辑器参与世界观生成">
@@ -64,14 +62,14 @@
         <header class="settings-head">
           <div class="head-copy">
             <span class="head-kicker">PREFERENCES</span>
-            <h2 id="settings-title">视觉风格偏好</h2>
+            <h2 id="settings-title">界面主题</h2>
           </div>
           <button class="close-btn" type="button" aria-label="关闭设置" @click="settingsOpen = false">
             <X :size="16" />
           </button>
         </header>
 
-        <p class="settings-lead">所有预设共用同一套响应式排版与字段架构，仅调整阅读质感与色调氛围：</p>
+        <p class="settings-lead">选一个看着舒服的样式，填写内容不会变。</p>
 
         <div class="theme-grid" role="radiogroup" aria-label="选择主题">
           <button

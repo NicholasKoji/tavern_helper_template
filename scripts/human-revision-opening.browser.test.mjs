@@ -131,6 +131,19 @@ try {
             window.__resolveAi = resolve;
           });
         if (options.generation_id.startsWith('human-revision-opening-')) return '测试开场正文<StatusPlaceHolderImpl/>';
+        if (options.generation_id.startsWith('human-revision-location-'))
+          return JSON.stringify({
+            结论: '地点建议',
+            理由: '',
+            可执行约束: [],
+            可采用: window.__badLocation
+              ? { 'opening.location.1': '临海市' }
+              : {
+                  'opening.location.1': '试图替换原地点',
+                  'opening.location.2': '老港区',
+                  'opening.location.3': '灯塔街咖啡馆',
+                },
+          });
         const prompt = options.ordered_prompts.map(item => item.content || '').join('\n');
         const target = prompt.match(/目标字段 ID：([^\n]+)/)?.[1];
         return JSON.stringify({
@@ -177,7 +190,7 @@ try {
   await page.getByRole('button', { name: '取消', exact: true }).click();
   // Explicit "无" is a valid world answer, not an empty field to overwrite in bulk.
   await page.locator('.question-card').nth(1).locator('textarea').fill('无');
-  await page.getByRole('button', { name: '补全本层空白' }).click();
+  await page.getByRole('button', { name: '帮我补全这一页' }).click();
   await page.getByRole('dialog', { name: /AI 补全预览/ }).waitFor();
   const bulkPrompt = await page.evaluate(() =>
     window.__requests
@@ -190,26 +203,82 @@ try {
   await page.getByRole('button', { name: '取消', exact: true }).click();
   // World layers are optional; navigation does not request AI or force completion.
   for (const count of [4, 3]) {
-    await page.getByRole('button', { name: '进入下一层' }).click();
+    await page.getByRole('button', { name: '下一步' }).click();
     await page.waitForTimeout(550);
     assert.equal(await page.locator('.question-card').count(), count);
   }
-  await page.getByRole('button', { name: '进入下一层' }).click();
+  await page.getByRole('button', { name: '下一步' }).click();
   await page.getByRole('heading', { name: '主角与重要登场人物' }).waitFor();
-  await page.getByRole('button', { name: '进入下一层' }).click();
-  await page.getByRole('heading', { name: '设定现实编辑器的运行法则与边界' }).waitFor();
-  assert.equal(await page.getByRole('button', { name: '生成唯一开场预览' }).count(), 0);
-  await page.getByRole('button', { name: '进入下一层' }).click();
+  await page.getByRole('button', { name: '下一步' }).click();
+  await page.getByRole('heading', { name: '你想怎样改变现实？' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '生成开场' }).count(), 0);
+  await page.getByRole('button', { name: '下一步' }).click();
   await page.getByRole('heading', { name: '选择进入世界的瞬间' }).waitFor();
+  // One composite suggestion: preserve known locations, preview/edit/cancel, atomic adoption.
+  assert.equal(await page.locator('.location-ai-btn').count(), 1);
+  assert.equal(await page.locator('.location-grid button').count(), 0);
+  await page.locator('.location-grid input').first().fill('玩家指定城市');
+  await page.locator('.location-ai-btn').click();
+  await page.locator('.values-grid textarea').first().waitFor();
+  assert.equal(await page.locator('.values-grid textarea').count(), 3);
+  assert.equal(await page.locator('.values-grid textarea').first().inputValue(), '玩家指定城市');
+  assert.equal(await page.locator('.location-grid input').nth(1).inputValue(), '');
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  assert.equal(await page.locator('.location-grid input').nth(2).inputValue(), '');
+  await page.locator('.location-ai-btn').click();
+  await page.locator('.values-grid textarea').nth(2).fill('玩家修改的咖啡馆');
+  await page.getByRole('button', { name: '采用此建议' }).click();
+  assert.deepEqual(await page.locator('.location-grid input').evaluateAll(inputs => inputs.map(i => i.value)), [
+    '玩家指定城市',
+    '老港区',
+    '玩家修改的咖啡馆',
+  ]);
+  for (const input of await page.locator('.location-grid input').all()) await input.fill('');
+  await page.evaluate(() => {
+    window.__badLocation = true;
+  });
+  await page.locator('.location-ai-btn').click();
+  await page.getByText('地点建议还不完整，请再试一次。', { exact: true }).waitFor();
+  assert.equal(await page.locator('.ai-modal-overlay').count(), 0);
+  assert.deepEqual(await page.locator('.location-grid input').evaluateAll(inputs => inputs.map(i => i.value)), [
+    '',
+    '',
+    '',
+  ]);
+  await page.evaluate(() => {
+    window.__badLocation = false;
+  });
+  await page.evaluate(() => {
+    window.__delay = true;
+    window.__resolveAi = null;
+  });
+  await page.locator('.location-ai-btn').click();
+  await page.waitForFunction(() => Boolean(window.__resolveAi));
+  await page.locator('.location-grid input').first().fill('后来填写的城市');
+  await page.evaluate(() => {
+    window.__delay = false;
+    window.__resolveAi();
+  });
+  await page.locator('.modal-stale-alert').waitFor();
+  assert.equal(await page.getByRole('button', { name: '采用此建议' }).isDisabled(), true);
+  await page.getByRole('button', { name: '重新生成', exact: true }).click();
+  await page.locator('.values-grid textarea').first().waitFor();
+  assert.equal(await page.locator('.values-grid textarea').first().inputValue(), '后来填写的城市');
+  await page.locator('.values-grid textarea').nth(2).fill('');
+  await page.getByRole('button', { name: '采用此建议' }).click();
+  assert.equal(await page.locator('.ai-modal-overlay').count(), 1);
+  assert.equal(await page.locator('.location-grid input').nth(1).inputValue(), '');
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+
   const before = await page.evaluate(() => window.__requests.length);
-  await page.getByRole('button', { name: '生成唯一开场预览' }).click();
+  await page.getByRole('button', { name: '生成开场' }).click();
   assert.equal(await page.evaluate(() => window.__requests.length), before);
   await page.getByRole('textbox', { name: '开场日期年', exact: true }).fill('1995');
   await page.getByRole('textbox', { name: '开场日期月', exact: true }).fill('6');
   await page.getByRole('textbox', { name: '开场日期日', exact: true }).fill('8');
   const locations = ['城市 / A', '北区·沿河', '楼内 > 房间'];
   for (let i = 0; i < 3; i++) await page.locator('.location-grid input').nth(i).fill(locations[i]);
-  await page.getByRole('button', { name: '生成唯一开场预览' }).click();
+  await page.getByRole('button', { name: '生成开场' }).click();
   await page.locator('.preview-text').waitFor();
   const request = await page.evaluate(() => window.__requests.at(-1));
   const prompt = request.ordered_prompts.map(item => item.content || '').join('\n');
@@ -226,7 +295,7 @@ try {
   await page.locator('.location-grid input').nth(2).fill('临时改动');
   await page.locator('.step-item').first().click();
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: '套用并前往第六层' }).click();
+  await page.getByRole('button', { name: '套用并准备开场' }).click();
   await page.getByRole('heading', { name: '选择进入世界的瞬间' }).waitFor();
   assert.equal(await page.locator('.location-grid input').nth(2).inputValue(), locations[2]);
   // Every step fits narrow iframes; screenshots are optional test outputs.
@@ -235,12 +304,72 @@ try {
     for (let step = 0; step < 6; step++) {
       await page.locator('.step-item').nth(step).click();
       await page.waitForTimeout(550);
+      const navigation = await page.locator('.step-wizard-nav').evaluate(nav => ({
+        tops: [...nav.querySelectorAll('.step-item')].map(el => el.getBoundingClientRect().top),
+        width: nav.clientWidth,
+        scrollWidth: nav.scrollWidth,
+      }));
+      assert.equal(new Set(navigation.tops).size, 1, 'navigation must stay in one row');
+      if (width <= 390) assert.ok(navigation.scrollWidth > navigation.width);
+      if (step === 4) {
+        const cards = await page
+          .locator('.grid-3-col > .choice-card')
+          .evaluateAll(items =>
+            items.map(el => ({ top: el.getBoundingClientRect().top, bottom: el.getBoundingClientRect().bottom })),
+          );
+        assert.equal(cards.length, 3);
+        assert.ok(cards[1].top >= cards[0].bottom && cards[2].top >= cards[1].bottom);
+      }
+      if (step === 5) {
+        assert.equal(await page.locator('legend').count(), 0);
+        const titlesFit = await page.locator('.coordinate-title').evaluateAll(titles =>
+          titles.every(el => {
+            const title = el.getBoundingClientRect(),
+              card = el.closest('.coordinate-fields').getBoundingClientRect();
+            return title.top >= card.top && title.bottom <= card.bottom && title.height >= 22;
+          }),
+        );
+        assert.ok(titlesFit, 'section titles must be fully inside normal flow');
+      }
       const size = await page.evaluate(() => ({
         content: document.documentElement.scrollWidth,
         viewport: window.innerWidth,
       }));
       assert.ok(size.content <= size.viewport, `step ${step + 1} overflows at ${width}: ${JSON.stringify(size)}`);
     }
+  }
+  // Next/previous navigation scrolls the active item into view without clicking the tab itself.
+  await page.locator('.step-item').first().click();
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole('button', { name: '下一步', exact: true }).click();
+    await page.waitForTimeout(550);
+    assert.ok(
+      await page.locator('.step-wizard-nav').evaluate(nav => {
+        const outer = nav.getBoundingClientRect(),
+          active = nav.querySelector('.is-active').getBoundingClientRect();
+        return active.left >= outer.left && active.right <= outer.right;
+      }),
+    );
+  }
+  await page.getByRole('button', { name: '上一步', exact: true }).click();
+  await page.waitForTimeout(550);
+  await page.getByRole('button', { name: '下一步', exact: true }).click();
+  await page.waitForTimeout(550);
+  await page.getByRole('button', { name: '设置与主题偏好' }).click();
+  const themes = await page.getByRole('radio').count();
+  for (let i = 0; i < themes; i++) {
+    if (i) await page.getByRole('button', { name: '设置与主题偏好' }).click();
+    await page.getByRole('radio').nth(i).click();
+    await page.waitForTimeout(550);
+    assert.ok(
+      await page.locator('.coordinate-title').evaluateAll(titles =>
+        titles.every(el => {
+          const a = el.getBoundingClientRect(),
+            b = el.closest('.coordinate-fields').getBoundingClientRect();
+          return a.top >= b.top && a.bottom <= b.bottom;
+        }),
+      ),
+    );
   }
   assert.deepEqual(errors, []);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));

@@ -3,7 +3,7 @@
     <div class="layer-banner">
       <div class="banner-badge">{{ meta.order }} · {{ meta.title }}</div>
       <h2 class="banner-title">{{ meta.question }}</h2>
-      <p class="banner-desc">本层全部选填。只填写你想确定的内容；留空不记录，也不会自动补全。</p>
+      <p class="banner-desc">有想法就写下来，没想好的可以先跳过。留空的内容不会带入故事。</p>
     </div>
     <div class="layer-fields">
       <QuestionField
@@ -11,7 +11,7 @@
         :key="field.id"
         :title="field.title"
         :hint="field.hint"
-        placeholder="选填，可自行填写或单独请求 AI 建议"
+        :placeholder="field.placeholder"
         :model-value="read(field)"
         :ai-key="field.id"
         :is-ai-busy="aiBusyKey === field.id"

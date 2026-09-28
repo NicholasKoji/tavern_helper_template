@@ -287,7 +287,7 @@ const layers = [
     description: '人物身份、关系与个人诉求',
     icon: UsersRound,
   },
-  { id: 'editor', kicker: '第六层', order: '05', title: '现实编辑器', description: '改变世界的手段与边界', icon: Cpu },
+  { id: 'editor', kicker: '第五层', order: '05', title: '现实编辑器', description: '改变世界的手段与边界', icon: Cpu },
   {
     id: 'opening',
     kicker: '第六层',
@@ -309,9 +309,9 @@ const editorAutonomyOptions = [
   { value: 'E-玩家插件伪装', label: '只在外部触发时执行' },
 ];
 const editorScopes: Array<{ value: EditorScope; label: string; description: string }> = [
-  { value: '世界', label: '整个世界', description: '公共常识与世界层规则' },
-  { value: '区域', label: '指定区域', description: '地点、建筑或局部空间' },
-  { value: '个人', label: '指定个人', description: '角色或单一对象' },
+  { value: '世界', label: '整个世界', description: '让整个世界一起改变' },
+  { value: '区域', label: '指定区域', description: '只改变你选中的地方' },
+  { value: '个人', label: '指定个人', description: '只影响你选中的人' },
 ];
 
 function createClothing(): ClothingDraft {
@@ -602,7 +602,7 @@ function applyOpeningPlan(plan: OpeningPlan, jumpToFinal = false) {
     maxVisitedLayer.value = layers.length - 1;
     currentLayer.value = layers.length - 1;
     scrollToTop();
-    setStatus(`已套用“${plan.名称}”，前五层已标记为已访问。`, 'success');
+    setStatus(`已套用“${plan.名称}”，可以准备开场了。`, 'success');
   } else {
     currentLayer.value = 0;
     setStatus(`已套用“${plan.名称}”，可从第一层继续检查或修改。`, 'success');
@@ -721,7 +721,7 @@ function exportOpeningPlan(plan: OpeningPlan) {
 }
 
 async function importOpeningPlan(file: File) {
-  setStatus('正在完整校验方案 JSON…', 'working');
+  setStatus('正在读取方案…', 'working');
   try {
     let importedPlan = parseOpeningPlanJson(await file.text());
     let nameConflict = findOpeningPlanByName(openingPlans.value, importedPlan.名称);
@@ -877,7 +877,7 @@ const aiFieldMap: Record<string, AiFieldDescriptor> = Object.fromEntries(
       id: field.id,
       title: field.title,
       layer: field.layer,
-      question: field.hint,
+      question: field.prompt,
       read: () => (form[field.section] as Record<string, string>)[field.field],
       write: (value: string) => {
         (form[field.section] as Record<string, string>)[field.field] = value;
@@ -1320,7 +1320,7 @@ function buildBulkPrompt(layer: LayerId) {
     bulkLayerContext(layer),
     null,
     2,
-  )}\n\n【整理要求】\n- 只补全上面列出的空白字段，不覆盖已有回答。\n- 可采用对象只能使用“当前层允许返回的字段”中的 ID；不要返回前层、后层或未列出的键。\n- 读取所有已填上下文以保持一致，但只生成当前允许字段。每项遵循自己的问题边界，不在不同字段复述相同内容。\n- 世界信息可以独立于主角和第一幕成立；不强制危机、成长或异常，不擅自补齐未列出的空项。\n\n只输出 JSON：结论、理由、可执行约束、可采用。可采用对象的键只能使用上面列出的 ID。`;
+  )}\n\n【整理要求】\n- 只补全上面列出的空白字段，不覆盖已有回答。地点必须作为相互包含的完整三级结构设计，所有缺失层级一起返回，并服从已有地点。\n- 可采用对象只能使用“当前层允许返回的字段”中的 ID；不要返回前层、后层或未列出的键。\n- 读取所有已填上下文以保持一致，但只生成当前允许字段。每项遵循自己的问题边界，不在不同字段复述相同内容。\n- 世界信息可以独立于主角和第一幕成立；不强制危机、成长或异常，不擅自补齐未列出的空项。\n\n只输出 JSON：结论、理由、可执行约束、可采用。可采用对象的键只能使用上面列出的 ID。`;
 }
 
 async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
@@ -1344,7 +1344,7 @@ async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
       values: payload.可采用?.[descriptor.id] ? { [descriptor.id]: payload.可采用[descriptor.id] } : {},
       contextRevision: revision,
     };
-    setStatus('AI 结果已放入预览，确认后才会写入回答。', 'success');
+    setStatus('建议已经准备好，看看喜欢不喜欢，再决定要不要采用。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] AI 字段整理失败', error);
     setStatus(`AI 整理失败：${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -1353,7 +1353,46 @@ async function requestAiDescriptor(descriptor: AiFieldDescriptor) {
   }
 }
 
+async function requestLocationAi() {
+  if (aiBusyKey.value) return;
+  const revision = contextRevision.value;
+  const keys = ['一级区域', '二级区域', '三级地点'] as const;
+  const current = { ...form.开局.起始地点 };
+  aiBusyKey.value = 'opening.location';
+  setStatus('正在想一个适合开场的地方…', 'working');
+  try {
+    const payload = await requestJson(
+      `为文字 RP 设计一组相互包含的三级起始地点。一级为大区域，二级为其中的片区，三级为其中具体落脚点。严格保留已有非空地点，结合它们生成其余部分，不复述世界设定，不强加危机。已填上下文：${JSON.stringify(contextSnapshot(true))}。当前地点：${JSON.stringify(current)}。只输出 JSON：结论、理由、可执行约束、可采用。可采用必须含 opening.location.1、opening.location.2、opening.location.3 三个非空字符串。`,
+      '请一起设计完整的三级起始地点。',
+      `human-revision-location-${Date.now()}`,
+    );
+    const values = Object.fromEntries(
+      keys.map((key, index) => [
+        `opening.location.${index + 1}`,
+        current[key].trim() ? current[key] : (payload.可采用?.[`opening.location.${index + 1}`] ?? '').trim(),
+      ]),
+    );
+    if (Object.values(values).some(value => !value.trim())) throw new Error('地点建议还不完整，请再试一次。');
+    aiPreview.value = {
+      target: 'opening.location',
+      title: '起始地点 · AI 结果预览',
+      layer: 'opening',
+      summary: payload.结论,
+      rationale: payload.理由,
+      constraints: payload.可执行约束 ?? [],
+      values,
+      contextRevision: revision,
+    };
+    setStatus('三个地点已经放进预览，看看是否合心意。', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), 'error');
+  } finally {
+    aiBusyKey.value = '';
+  }
+}
+
 async function requestAi(descriptorId: string) {
+  if (descriptorId === 'opening.location') return requestLocationAi();
   const descriptor = aiFieldMap[descriptorId];
   if (descriptor) await requestAiDescriptor(descriptor);
 }
@@ -1581,12 +1620,12 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
   const allowedDescriptors = bulkPendingDescriptors(requestLayer);
   const allowedKeys = allowedDescriptors.map(descriptor => descriptor.id);
   if (!allowedKeys.length) {
-    setStatus('本层没有需要补全的空白文本项。');
+    setStatus('这一页已经填好了。');
     return;
   }
   const revision = contextRevision.value;
   aiBusyKey.value = 'bulk';
-  setStatus('正在补全本层空白项…', 'working');
+  setStatus('正在为这一页想些点子…', 'working');
   try {
     const payload = await requestJson(
       buildBulkPrompt(requestLayer),
@@ -1604,7 +1643,7 @@ async function completeRemaining(requestLayer: LayerId = currentLayerMeta.value.
       contextRevision: revision,
       bulkAllowedKeys: allowedKeys,
     };
-    setStatus('本层补全结果已进入预览，确认后才会写入空白回答。', 'success');
+    setStatus('建议已经准备好。采用后只填入空白处，你写过的内容会保留。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] AI 批量补全失败', error);
     setStatus(`AI 整理失败：${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -1706,10 +1745,23 @@ function applyAiPreview() {
   const preview = aiPreview.value;
   if (!preview || aiPreviewStale.value) return;
   const values = preview.values;
-  if (preview.target === 'bulk') {
+  if (preview.target === 'opening.location') {
+    const keys = ['一级区域', '二级区域', '三级地点'] as const;
+    const parts = keys.map((_, index) => (values[`opening.location.${index + 1}`] ?? '').trim());
+    if (parts.some(value => !value)) {
+      setStatus('请把三个地点都填好，再一起采用。', 'error');
+      return;
+    }
+    form.开局.起始地点 = { 一级区域: parts[0], 二级区域: parts[1], 三级地点: parts[2] };
+  } else if (preview.target === 'bulk') {
     const allowedKeys = new Set(preview.bulkAllowedKeys ?? []);
+    const locationIds = ['opening.location.1', 'opening.location.2', 'opening.location.3'];
+    const completeLocation = locationIds.every(id => {
+      const descriptor = aiFieldMap[id];
+      return descriptor.read().trim() || (allowedKeys.has(id) && values[id]?.trim());
+    });
     Object.entries(values).forEach(([key, value]) => {
-      if (!allowedKeys.has(key)) return;
+      if (!allowedKeys.has(key) || (locationIds.includes(key) && !completeLocation)) return;
       const descriptor = resolveAiDescriptor(key);
       if (descriptor?.layer !== preview.layer || !isAiFieldBlank(descriptor) || !value.trim()) return;
       let text = value.trim();
@@ -1733,7 +1785,7 @@ function applyAiPreview() {
     if (descriptor && value.trim()) descriptor.write(value.trim());
   }
   aiPreview.value = null;
-  setStatus('已采用 AI 整理结果，内容仍可继续修改。', 'success');
+  setStatus('已采用，你还可以继续修改。', 'success');
 }
 
 function closeAiPreview() {
@@ -1840,13 +1892,13 @@ function validateOpeningCoordinates(): boolean {
 async function generateOpeningDraft(note = '') {
   if (openingGenerating.value || starting.value || !validateOpeningCoordinates()) return;
   openingGenerating.value = true;
-  setStatus(note ? '正在按修改意见重新生成唯一开场…' : '正在生成唯一开场预览…', 'working');
+  setStatus(note ? '正在按你的想法修改开场…' : '正在写故事的开场…', 'working');
   const revision = contextRevision.value;
   try {
     const prompt = `${buildOpeningPrompt()}${note ? `\n\n【针对上一份开场的修改意见】\n${note}\n只修改这份开场，不生成第二份候选。` : ''}`;
     openingPreview.value = await requestOpening(prompt, note || '请生成唯一的正式开场。');
     openingContextRevision.value = revision;
-    setStatus('唯一开场已生成，请预览后确认签发。', 'success');
+    setStatus('开场写好了。先读一读，满意就开始故事吧。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] 开场生成失败', error);
     setStatus(`开场生成失败：${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -1859,7 +1911,7 @@ async function confirmOpening() {
   if (!openingPreview.value || openingPreviewStale.value || starting.value) return;
   if (!validateOpeningCoordinates()) return;
   starting.value = true;
-  setStatus('正在签发配置并创建开场楼层…', 'working');
+  setStatus('正在保存设定，开启故事…', 'working');
   const snapshot = buildOpeningSnapshot();
   const oldData = normalizeOpeningMvuData(Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() }));
   const beforeMessages = openingMessages();
@@ -1901,7 +1953,7 @@ async function confirmOpening() {
       updateVariablePresent: persistedMessage.message.includes('<UpdateVariable>'),
       statDataRoots: Object.keys(persistedMessage.data?.stat_data ?? {}),
     });
-    setStatus('开场已签发，往下翻阅新楼层即可开始游玩。', 'success');
+    setStatus('故事开始了，往下翻就能继续。', 'success');
   } catch (error) {
     console.error('[人间修订中·世界配置] 开场签发失败', error);
     if (createdMessageId === undefined) {

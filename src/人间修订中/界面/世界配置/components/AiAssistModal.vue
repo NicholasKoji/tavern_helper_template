@@ -13,7 +13,7 @@
           <div class="header-left">
             <span class="modal-seal">
               <Sparkles :size="12" />
-              <span>AI 整理</span>
+              <span>AI 建议</span>
             </span>
             <h3 id="ai-preview-title" class="modal-title">{{ aiPreview.title }}</h3>
           </div>
@@ -24,25 +24,25 @@
 
         <div v-if="isStale" class="modal-stale-alert">
           <CircleAlert :size="14" />
-          <span>相关上下文已发生变化，当前整理结果可能已过时。</span>
+          <span>你刚改过设定，这份建议需要重新生成。</span>
         </div>
 
         <div class="modal-body-scroll">
           <!-- 结论与摘要 -->
           <div class="summary-box">
-            <h4 class="section-label">整理结论</h4>
+            <h4 class="section-label">这次的想法</h4>
             <p class="summary-text">{{ aiPreview.summary }}</p>
           </div>
 
           <!-- 理由阐述 -->
           <div v-if="aiPreview.rationale" class="rationale-box">
-            <h4 class="section-label">设计考量与影响</h4>
+            <h4 class="section-label">为什么这样写</h4>
             <p class="rationale-text">{{ aiPreview.rationale }}</p>
           </div>
 
           <!-- 可执行约束 -->
           <div v-if="aiPreview.constraints && aiPreview.constraints.length" class="constraints-box">
-            <h4 class="section-label">可执行叙事约束</h4>
+            <h4 class="section-label">可以留意的细节</h4>
             <ul class="constraints-list">
               <li v-for="(item, idx) in aiPreview.constraints" :key="idx">{{ item }}</li>
             </ul>
@@ -56,7 +56,7 @@
           <!-- 建议内容明细 -->
           <div v-if="hasValues" class="values-box">
             <h4 class="section-label">
-              {{ aiPreview.kind === 'private-status' ? '拟创建或补充的动态部位' : '拟写入的字段内容' }}
+              {{ aiPreview.kind === 'private-status' ? '拟创建或补充的动态部位' : '看看要填入的内容' }}
             </h4>
             <div class="values-grid">
               <div v-for="(val, key) in aiPreview.values" :key="key" class="value-item">
@@ -77,7 +77,7 @@
         <footer class="modal-footer">
           <button class="action-btn secondary" type="button" :disabled="isAnyAiBusy" @click="$emit('regenerate')">
             <RefreshCw :size="13" />
-            <span>重新整理</span>
+            <span>重新生成</span>
           </button>
 
           <div class="footer-right">

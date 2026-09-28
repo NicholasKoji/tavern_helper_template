@@ -3,7 +3,7 @@
     <div class="layer-banner">
       <div class="banner-badge">04 · 角色与关系</div>
       <h2 class="banner-title">主角与重要登场人物</h2>
-      <p class="banner-desc">为核心人物赋予明确的身份、性格与关系位置，让场面因人物的碰撞而生动起来。</p>
+      <p class="banner-desc">先聊聊你扮演的人，再添上想在故事里遇见的角色。</p>
     </div>
 
     <!-- 主角档案卡 -->
@@ -39,28 +39,28 @@
 
       <div v-if="!form.主角.启用" class="disabled-notice">
         <CircleAlert :size="15" />
-        <span>已关闭主角角色：签发时写入空主角骨架，忽略当前主角表单内容。</span>
+        <span>这次不以主角身份进入故事，下方的主角资料不会带入。</span>
       </div>
 
       <div v-else class="card-form-grid">
         <div class="field-row-3">
           <div class="form-item">
-            <label class="form-label">性别表达</label>
+            <label class="form-label">性别</label>
             <input v-model="form.主角.性别" type="text" class="dossier-input" placeholder="可留空，如：女 / 男" />
           </div>
           <div class="form-item">
-            <label class="form-label">年龄阶段</label>
+            <label class="form-label">年龄</label>
             <input
               :value="form.主角.年龄"
               type="text"
               inputmode="numeric"
               class="dossier-input"
-              placeholder="可留空或正整数，如：24"
+              placeholder="例如：24"
               @input="onProtagonistAgeInput"
             />
           </div>
           <div class="form-item">
-            <label class="form-label">身份与社会位置</label>
+            <label class="form-label">身份</label>
             <input
               v-model="form.主角.身份与位置"
               type="text"
@@ -72,16 +72,16 @@
 
         <div class="field-row-2">
           <div class="form-item">
-            <label class="form-label">主动追求的目标</label>
+            <label class="form-label">最想做成的事</label>
             <input
               v-model="form.主角.追求"
               type="text"
               class="dossier-input"
-              placeholder="留空则签发为空，不从其他字段后备填入"
+              placeholder="有什么想实现的愿望？还没想好可以留空。"
             />
           </div>
           <div class="form-item">
-            <label class="form-label">性格主色</label>
+            <label class="form-label">压力下的另一面</label>
             <input
               v-model="form.主角.性格主色"
               type="text"
@@ -93,7 +93,7 @@
 
         <div class="field-row-2">
           <div class="form-item">
-            <label class="form-label">性格底色与说话风格</label>
+            <label class="form-label">平时的性格与说话方式</label>
             <input
               v-model="form.主角.性格与声音"
               type="text"
@@ -102,7 +102,7 @@
             />
           </div>
           <div class="form-item">
-            <label class="form-label">补充设定与生活痕迹</label>
+            <label class="form-label">还有什么想补充的？</label>
             <input
               v-model="form.主角.补充设定"
               type="text"
@@ -187,7 +187,7 @@
     <div class="npc-section-header">
       <div class="npc-header-copy">
         <h3 class="npc-section-title">重要登场角色 (NPC)</h3>
-        <p class="npc-section-desc">第一幕聚焦已登记角色，支持随时增删。姓名为空的角色不会写入 NPC序列。</p>
+        <p class="npc-section-desc">把想遇见的人写在这里，随时可以增删。记得给他们起个名字，才会带进故事。</p>
       </div>
       <button class="add-role-btn" type="button" @click="$emit('addCharacter')">
         <Plus :size="14" stroke-width="2.2" />
@@ -199,7 +199,7 @@
       <Users :size="20" class="empty-icon" />
       <div>
         <strong class="empty-title">尚未登记特定重要角色</strong>
-        <p class="empty-desc">你可以点击上方按钮添加主要互动 NPC，或者直接进入下一步由世界背景自然生成。</p>
+        <p class="empty-desc">想好了就添加一个角色，也可以先跳过，之后在故事里自然相遇。</p>
       </div>
     </div>
 
@@ -227,7 +227,7 @@
               @click="$emit('assistCharacter', index)"
             >
               <Sparkles :size="13" />
-              <span>{{ aiBusyKey === `character:${index}` ? '整理中…' : 'AI 整理角色' }}</span>
+              <span>{{ aiBusyKey === `character:${index}` ? '正在想…' : 'AI 建议' }}</span>
             </button>
             <button
               class="del-role-btn"
@@ -257,7 +257,7 @@
                 type="text"
                 inputmode="numeric"
                 class="dossier-input"
-                placeholder="可留空或正整数，如：31"
+                placeholder="例如：31"
                 @input="onCharacterAgeInput(character, $event)"
               />
             </div>
@@ -295,7 +295,7 @@
 
           <div class="field-row-2">
             <div class="form-item">
-              <label class="form-label">性格主色</label>
+              <label class="form-label">压力下的另一面</label>
               <input
                 v-model="character.性格主色"
                 type="text"

@@ -1,5 +1,5 @@
 <template>
-  <nav class="step-wizard-nav" aria-label="开场配置分步导航">
+  <nav ref="nav" class="step-wizard-nav" aria-label="开场配置分步导航">
     <div class="step-track">
       <button
         v-for="(layer, index) in layers"
@@ -29,9 +29,10 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue';
 import { Check } from '@lucide/vue';
 
-defineProps<{
+const props = defineProps<{
   layers: ReadonlyArray<{
     id: string;
     kicker: string;
@@ -47,6 +48,20 @@ defineProps<{
 defineEmits<{
   (e: 'goToLayer', index: number): void;
 }>();
+const nav = ref<HTMLElement | null>(null);
+watch(
+  () => props.currentLayer,
+  async () => {
+    await nextTick();
+    const container = nav.value;
+    const active = container?.querySelector<HTMLElement>('.is-active');
+    if (!container || !active) return;
+    const outer = container.getBoundingClientRect();
+    const inner = active.getBoundingClientRect();
+    if (inner.left < outer.left + 8) container.scrollLeft += inner.left - outer.left - 8;
+    else if (inner.right > outer.right - 8) container.scrollLeft += inner.right - outer.right + 8;
+  },
+);
 </script>
 
 <style scoped>
@@ -82,15 +97,16 @@ defineEmits<{
 }
 
 .step-track {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: 6px;
-  width: 100%;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
   box-sizing: border-box;
 }
 
 .step-item {
+  flex: 1 0 auto;
   position: relative;
   display: flex;
   align-items: center;
@@ -164,7 +180,7 @@ defineEmits<{
 }
 
 .step-kicker {
-  font-size: 9.5px;
+  font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
   color: var(--ink-muted);
@@ -178,19 +194,5 @@ defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
-}
-
-@media (max-width: 900px) {
-  .step-track {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .step-item {
-    padding: 8px 6px;
-    gap: 6px;
-  }
-  .step-title {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
 }
 </style>

@@ -9,7 +9,7 @@
       <div class="left-actions">
         <button v-if="currentLayer > 0" class="nav-btn prev-btn" type="button" @click="$emit('previous')">
           <ChevronLeft :size="16" />
-          <span>上一层</span>
+          <span>上一步</span>
         </button>
 
         <button
@@ -20,13 +20,13 @@
           @click="$emit('completeRemaining')"
         >
           <WandSparkles :size="14" />
-          <span>{{ isAiBusy === 'bulk' ? '正在补全空白…' : '补全本层空白' }}</span>
+          <span>{{ isAiBusy === 'bulk' ? '正在补全空白…' : '帮我补全这一页' }}</span>
         </button>
       </div>
 
       <div class="right-actions">
         <button v-if="!isLastLayer" class="nav-btn next-btn" type="button" @click="$emit('next')">
-          <span>进入下一层</span>
+          <span>下一步</span>
           <ChevronRight :size="16" />
         </button>
 
@@ -70,7 +70,7 @@ defineEmits<{
 
 <style scoped>
 .dossier-action-footer {
-  position: sticky;
+  position: static;
   bottom: 8px;
   z-index: 100;
   display: flex;

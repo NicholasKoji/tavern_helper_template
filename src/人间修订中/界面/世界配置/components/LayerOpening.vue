@@ -3,10 +3,10 @@
     <div class="layer-banner">
       <div class="banner-badge">06 · 开局与生成</div>
       <h2 class="banner-title">选择进入世界的瞬间</h2>
-      <p class="banner-desc">只需填写日期与三级地点。其他内容可留空，平静的日常也可以成为开场。</p>
+      <p class="banner-desc">定好故事的日期和地点就能开始。其他内容随你，平静的一天也可以是个好开场。</p>
     </div>
-    <fieldset class="coordinate-fields">
-      <legend>开场日期 · 必填</legend>
+    <section class="coordinate-fields">
+      <h3 class="coordinate-title">开场日期 · 必填</h3>
       <div class="coordinate-grid">
         <label v-for="key in dateKeys" :key="key"
           >{{ key }}
@@ -20,28 +20,35 @@
           />
         </label>
       </div>
-      <p class="coordinate-hint">使用故事日期，不会自动填入现实日期。</p>
-    </fieldset>
-    <fieldset class="coordinate-fields">
-      <legend>起始地点 · 三级必填</legend>
-      <div class="location-grid">
-        <QuestionField
-          v-for="(key, index) in locationKeys"
-          :key="key"
-          :title="key"
-          type="input"
-          :hint="locationHints[index]"
-          :model-value="form.开局.起始地点[key]"
-          :ai-key="`opening.location.${index + 1}`"
-          :is-ai-busy="aiBusyKey === `opening.location.${index + 1}`"
-          :is-any-ai-busy="Boolean(aiBusyKey)"
-          @update:model-value="form.开局.起始地点[key] = $event"
-          @assist="$emit('assist', $event)"
-        />
+      <p class="coordinate-hint">故事发生在哪一天？这里填写的是故事里的日期。</p>
+    </section>
+    <section class="coordinate-fields">
+      <div class="location-heading">
+        <h3 class="coordinate-title">故事从哪里开始？ · 必填</h3>
+        <button
+          class="generate-preview-btn location-ai-btn"
+          type="button"
+          :disabled="Boolean(aiBusyKey)"
+          @click="$emit('assist', 'opening.location')"
+        >
+          <Sparkles :size="14" />{{ aiBusyKey === 'opening.location' ? '正在想…' : 'AI 建议' }}
+        </button>
       </div>
-    </fieldset>
-    <fieldset class="coordinate-fields">
-      <legend>开场时间 · 选填</legend>
+      <p class="coordinate-hint">从大区域到具体落脚点，一起定好。AI 会沿用你已经填好的地点。</p>
+      <div class="location-grid">
+        <label v-for="(key, index) in locationKeys" :key="key">
+          {{ locationHints[index] }}
+          <input
+            v-model="form.开局.起始地点[key]"
+            class="dossier-input"
+            :aria-label="key"
+            :placeholder="locationExamples[index]"
+          />
+        </label>
+      </div>
+    </section>
+    <section class="coordinate-fields">
+      <h3 class="coordinate-title">开场时间 · 选填</h3>
       <div class="coordinate-grid time-grid">
         <label v-for="key in timeKeys" :key="key"
           >{{ key }}
@@ -57,17 +64,17 @@
         </label>
       </div>
       <p class="coordinate-hint">可全部留空；指定时间时，同时填写时和分。</p>
-    </fieldset>
-    <fieldset class="coordinate-fields">
-      <legend>在场人物 · 选填</legend>
-      <p class="coordinate-hint">从第四层已命名角色中选择，不重复填写人物档案。主角是否参与沿用第四层设置。</p>
+    </section>
+    <section class="coordinate-fields">
+      <h3 class="coordinate-title">在场人物 · 选填</h3>
+      <p class="coordinate-hint">你之前添加的人物里，有谁会在开场时出现？</p>
       <div class="presence-options">
         <label v-for="character in namedCharacters" :key="character.index">
           <input v-model="form.开局.在场角色" type="checkbox" :value="character.index" /> {{ character.name }}
         </label>
-        <span v-if="!namedCharacters.length" class="coordinate-hint">尚无已命名的重要角色，可直接跳过。</span>
+        <span v-if="!namedCharacters.length" class="coordinate-hint">还没添加人物，可以先跳过。</span>
       </div>
-    </fieldset>
+    </section>
     <QuestionField
       v-model="form.开局.初始情境"
       title="初始情境"
@@ -80,14 +87,14 @@
     />
     <details class="coordinate-fields">
       <summary>叙事偏好 · 选填</summary>
-      <p class="coordinate-hint">只控制正文如何呈现，不作为世界事实。</p>
+      <p class="coordinate-hint">喜欢怎样的讲述方式？可以留下一点偏好。</p>
       <div class="layer-fields">
         <QuestionField
           v-for="key in narrativeKeys"
           :key="key"
           v-model="form.叙事偏好[key]"
-          :title="key"
-          placeholder="选填"
+          :title="narrativeCopy[key].title"
+          :placeholder="narrativeCopy[key].placeholder"
           :ai-key="`narrative.${key}`"
           :is-ai-busy="aiBusyKey === `narrative.${key}`"
           :is-any-ai-busy="Boolean(aiBusyKey)"
@@ -99,8 +106,8 @@
     <section class="signing-section">
       <header class="signing-head">
         <div class="signing-title-wrap">
-          <span class="signing-kicker">FINAL REVISION & SIGNING</span>
-          <h3 class="signing-title">签发卷宗 · 第一幕生成</h3>
+          <span class="signing-kicker">准备开始</span>
+          <h3 class="signing-title">看看故事怎样开始</h3>
         </div>
         <div class="signing-head-actions">
           <button
@@ -111,7 +118,7 @@
             @click="$emit('generateOpening')"
           >
             <Sparkles :size="14" />
-            <span>{{ openingGenerating ? '正在生成第一幕…' : openingPreview ? '重新生成' : '生成唯一开场预览' }}</span>
+            <span>{{ openingGenerating ? '正在生成第一幕…' : openingPreview ? '重新生成' : '生成开场' }}</span>
           </button>
         </div>
       </header>
@@ -120,7 +127,7 @@
         <div class="skeleton-line full"></div>
         <div class="skeleton-line three-quarter"></div>
         <div class="skeleton-line half"></div>
-        <p class="skeleton-text">正在依据 6 层配置设定生成唯一正式开局正文，请稍候…</p>
+        <p class="skeleton-text">正在把你的想法写成故事，稍等一下…</p>
       </div>
 
       <div v-else-if="openingPreview" class="opening-preview-box">
@@ -160,15 +167,13 @@
             @click="$emit('confirmOpening')"
           >
             <Stamp :size="16" class="stamp-icon" />
-            <span>{{ starting ? '正在签发写入…' : '签发卷宗 · 开启第一幕' }}</span>
+            <span>{{ starting ? '正在开启故事…' : '确认开场，开始故事' }}</span>
           </button>
         </div>
       </div>
 
       <div v-else class="signing-placeholder">
-        <p>
-          点击上方<strong>「生成唯一开场预览」</strong>，AI 将根据你已填写的 6 层世界观、主角和重要角色生成第一幕正文。
-        </p>
+        <p>点击上方<strong>「生成开场」</strong>，先看看故事会怎样开始。满意后再确认，也可以提出想改的地方。</p>
       </div>
     </section>
   </div>
@@ -196,6 +201,13 @@ const dateKeys = ['年', '月', '日'] as const;
 const timeKeys = ['时', '分'] as const;
 const locationKeys = ['一级区域', '二级区域', '三级地点'] as const;
 const locationHints = ['国家、城市或大区域', '其中的城区、聚落或片区', '其中的建筑、房间或具体场所'];
+const locationExamples = ['例如：临海市', '例如：老港区', '例如：灯塔街的咖啡馆'];
+const narrativeCopy = {
+  叙事视角: { title: '用谁的视角讲故事？', placeholder: '例如：用第二人称，像在对我讲述眼前发生的事。' },
+  文风: { title: '喜欢怎样的文字？', placeholder: '例如：自然细腻，多一些对话，少一些华丽的比喻。' },
+  节奏: { title: '故事走得快些，还是慢些？', placeholder: '例如：慢慢展开，留时间闲聊和观察周围。' },
+  体验倾向: { title: '这次最想体验什么？', placeholder: '例如：轻松日常、结识朋友，偶尔来一点小冒险。' },
+};
 const narrativeKeys = ['叙事视角', '文风', '节奏', '体验倾向'] as const;
 const namedCharacters = computed(() =>
   props.form.重要角色.map((item, index) => ({ index, name: item.姓名.trim() })).filter(item => item.name),
@@ -489,7 +501,7 @@ const localRevisionNote = ref('');
   padding: 16px;
   background: var(--paper-subtle);
 }
-.coordinate-fields legend,
+.coordinate-title,
 .coordinate-fields summary {
   font-weight: 600;
   color: var(--ink-heading);
@@ -504,6 +516,7 @@ const localRevisionNote = ref('');
   gap: 12px;
 }
 .coordinate-grid label {
+  color: var(--ink-body);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -555,5 +568,27 @@ const localRevisionNote = ref('');
   outline: none;
   border-color: var(--brass);
   box-shadow: 0 0 0 2px var(--brass-soft);
+}
+.coordinate-title {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.location-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.location-heading .coordinate-title {
+  margin: 0;
+}
+.location-grid label {
+  color: var(--ink-body);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  min-width: 0;
 }
 </style>
