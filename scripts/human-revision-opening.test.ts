@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
+import lodash from 'lodash';
 import {
   applyOpeningPatchToMvuData,
   appendOpeningUpdateVariable,
@@ -350,14 +353,114 @@ async function testChatLoreTransactionRollback() {
   // New messages must render immediately; rollback must also remove the rendered floor.
   assert.match(
     appSource,
-    /await createChatMessages\(\[\{ role: 'assistant', message, data: parsed \}\], \{ refresh: 'affected' \}\);/,
+    /await createChatMessages\(\s*\[\{ role: 'assistant', message, data: parsed, extra: \{ human_revision_opening_id: openingId \} \}\],\s*\{ refresh: 'affected' \},?\s*\);/,
   );
   assert.match(appSource, /await deleteChatMessages\(\[createdMessageId\], \{ refresh: 'affected' \}\);/);
 
   assert.doesNotMatch(appSource, /const afterMessageId = getLastMessageId\(\)/);
 }
 
-testChatLoreTransactionRollback()
+// Execute the real confirmation flow: rendered-message listeners may update both
+// MVU data and the UpdateVariable block before createChatMessages returns.
+async function testOpeningRenderedUpdate() {
+  const helpers = worldConfigSource.slice(
+    worldConfigSource.indexOf('function openingMessages()'),
+    worldConfigSource.indexOf('function setTheme('),
+  );
+  const confirm = worldConfigSource.slice(
+    worldConfigSource.indexOf('async function confirmOpening()'),
+    worldConfigSource.indexOf('onMounted(() =>'),
+  );
+  for (const scenario of ['unchanged', 'variables', 'text', 'save-update', 'missing-data', 'write-error'] as const) {
+    const messages: any[] = [];
+    let loreExists = false;
+    let rollbackCount = 0;
+    let saved = false;
+    let status = '';
+    const parsed = { stat_data: buildOpeningState(snapshot), initialized_lorebooks: {} };
+    const context = vm.createContext({
+      console: { info() {}, error() {} },
+      _: lodash,
+      OPENING_READBACK_CHECKS: 1,
+      HUMAN_REVISION_BUILD_MARKER: 'test',
+      setTimeout: (callback: () => void) => callback(),
+      openingPreview: { value: '测试开场正文' },
+      openingPreviewStale: { value: false },
+      starting: { value: false },
+      protagonistName: { value: '玩家' },
+      validateOpeningCoordinates: () => true,
+      buildOpeningSnapshot: () => snapshot,
+      normalizeOpeningMvuData,
+      getCurrentMessageId: () => 0,
+      getChatMessages: () => messages,
+      buildOpeningUpdateVariable,
+      appendOpeningUpdateVariable,
+      Mvu: { getMvuData: () => parsed, parseMessage: async () => parsed },
+      setStatus: (text: string) => (status = text),
+      commitCurrentChatLore: async () => {
+        loreExists = true;
+        return { worldbookName: '测试聊天世界书' };
+      },
+      verifyChatLoreMutation: async () => ({ binding: '测试聊天世界书', managedEntries: [{}, {}] }),
+      rollbackChatLoreMutation: async () => {
+        loreExists = false;
+        rollbackCount += 1;
+      },
+      createChatMessages: async (incoming: any[], options: { refresh: string }) => {
+        assert.equal(options.refresh, 'affected', 'opening must render immediately');
+        if (scenario === 'write-error') throw new Error('simulated message write failure');
+        const message = structuredClone({ ...incoming[0], message_id: 1 });
+        if (scenario === 'variables') {
+          message.data.stat_data.当前场景.摘要 = '变量更新后的场景';
+          message.data.initialized_lorebooks = { 新聊天世界书: ['已初始化'] };
+        }
+        if (scenario === 'text') message.message = '测试开场正文\n<UpdateVariable>更新后的补丁</UpdateVariable>';
+        if (scenario === 'missing-data') message.data = {};
+        messages.push(message);
+        // Another listener may append a message; latest ID alone is not identity.
+        messages.push({ message_id: 2, role: 'assistant', message: '其他并发消息', data: parsed, extra: {} });
+      },
+      deleteChatMessages: async (ids: number[]) => {
+        for (const id of ids)
+          messages.splice(
+            messages.findIndex(message => message.message_id === id),
+            1,
+          );
+      },
+      SillyTavern: {
+        uuidv4: () => `opening-${scenario}`,
+        saveChat: async () => {
+          saved = true;
+          if (scenario === 'save-update' && messages[0]?.message_id === 1) {
+            messages[0].data.stat_data.当前场景.摘要 = '保存期间完成变量更新';
+          }
+        },
+      },
+    });
+    const source = ts.transpileModule(`${helpers}\n${confirm}`, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+    }).outputText;
+    vm.runInContext(source, context);
+    await vm.runInContext('confirmOpening()', context);
+    const shouldSucceed = scenario !== 'missing-data' && scenario !== 'write-error';
+    assert.equal(loreExists, shouldSucceed, `${scenario}: worldbook retention`);
+    assert.equal(rollbackCount, shouldSucceed ? 0 : 1, `${scenario}: rollback count`);
+    assert.equal(context.starting.value, false);
+    if (shouldSucceed) {
+      assert.equal(saved, true);
+      assert.match(status, /开局已载入/);
+      assert.equal(messages[0].message_id, 1);
+      if (scenario === 'variables') assert.equal(messages[0].data.stat_data.当前场景.摘要, '变量更新后的场景');
+    } else {
+      assert.match(status, /签发失败/);
+      assert.ok(messages.every(message => message.message_id !== 1));
+    }
+  }
+  console.log('opening render/update/rollback regression: PASS');
+}
+
+testOpeningRenderedUpdate()
+  .then(testChatLoreTransactionRollback)
   .then(() => console.log('human-revision opening tests: PASS'))
   .catch(error => {
     console.error(error);

@@ -779,26 +779,36 @@ function openingMessages() {
   return getChatMessages('0-{{lastMessageId}}');
 }
 
-function findCreatedOpeningMessage(message: string, dataToMatch: Record<string, any>, beforeMessageIds: Set<number>) {
+function findCreatedOpeningMessage(openingId: string, beforeMessageIds: Set<number>) {
   return openingMessages().find(
     candidate =>
       !beforeMessageIds.has(candidate.message_id) &&
-      candidate.message === message &&
-      (Object.keys(dataToMatch).length === 0 || _.isEqual(candidate.data, dataToMatch)),
+      candidate.role === 'assistant' &&
+      candidate.extra?.human_revision_opening_id === openingId,
   );
 }
 
 async function waitForCreatedOpeningMessage(
-  message: string,
-  dataToMatch: Record<string, any>,
+  openingId: string,
+  initialData: Record<string, any>,
   beforeMessageIds: Set<number>,
 ) {
   for (let attempt = 0; attempt < OPENING_READBACK_CHECKS; attempt += 1) {
-    const candidate = findCreatedOpeningMessage(message, dataToMatch, beforeMessageIds);
-    if (candidate) return candidate;
+    const candidate = findCreatedOpeningMessage(openingId, beforeMessageIds);
+    const state = candidate?.data?.stat_data;
+    // affected 渲染会触发 MVU/独立变量更新：正文补丁和变量值都可能已被合法更新。
+    // 用签发标记识别消息，只检查数据结构，不把更新后的状态误判为写入失败。
+    if (
+      candidate?.message.trim() &&
+      state &&
+      typeof state === 'object' &&
+      !Array.isArray(state) &&
+      Object.keys(initialData.stat_data).every(key => Object.hasOwn(state, key))
+    )
+      return candidate;
     await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
   }
-  throw new Error('createChatMessages 后未能回读包含 UpdateVariable 与 MVU 数据的新消息');
+  throw new Error('createChatMessages 后未能回读本次签发的新消息或完整 MVU 数据');
 }
 
 function setTheme(theme: ThemeId) {
@@ -1927,6 +1937,7 @@ async function confirmOpening() {
   const message = appendOpeningUpdateVariable(openingPreview.value, updateVariable);
   let mutation: ChatLoreMutation | undefined;
   let createdMessageId: number | undefined;
+  const openingId = SillyTavern.uuidv4();
   try {
     mutation = await commitCurrentChatLore(snapshot);
     const expectedChatLore = await verifyChatLoreMutation(mutation);
@@ -1943,17 +1954,14 @@ async function confirmOpening() {
       roots: Object.keys(parsed.stat_data),
       updateVariablePresent: message.includes('<UpdateVariable>'),
     });
-    await createChatMessages([{ role: 'assistant', message, data: parsed }], { refresh: 'affected' });
-    const createdMessage = await waitForCreatedOpeningMessage(message, parsed, beforeMessageIds);
+    await createChatMessages(
+      [{ role: 'assistant', message, data: parsed, extra: { human_revision_opening_id: openingId } }],
+      { refresh: 'affected' },
+    );
+    const createdMessage = await waitForCreatedOpeningMessage(openingId, parsed, beforeMessageIds);
     createdMessageId = createdMessage.message_id;
-    if (!createdMessage.message.includes('<UpdateVariable>')) {
-      throw new Error('新消息回读成功但正文缺少可审计的 <UpdateVariable>');
-    }
-    if (!_.isEqual(createdMessage.data, parsed)) {
-      throw new Error('新消息回读成功但 MVU 数据与 parseMessage 返回值不一致');
-    }
     await SillyTavern.saveChat();
-    const persistedMessage = await waitForCreatedOpeningMessage(message, parsed, beforeMessageIds);
+    const persistedMessage = await waitForCreatedOpeningMessage(openingId, parsed, beforeMessageIds);
     console.info('[人间修订中·世界配置] 新消息写后回读已确认', {
       buildMarker: HUMAN_REVISION_BUILD_MARKER,
       messageId: persistedMessage.message_id,
@@ -1964,7 +1972,7 @@ async function confirmOpening() {
   } catch (error) {
     console.error('[人间修订中·世界配置] 开局载入失败', error);
     if (createdMessageId === undefined) {
-      const candidate = findCreatedOpeningMessage(message, {}, beforeMessageIds);
+      const candidate = findCreatedOpeningMessage(openingId, beforeMessageIds);
       if (candidate) createdMessageId = candidate.message_id;
     }
     const rollbackErrors: string[] = [];
